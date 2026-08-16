@@ -1,14 +1,21 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Instrument_Serif, JetBrains_Mono } from 'next/font/google';
 import Link from 'next/link';
 import { MotionDirector } from '@/components/MotionDirector';
 import { SiteNav } from '@/components/SiteNav';
-import { NoticeLogo } from '@/components/NoticeLogo';
 import { siteUrl } from '@/lib/env';
 import './globals.css';
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' });
-const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' });
+// A high-contrast serif for display and monospace for everything else. The
+// serif gives the page a voice; the mono keeps every number, field name and
+// status reading as data, which is most of what this interface shows.
+const display = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-display',
+  display: 'swap',
+});
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -27,12 +34,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen bg-surface font-sans text-ivory antialiased">
+    <html lang="en" className={`${display.variable} ${mono.variable}`}>
+      <body className="min-h-screen bg-surface font-mono text-ivory antialiased">
         <MotionDirector />
         <a
           href="#main-content"
-          className="fixed left-4 top-4 z-[100] -translate-y-24 bg-ivory px-4 py-2 text-sm font-semibold text-surface-raised transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] focus:translate-y-0"
+          className="fixed left-4 top-4 z-[100] -translate-y-24 bg-ivory px-4 py-2 text-sm text-surface-raised transition-transform duration-300 focus:translate-y-0"
         >
           Skip to content
         </a>
@@ -46,44 +53,81 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function SiteFooter() {
   return (
-    <footer className="site-footer">
-      <div className="site-footer__grid">
-        <div className="site-footer__intro">
-          <NoticeLogo inverse />
-          <h2>Proof infrastructure<br />for live web data.</h2>
-          <p>Two independent signals. One decision your product can defend.</p>
+    <footer className="border-t border-surface-border bg-surface-raised">
+      <div className="mx-auto max-w-[1400px] px-6 py-20 lg:px-10">
+        <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(4,0.7fr)]">
+          <div className="max-w-xs">
+            <p className="font-display text-3xl">NOTICE</p>
+            <p className="mt-4 text-sm leading-6 text-muted">
+              The verification layer for live web data. Two independent Bright Data sensors, one
+              decision your product can defend.
+            </p>
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-surface-border px-3 py-1 text-[11px] uppercase tracking-eyebrow text-muted">
+              <span className="h-1.5 w-1.5 rounded-full bg-verified" aria-hidden />
+              Built with Bright Data
+            </p>
+          </div>
+
+          <FooterColumn
+            title="Product"
+            links={[
+              ['How it works', '/#system'],
+              ['Proof', '/#proof'],
+              ['Verified feed', '/verified'],
+              ['Control room', '/#control-room'],
+            ]}
+          />
+          <FooterColumn
+            title="Developers"
+            links={[
+              ['Deploy gate', '/#gate'],
+              ['MCP server', '/#agents'],
+              ['Source', 'https://github.com/prabhatkumar67/notice'],
+            ]}
+          />
+          <FooterColumn
+            title="Bright Data"
+            links={[
+              ['Scraper Studio', 'https://brightdata.com/products/web-scraper/studio'],
+              ['Web Unlocker', 'https://brightdata.com/products/web-unlocker'],
+              ['CLI', 'https://github.com/brightdata/cli'],
+            ]}
+          />
+          <FooterColumn
+            title="Company"
+            links={[
+              ['Privacy', '/privacy'],
+              ['Terms', '/terms'],
+            ]}
+          />
         </div>
-        <FooterColumn title="Product" links={[["How it works", "/#system"], ["Verification proof", "/#proof"], ["Verified feed", "/verified"], ["Control room", "/#control-room"]]} />
-        <FooterColumn title="Resources" links={[["Bright Data CLI", "https://github.com/brightdata/cli"], ["Scraper Studio", "https://brightdata.com/products/web-scraper/studio"], ["Scrape Verse", "https://www.wemakedevs.org/hackathons/scrape-verse"]]} />
-        <FooterColumn title="Company" links={[["Privacy", "/privacy"], ["Terms", "/terms"], ["Home", "/"]]} />
-      </div>
-      <div className="site-footer__legal"><span>© 2026 NOTICE</span><span>BUILT WITH BRIGHT DATA</span></div>
-      {/*
-        Mark above word, in a column, so the logo can never sit on top of the
-        letters. Both were absolutely positioned and centred before, which put
-        the square over the middle of the word and hid two characters.
-      */}
-      <div className="site-footer__sign" aria-hidden>
-        <div className="site-footer__mark"><NoticeLogo inverse compact /></div>
-        <div className="site-footer__word">
-          {/*
-            textLength pins the rendered width to the viewBox regardless of the
-            font's metrics, so the word spans the full footer at any viewport
-            instead of being guessed at with a vw font size that stops growing
-            at its clamp ceiling. lengthAdjust="spacing" tightens the gaps and
-            leaves the glyph shapes undistorted.
-          */}
-          <svg viewBox="0 0 1000 170" preserveAspectRatio="xMidYMax meet" role="presentation">
-            <text x="500" y="155" textLength="960" lengthAdjust="spacing" textAnchor="middle">
-              NOTICE
-            </text>
-          </svg>
+
+        <div className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-surface-border pt-8 text-[11px] uppercase tracking-eyebrow text-muted">
+          <span>© 2026 NOTICE. Trust the data, not the green check.</span>
+          <span>Into the Scrape-Verse</span>
         </div>
       </div>
     </footer>
   );
 }
 
-function FooterColumn({ title, links }: { title: string; links: Array<[string, string]> }) {
-  return <div className="site-footer__column"><p>{title}</p>{links.map(([label, href]) => href.startsWith('http') ? <a key={href} href={href}>{label}</a> : <Link key={href} href={href}>{label}</Link>)}</div>;
+function FooterColumn({ title, links }: { title: string; links: [string, string][] }) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-eyebrow text-muted">{title}</p>
+      <div className="mt-4 flex flex-col gap-3 text-sm">
+        {links.map(([label, href]) =>
+          href.startsWith('http') ? (
+            <a key={href} href={href} className="text-ivory transition-colors hover:text-verified">
+              {label}
+            </a>
+          ) : (
+            <Link key={href} href={href} className="text-ivory transition-colors hover:text-verified">
+              {label}
+            </Link>
+          ),
+        )}
+      </div>
+    </div>
+  );
 }

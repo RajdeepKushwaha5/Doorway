@@ -1,18 +1,5 @@
 import Link from 'next/link';
-import {
-  ArrowUpRight,
-  CheckCircle,
-  Eye,
-  Pulse,
-  ShieldCheck,
-  TerminalWindow,
-  WarningOctagon,
-  Wrench,
-} from '@phosphor-icons/react/dist/ssr';
-import { StatusChip } from '@/components/StatusChip';
-import { ProofLedger } from '@/components/ProofLedger';
-import { WordReveal } from '@/components/WordReveal';
-import { VerificationDiagram } from '@/components/VerificationDiagram';
+import { Globe } from '@/components/Globe';
 import { RegisterCollector } from '@/components/RegisterCollector';
 import { OperationsPanel } from '@/components/OperationsPanel';
 import { api } from '@/lib/api';
@@ -20,69 +7,63 @@ import type { CollectorSummary, Incident } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-const benefits = [
+/**
+ * The landing page.
+ *
+ * Ordered so a reader meets the problem before the product. The first thing
+ * after the headline is a wrong number beside a right one, because none of
+ * this is easy to care about until you have seen how ordinary a silent
+ * corruption looks.
+ */
+
+const STEPS = [
   {
-    number: '01',
-    icon: Eye,
-    title: 'Catch believable wrong data',
-    copy: 'NOTICE catches the result that looks valid, passes the schema, and quietly reports the wrong fact.',
+    n: '01',
+    title: 'Observe',
+    copy: 'A Scraper Studio collector returns structured rows. Contracts check them for missing, impossible or unusual values.',
   },
   {
-    number: '02',
-    icon: Pulse,
-    title: 'Know when to leave it alone',
-    copy: 'When the collector and witness agree on a new value, NOTICE records a real source change and does not heal.',
+    n: '02',
+    title: 'Witness',
+    copy: 'Web Unlocker reads the same page as plain markdown. No selectors, so it cannot drift the way an extractor does.',
   },
   {
-    number: '03',
-    icon: ShieldCheck,
-    title: 'Make every repair earn trust',
-    copy: 'A proposed fix runs against the incident and regression pages before production can change.',
+    n: '03',
+    title: 'Decide',
+    copy: 'Sensors disagree and the extractor broke. They agree on a new value and the world changed, so the collector is left alone.',
+  },
+  {
+    n: '04',
+    title: 'Prove',
+    copy: 'Self-Healing proposes a repair. It is replayed against the page that failed and the pages that worked, before anything ships.',
   },
 ];
 
-const steps = [
+const FAQS = [
   {
-    icon: TerminalWindow,
-    label: 'Observe',
-    copy: 'Scraper Studio returns structured data. Contracts look for missing, unusual, or impossible values.',
+    q: 'Why is valid JSON not enough?',
+    tag: 'detection',
+    a: 'A layout change can move a price selector onto a refundable deposit. The output stays schema-valid, the request still succeeds, and nothing raises an error. The wrong fact is the only symptom.',
   },
   {
-    icon: Eye,
-    label: 'Decide',
-    copy: 'Bright Data Markdown reads the page without the collector selectors. Agreement means the world changed. Disagreement means drift.',
+    q: 'How do you know the site changed rather than the scraper breaking?',
+    tag: 'the rule',
+    a: 'Two Bright Data sensors read the same page. The collector uses selectors; Web Unlocker returns markdown with none. If both report the same new value, extraction still works and the source moved. If they disagree, the extractor drifted.',
   },
   {
-    icon: Wrench,
-    label: 'Prove',
-    copy: 'Self Healing proposes a repair. NOTICE replays it, blocks regressions, and verifies production again.',
-  },
-];
-
-const faqs = [
-  {
-    question: 'Why is valid JSON not enough?',
-    answer: 'A selector can move from a product price to a nearby deposit while the output shape stays perfectly valid. The pipeline sees success while the business receives the wrong fact.',
+    q: 'Does this replace Bright Data Self-Healing?',
+    tag: 'scope',
+    a: 'No. Scraper Studio builds and repairs the collector. Their own product manager has said repair is triggered by you and there is no automated detection yet. NOTICE is the part that notices, and the part that checks the repair actually worked.',
   },
   {
-    question: 'How does NOTICE know the site changed?',
-    answer: 'It compares the structured collector result with a separate Bright Data Markdown reading. If both report the same new value, extraction still works and the source itself changed.',
+    q: 'What reaches my application?',
+    tag: 'output',
+    a: 'A value two sensors agree on now, the last verified value clearly marked stale, or nothing at all with a reason. A quarantined field is withheld rather than flagged, so nothing downstream can act on it by accident.',
   },
   {
-    question: 'Does NOTICE replace Bright Data Self Healing?',
-    answer: 'No. Scraper Studio creates and repairs the collector. NOTICE decides when repair is justified and verifies the candidate before approval.',
-  },
-  {
-    question: 'Can it approve every repair automatically?',
-    answer: 'Only a candidate that fixes the incident and preserves every pinned regression case can reach approval. Missing evidence remains a blocked decision.',
-  },
-  {
-    question: 'What reaches downstream applications?',
-    answer: 'Only verified current data or the last known good value with an explicit stale warning. Suspect rows remain quarantined.',
-  },
-  {
-    question: 'Is DriftMart a real shop?',
-    answer: 'No. DriftMart is a clearly labelled fault injection fixture used to reproduce page changes safely. NOTICE also preserves evidence from real public targets.',
+    q: 'Can it approve its own repairs?',
+    tag: 'safety',
+    a: 'Only a candidate that fixes the incident and preserves every pinned regression case can be promoted, and never twice. On a real collector this month, Bright Data reported a repair as succeeded while production still returned the wrong value. That is why promotion is verified afterwards rather than trusted.',
   },
 ];
 
@@ -98,329 +79,456 @@ export default async function HomePage() {
   }
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
-  const verified = Math.max(collectors.length - new Set(open.map((incident) => incident.collectorId)).size, 0);
-  const verifiedRate = collectors.length === 0 ? 0 : Math.round((verified / collectors.length) * 100);
 
   return (
-    <div className="overflow-hidden">
-      <section className="border-b border-surface-border bg-surface pt-20">
-        <div className="section-index mx-auto max-w-7xl"><span>INTRODUCTION</span><span>[ 00 / 05 ]</span></div>
-        <div className="mx-auto grid min-h-[760px] max-w-7xl items-center gap-16 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr] lg:px-8">
+    <>
+      {/* Hero ----------------------------------------------------------- */}
+      <section className="border-b border-surface-border">
+        <div className="mx-auto grid max-w-[1400px] items-center gap-16 px-6 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:px-10 lg:py-28">
           <div>
-            <p className="eyebrow hero-kicker mb-6"><span className="signal-square" /> The verification layer for live web data</p>
             <h1 className="display-heading">
-              <span className="hero-line"><span>Trust the data.</span></span>
-              <span className="hero-line text-ember"><span>Not the</span></span>
-              <span className="hero-line text-ember"><span>green check.</span></span>
+              Trust the data,
+              <br />
+              not the green check.
             </h1>
-            <p className="hero-copy mt-8 max-w-[620px] text-lg text-muted">
-              NOTICE catches Scraper Studio collectors that return believable but wrong data, decides whether the site changed or the extractor broke, and proves every repair before production.
+
+            <p className="mt-8 max-w-[52ch] text-[15px] leading-7 text-muted">
+              A scraper can break without breaking. NOTICE catches the run that returns
+              <span className="text-ivory"> valid JSON and the wrong fact</span>, works out whether
+              the website changed or the extractor drifted, and proves any repair before it reaches
+              production.
             </p>
-            <div className="hero-action mt-10 flex flex-wrap gap-3">
-              <a href="#control-room" className="primary-button">
-                Open live control room <ArrowUpRight size={18} weight="bold" />
-              </a>
-              <a href="#proof" className="secondary-button">See the proof</a>
+
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Link href="#control-room" className="accent-button">
+                Open the control room <span aria-hidden>→</span>
+              </Link>
+              <Link href="#problem" className="secondary-button">
+                See the problem
+              </Link>
             </div>
-            <div className="hero-proof mt-16 grid grid-cols-3 border border-x-0 border-b-0 border-surface-border pt-6">
-              <Proof label="Bright Data" value="2 live signals" />
-              {/* Keep in step with `npm test`. A number on the landing page
-                  that no longer matches the suite is the one claim a reader
-                  can check in ten seconds. */}
-              <Proof label="Safety suite" value="205 tests passing" />
-              <Proof label="Default policy" value="Read only until proven" />
+
+            <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-3 text-[11px] uppercase tracking-eyebrow text-muted">
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${offline ? 'bg-suspect' : 'bg-verified'}`}
+                  aria-hidden
+                />
+                {offline ? 'Backend offline' : `${String(collectors.length)} sources monitored`}
+              </span>
+              <span>2 independent sensors</span>
+              <span>205 tests</span>
+              <span>Read only until proven</span>
             </div>
           </div>
-          <div className="hero-visual" data-reveal="scale"><VerificationDiagram /></div>
+
+          <div className="flex justify-center lg:justify-end" data-reveal="scale">
+            <Globe />
+          </div>
         </div>
+
+        <FleetMarquee collectors={collectors} offline={offline} />
       </section>
 
-      <section id="story" data-chapter="story" className="border-b border-surface-border bg-surface-raised px-6 py-24 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-            <div data-reveal="left">
-              <p className="eyebrow">The failure nobody sees</p>
-              <h2 className="mt-6 max-w-xl text-4xl font-medium tracking-tight md:text-5xl">
-                The request succeeded. The fact did not.
-              </h2>
-            </div>
-            <p data-reveal="right" className="max-w-2xl text-lg text-muted">
-              A layout change can make a price selector capture a deposit, an old list price, or zero in the wrong currency. The JSON still looks clean. No exception fires. The bad decision happens later.
-            </p>
-          </div>
+      {/* The problem ---------------------------------------------------- */}
+      <section id="problem" className="border-b border-surface-border">
+        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
+          <p className="eyebrow">✦ The failure nobody sees</p>
+          <h2 className="section-heading mt-6 max-w-[18ch]">
+            The request succeeded. The fact did not.
+          </h2>
+          <p className="mt-6 max-w-[62ch] text-[15px] leading-7 text-muted">
+            A redesign moves a price selector onto a refundable deposit. Status 200, schema valid,
+            no exception and nothing in a log. Every dashboard, model and agent downstream now
+            believes the wrong number.
+          </p>
 
-          <div className="mt-16 grid gap-6 lg:grid-cols-2">
-            <article data-reveal="left" data-delay="1" className="panel overflow-hidden border-blocked/30">
-              <div className="flex items-center justify-between border border-x-0 border-t-0 border-surface-border px-6 py-4">
+          <div className="mt-14 grid gap-5 lg:grid-cols-2">
+            <article className="panel overflow-hidden" data-reveal="left">
+              <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
                 <span className="eyebrow text-blocked">Unguarded pipeline</span>
-                <WarningOctagon size={20} className="text-blocked" />
+                <span className="status-chip border-blocked/30 text-blocked">shipped</span>
               </div>
               <div className="p-8">
-                <p className="text-sm text-muted">Structured output</p>
-                <div className="mt-6 font-mono text-sm text-ivory/75">
-                  <p>{'{'}</p>
-                  <p className="pl-6">&quot;status&quot;: &quot;success&quot;,</p>
-                  <p className="pl-6 text-blocked">&quot;price&quot;: 25.00,</p>
-                  <p className="pl-6">&quot;currency&quot;: &quot;USD&quot;</p>
-                  <p>{'}'}</p>
-                </div>
-                <p className="mt-8 text-sm text-blocked">The selector captured the refundable deposit.</p>
+                <p className="eyebrow">Collector output</p>
+                <pre className="mt-5 text-[13px] leading-7 text-muted">
+                  {'{\n  "status": "success",\n  "price": '}
+                  <span className="text-blocked">25.00</span>
+                  {',\n  "currency": "USD"\n}'}
+                </pre>
+                <p className="mt-8 text-[13px] text-blocked">
+                  The selector captured the refundable deposit.
+                </p>
               </div>
             </article>
 
-            <article data-reveal="right" data-delay="2" className="panel overflow-hidden border-verified/30">
-              <div className="flex items-center justify-between border border-x-0 border-t-0 border-surface-border px-6 py-4">
-                <span className="eyebrow text-verified">NOTICE verified</span>
-                <ShieldCheck size={20} className="text-verified" />
+            <article className="panel overflow-hidden" data-reveal="right" data-delay="1">
+              <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
+                <span className="eyebrow text-verified">NOTICE</span>
+                <span className="status-chip border-verified/30 text-verified">withheld</span>
               </div>
               <div className="p-8">
-                <p className="text-sm text-muted">Independent witness</p>
-                <div className="mt-6 font-mono text-sm text-ivory/75">
-                  <p>Purchase price</p>
-                  <p className="mt-2 text-3xl text-verified">$249</p>
-                  <p className="mt-4 text-muted">labelled line, 93% confidence</p>
-                </div>
-                <p className="mt-8 text-sm text-verified">The corrupt row is quarantined before it reaches the buyer.</p>
+                <p className="eyebrow">Independent witness</p>
+                <p className="signal-card__value text-verified">$249</p>
+                <p className="mt-3 text-[13px] text-muted">
+                  Read from the line <span className="text-ivory">Price: $249</span>, with no
+                  selectors involved.
+                </p>
+                <p className="mt-8 text-[13px] text-verified">
+                  The corrupt row is quarantined before it reaches anyone.
+                </p>
               </div>
             </article>
           </div>
         </div>
       </section>
 
-      <section id="principle" data-chapter="principle" className="bg-surface px-6 py-28 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <p data-reveal className="eyebrow mb-10">One rule changes everything</p>
-          <WordReveal text="When the signals agree, the world changed. When they disagree, the extractor broke." />
-        </div>
-      </section>
+      {/* The rule ------------------------------------------------------- */}
+      <section id="system" className="border-b border-surface-border bg-surface-raised">
+        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
+          <p className="eyebrow">✦ How it works</p>
+          <h2 className="section-heading mt-6 max-w-[20ch]">
+            Two sensors. One rule. Nothing published on a guess.
+          </h2>
 
-      <section className="border border-x-0 border-surface-border bg-surface-raised px-6 py-24 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div data-reveal className="max-w-[680px]">
-            <p className="eyebrow">Why teams need NOTICE</p>
-            <h2 className="mt-6 text-4xl font-medium tracking-tight md:text-5xl">
-              Reliability means knowing what not to repair.
-            </h2>
+          <div className="mt-14 grid gap-px overflow-hidden rounded-card border border-surface-border bg-surface-border md:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map((step, index) => (
+              <div
+                key={step.n}
+                className="bg-surface-raised p-7"
+                data-reveal
+                data-delay={String(Math.min(index, 3))}
+              >
+                <p className="font-display text-3xl text-muted">{step.n}</p>
+                <p className="mt-4 text-[13px] uppercase tracking-eyebrow">{step.title}</p>
+                <p className="mt-3 text-[13px] leading-6 text-muted">{step.copy}</p>
+              </div>
+            ))}
           </div>
-          <div className="mt-16 grid gap-6 md:grid-cols-3">
-            {benefits.map((benefit) => {
-              const Icon = benefit.icon;
-              return (
-              <article key={benefit.number} data-reveal="scale" data-delay={String(Number(benefit.number))} className="panel panel-hover p-8">
-                  <div className="flex items-center justify-between">
-                    <Icon size={28} weight="light" />
-                    <span className="font-mono text-xs text-muted">{benefit.number}</span>
-                  </div>
-                  <h3 className="mt-12 text-2xl font-medium">{benefit.title}</h3>
-                  <p className="mt-4 text-sm text-muted">{benefit.copy}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
-      <section id="system" data-chapter="system" className="border-b border-surface-border bg-surface-raised px-6 py-24 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr]">
-            <div data-reveal="left">
-              <p className="eyebrow">The system</p>
-              <h2 className="mt-6 text-4xl font-medium tracking-tight md:text-5xl">Two signals. One defensible decision.</h2>
-              <p className="mt-6 text-base text-muted">Scraper Studio does the extraction. Bright Data Markdown supplies evidence. NOTICE decides what the evidence means.</p>
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <div className="panel p-7" data-reveal="left">
+              <p className="eyebrow text-blocked">They disagree</p>
+              <p className="mt-4 font-display text-3xl">The scraper broke.</p>
+              <p className="mt-3 text-[13px] leading-6 text-muted">
+                Repair it, with the page that actually failed sent as evidence.
+              </p>
             </div>
-            <ol className="space-y-4">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <li key={step.label} data-reveal="right" data-delay={String(index + 1)} className="panel panel-hover grid gap-6 p-6 sm:grid-cols-[auto_1fr_auto] sm:items-center">
-                    <span className="grid h-12 w-12 place-items-center bg-coralSoft text-ember">
-                      <Icon size={24} weight="bold" />
-                    </span>
-                    <div>
-                      <h3 className="text-xl font-medium">{step.label}</h3>
-                      <p className="mt-2 text-sm text-muted">{step.copy}</p>
-                    </div>
-                    <span className="font-mono text-xs text-muted">0{String(index + 1)}</span>
-                  </li>
-                );
-              })}
-            </ol>
+            <div className="panel p-7" data-reveal="right">
+              <p className="eyebrow text-verified">They agree, and the value moved</p>
+              <p className="mt-4 font-display text-3xl">The world changed.</p>
+              <p className="mt-3 text-[13px] leading-6 text-muted">
+                Leave the collector alone. A monitor fires the identical alert for both of these.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="proof" data-chapter="proof" className="border border-x-0 border-surface-border bg-surface-raised px-6 py-24 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div data-reveal className="grid gap-8 lg:grid-cols-[1fr_0.72fr] lg:items-end">
-            <div>
-              <p className="eyebrow">Verification benchmark <span className="text-ivory">[04/05]</span></p>
-              <h2 className="mt-6 max-w-3xl text-4xl font-medium tracking-tight md:text-6xl">
-                The same scrape. A more defensible decision.
-              </h2>
+      {/* Deploy gate ---------------------------------------------------- */}
+      <section id="gate" className="border-b border-surface-border bg-ink py-24">
+        <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+          <p className="eyebrow text-white/50">✦ Reliability</p>
+          <h2 className="section-heading mt-6 max-w-[22ch] text-white">
+            Stop a deploy that depends on data nobody checked.
+          </h2>
+          <p className="mt-6 max-w-[62ch] text-[15px] leading-7 text-white/60">
+            Your pipeline already refuses to ship on a failing test. It will happily ship a price a
+            broken scraper invented last Tuesday, because nothing in it distinguishes data from
+            correct data.
+          </p>
+
+          <div className="mt-12 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-card border border-white/10 bg-white/[0.03] p-7">
+              <p className="eyebrow text-white/45">.github/workflows/deploy.yml</p>
+              <pre className="mt-5 overflow-x-auto text-[13px] leading-7 text-white/80">
+                {`- uses: prabhatkumar67/notice/actions/verify@main
+  with:
+    api-base: https://notice-api-0vfo.onrender.com
+    collector: c_msvk2zahnc2mizts6`}
+              </pre>
+              <div className="mt-6 rounded-card border border-white/10 bg-black/40 p-5 text-[13px] leading-7">
+                <p className="text-blocked">
+                  ::error::DriftMart headphones: unavailable (extractor_drift)
+                </p>
+                <p className="mt-1 text-white/50">1 of 2 sources are not verified.</p>
+                <p className="mt-3 text-white/35">Process exited with code 1</p>
+              </div>
             </div>
-            <p className="max-w-xl text-base leading-7 text-muted">
-              Four cases from the failure model behind NOTICE. Choose one to see how two Bright Data signals become a verdict a downstream system can trust.
+
+            <div className="grid gap-px overflow-hidden rounded-card border border-white/10 bg-white/10">
+              {[
+                ['01 Monitor', 'Every source is observed on a schedule, inside the account free tier.'],
+                ['02 Detect', 'A break is caught by two sensors disagreeing, not by an exception.'],
+                ['03 Repair', 'Self-Healing is driven with the failing page as evidence.'],
+                ['04 Verify', 'The candidate is replayed before promotion, and again afterwards.'],
+              ].map(([title, copy]) => (
+                <div key={title} className="bg-ink p-6">
+                  <p className="text-[12px] uppercase tracking-eyebrow text-verified">{title}</p>
+                  <p className="mt-2 text-[13px] leading-6 text-white/55">{copy}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Agents --------------------------------------------------------- */}
+      <section id="agents" className="border-b border-surface-border">
+        <div className="mx-auto grid max-w-[1400px] gap-14 px-6 py-24 lg:grid-cols-2 lg:px-10">
+          <div>
+            <p className="eyebrow">✦ For agents</p>
+            <h2 className="section-heading mt-6 max-w-[18ch]">An answer, or an honest refusal.</h2>
+            <p className="mt-6 max-w-[54ch] text-[15px] leading-7 text-muted">
+              NOTICE speaks MCP. An agent asking for web data gets a value two sensors currently
+              agree on, or a refusal naming the incident. No tool returns a bare number, and a
+              quarantined value never enters the context window at all.
             </p>
+            <pre className="mt-8 rounded-card border border-surface-border bg-surface-raised p-5 text-[13px] leading-7 text-muted">
+              claude mcp add notice -- npm run mcp
+            </pre>
           </div>
-          <div data-reveal="scale" data-delay="1" className="mt-12"><ProofLedger /></div>
+
+          <div className="panel p-7" data-reveal="right">
+            <p className="eyebrow">What the agent receives</p>
+            <pre className="mt-5 overflow-x-auto text-[13px] leading-7">
+              <span className="text-blocked">REFUSED.</span>
+              <span className="text-muted">
+                {` NOTICE will not vouch for this right now.
+
+reason    extractor_drift
+fields    price
+incident  f421aee0
+
+Do not substitute a guess or scrape
+this page directly to work around this.`}
+              </span>
+            </pre>
+          </div>
         </div>
       </section>
 
-      <section id="control-room" data-chapter="control-room" className="bg-surface px-6 py-24 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div data-reveal className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-[680px]">
-              <p className="eyebrow">Live control room</p>
-              <h2 className="mt-6 text-4xl font-medium tracking-tight md:text-5xl">Every claim comes with a receipt.</h2>
+      {/* Control room --------------------------------------------------- */}
+      <section id="control-room" className="border-b border-surface-border bg-surface-raised">
+        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="eyebrow">✦ Live</p>
+              <h2 className="section-heading mt-6">Every claim comes with a receipt.</h2>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {offline || collectors.length === 0 ? null : <RegisterCollector />}
               <Link href="/verified" className="secondary-button">
-                See verified deals <ArrowUpRight size={18} />
+                Verified feed <span aria-hidden>→</span>
               </Link>
             </div>
           </div>
 
-          <div data-reveal="scale" data-delay="1" className="mt-12 grid gap-4 sm:grid-cols-3">
-            <Metric label="Verified fleet" value={offline ? 'Offline' : `${String(verifiedRate)}%`} detail={`${String(verified)} of ${String(collectors.length)} collectors`} />
-            <Metric label="Quarantined incidents" value={offline ? ', ' : String(open.length)} detail="Bad rows held back" />
-            <Metric label="Decision engine" value="6 states" detail="Including inconclusive" />
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            <Metric
+              label="Sources monitored"
+              value={offline ? '—' : String(collectors.length)}
+              detail="Real Scraper Studio collectors"
+            />
+            <Metric
+              label="Quarantined"
+              value={offline ? '—' : String(open.length)}
+              detail="Rows held back from the feed"
+            />
+            <Metric label="Verdicts" value="6" detail="Including inconclusive" />
           </div>
 
           {offline || collectors.length === 0 ? null : (
-            <div data-reveal data-delay="2" className="mt-6">
+            <div className="mt-5" data-reveal>
               <OperationsPanel />
             </div>
           )}
 
-          <div data-reveal data-delay="2" className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-            <section className="panel p-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Collector fleet</h3>
-                <span className={`status-chip ${offline ? 'border-suspect/40 text-suspect' : 'border-verified/40 text-verified'}`}>
-                  <span className={`h-2 w-2 rounded-full ${offline ? 'bg-suspect' : 'bg-verified'}`} aria-hidden />
-                  {offline ? 'Backend offline' : 'Live'}
-                </span>
-              </div>
-              <div className="mt-6 space-y-3">
-                {offline ? (
-                  <EmptyState title="Control room is waiting" copy="Start the NOTICE backend to connect the live collector fleet. The product story remains available while data is offline." />
-                ) : collectors.length === 0 ? (
-                  <div className="space-y-4">
-                    <EmptyState title="No collectors yet" copy="Register a Scraper Studio collector to begin learning its verified baseline." />
+          <div className="panel mt-5 overflow-hidden" data-reveal>
+            <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
+              <p className="text-[13px] uppercase tracking-eyebrow">Collector fleet</p>
+              <span
+                className={`status-chip ${
+                  offline ? 'border-suspect/30 text-suspect' : 'border-verified/30 text-verified'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${offline ? 'bg-suspect' : 'bg-verified'}`}
+                  aria-hidden
+                />
+                {offline ? 'Backend offline' : 'Live'}
+              </span>
+            </div>
+
+            <div className="divide-y divide-surface-border">
+              {offline ? (
+                <Empty
+                  title="Control room is waiting"
+                  copy="Start the NOTICE backend to connect the fleet. Everything above stays readable while it is offline."
+                />
+              ) : collectors.length === 0 ? (
+                <div className="p-8">
+                  <Empty
+                    title="No collectors yet"
+                    copy="Register a Scraper Studio collector to begin learning its verified baseline."
+                  />
+                  <div className="mt-6 flex justify-center">
                     <RegisterCollector />
                   </div>
-                ) : (
-                  collectors.slice(0, 5).map((collector) => (
-                    <Link
-                      key={collector.id}
-                      href={`/collectors/${collector.id}`}
-                      className="block border border-surface-border bg-surface-soft p-4 transition-colors duration-500 hover:border-muted"
+                </div>
+              ) : (
+                collectors.slice(0, 6).map((collector) => (
+                  <Link
+                    key={collector.id}
+                    href={`/collectors/${collector.id}`}
+                    className="flex items-center justify-between gap-4 px-6 py-5 transition-colors hover:bg-surface"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px]">{collector.name}</p>
+                      <p className="mt-1 truncate text-[12px] text-muted">
+                        {collector.brightDataCollectorId} · {collector.targetDomain}
+                      </p>
+                    </div>
+                    <span
+                      className={`status-chip shrink-0 ${
+                        collector.openIncidents === 0
+                          ? 'border-verified/30 text-verified'
+                          : 'border-blocked/30 text-blocked'
+                      }`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">{collector.name}</p>
-                          <p className="mt-1 font-mono text-xs text-muted">{collector.targetDomain}</p>
-                          {/* Surfaced here because a collector with no accepted
-                              baseline has its statistical checks disabled, and
-                              that is the single most useful thing to know at a
-                              glance about a collector's health. */}
-                          <p className="mt-1 text-xs text-muted">
-                            {collector.baselineRuns === 0
-                              ? 'No baseline accepted yet'
-                              : `Baseline: ${String(collector.baselineRuns)} run${collector.baselineRuns === 1 ? '' : 's'}`}
-                          </p>
-                        </div>
-                        <span className={`status-chip ${collector.openIncidents === 0 ? 'border-verified/40 text-verified' : 'border-blocked/40 text-blocked'}`}>
-                          {collector.openIncidents === 0 ? 'Verified' : `${String(collector.openIncidents)} open`}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className="panel p-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Recent evidence</h3>
-                <span className="font-mono text-xs text-muted">Newest first</span>
-              </div>
-              <div className="mt-6 space-y-3">
-                {incidents.length === 0 ? (
-                  <EmptyState title="No incidents recorded" copy="When a contract trips, NOTICE will place the witness, decision, repair prompt, and gate result here." />
-                ) : (
-                  incidents.slice(0, 5).map((incident) => (
-                    <Link key={incident.id} href={`/incidents/${incident.id}`} className="panel-hover block border border-surface-border bg-surface-soft p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <StatusChip classification={incident.classification} />
-                        <time className="font-mono text-xs text-muted" dateTime={incident.createdAt}>
-                          {new Date(incident.createdAt).toISOString().replace('T', ' ').slice(0, 16)} UTC
-                        </time>
-                      </div>
-                      <p className="mt-3 truncate text-sm text-muted">{incident.witness?.url ?? 'No target URL recorded'}</p>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </section>
+                      {collector.openIncidents === 0
+                        ? 'verified'
+                        : `${String(collector.openIncidents)} open`}
+                    </span>
+                  </Link>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="border border-x-0 border-surface-border bg-ember px-6 py-24 text-surface-raised lg:px-8">
-        <div data-reveal className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div className="max-w-[680px]">
-            <p className="eyebrow !text-surface-raised/70">The consequence</p>
-            <h2 className="mt-6 text-4xl font-medium tracking-tight md:text-6xl">A cheap deposit should never become the best deal.</h2>
-            <p className="mt-6 text-lg text-surface-raised/80">See the same recommendation answered from raw collector rows and from the NOTICE verified feed.</p>
-          </div>
-          <Link href="/verified" className="secondary-button !border-surface-raised !bg-surface-raised !text-ivory">
-            Compare the decisions <ArrowUpRight size={18} />
-          </Link>
-        </div>
-      </section>
+      {/* FAQ ------------------------------------------------------------ */}
+      <section id="faq" className="border-b border-surface-border">
+        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
+          <p className="eyebrow">✦ Answers</p>
+          <h2 className="section-heading mt-6">FAQ</h2>
 
-      <section className="bg-surface px-6 py-24 lg:px-8">
-        <div data-reveal className="mx-auto max-w-5xl">
-          <div className="max-w-[680px]">
-            <p className="eyebrow">Questions worth asking</p>
-            <h2 className="mt-6 text-4xl font-medium tracking-tight md:text-5xl">Trust should survive scrutiny.</h2>
-          </div>
-          <div className="mt-12 divide-y divide-surface-border border border-x-0 border-surface-border">
-            {faqs.map((faq) => (
-              <details key={faq.question} className="group py-6">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
-                  {faq.question}
-                  <span className="text-muted transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-open:rotate-45" aria-hidden>+</span>
+          <div className="mt-12 flex flex-col gap-4">
+            {FAQS.map((faq, index) => (
+              <details key={faq.q} className="panel px-6 py-5" data-reveal>
+                <summary className="flex cursor-pointer list-none items-start gap-5">
+                  <span className="font-display text-2xl text-muted">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="flex-1 font-display text-xl leading-snug">{faq.q}</span>
+                  <span className="eyebrow shrink-0 rounded-full border border-surface-border px-2.5 py-1">
+                    {faq.tag}
+                  </span>
                 </summary>
-                <p className="mt-4 max-w-3xl text-sm text-muted">{faq.answer}</p>
+                <p className="mt-4 max-w-[80ch] pl-12 text-[13px] leading-7 text-muted">{faq.a}</p>
               </details>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="border-t border-surface-border bg-surface-raised px-6 py-24 lg:px-8">
-        <div data-reveal="scale" className="mx-auto flex max-w-5xl flex-col items-center text-center">
-          <CheckCircle size={32} weight="fill" className="text-verified" />
-          <h2 className="mt-8 max-w-[680px] text-4xl font-medium tracking-tight md:text-6xl">Do not automate trust. Prove it.</h2>
-          <p className="mt-6 max-w-xl text-base text-muted">Read only by default. No repair ships without incident evidence and regression proof.</p>
-          <a href="#control-room" className="primary-button mt-8">Open live control room <ArrowUpRight size={18} /></a>
+      {/* Close ---------------------------------------------------------- */}
+      <section className="border-b border-surface-border">
+        <div className="mx-auto max-w-[1400px] px-6 py-28 text-center lg:px-10">
+          <h2 className="font-display text-5xl leading-[1.05] sm:text-6xl">
+            Both times the number changed.
+            <br />
+            Only one was a broken scraper.
+          </h2>
+          <p className="mx-auto mt-6 max-w-[52ch] text-[15px] leading-7 text-muted">
+            Telling those two apart is the whole project. Everything else is evidence.
+          </p>
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <Link href="#control-room" className="accent-button">
+              Open the control room <span aria-hidden>→</span>
+            </Link>
+            <a href="https://github.com/prabhatkumar67/notice" className="secondary-button">
+              Read the source
+            </a>
+          </div>
         </div>
       </section>
+    </>
+  );
+}
+
+/**
+ * The fleet, sliding.
+ *
+ * Children are duplicated once so the loop lands on an identical frame and
+ * never visibly jumps. Falls back to the Bright Data surfaces in use when
+ * nothing is registered, which keeps the band meaningful on a cold deployment
+ * rather than empty.
+ */
+function FleetMarquee({
+  collectors,
+  offline,
+}: {
+  collectors: CollectorSummary[];
+  offline: boolean;
+}) {
+  const items =
+    !offline && collectors.length > 0
+      ? collectors.map((collector) => ({
+          label: collector.targetDomain,
+          detail: collector.brightDataCollectorId,
+          ok: collector.openIncidents === 0,
+        }))
+      : [
+          { label: 'Scraper Studio', detail: 'collectors', ok: true },
+          { label: 'Web Unlocker', detail: 'markdown witness', ok: true },
+          { label: 'Web Unlocker', detail: 'screenshot evidence', ok: true },
+          { label: 'Self-Healing', detail: 'refactor_template', ok: true },
+          { label: 'Geo targeting', detail: 'comparable sensors', ok: true },
+          { label: 'MCP', detail: 'verified data for agents', ok: true },
+        ];
+
+  const doubled = [...items, ...items];
+
+  return (
+    <div className="border-t border-surface-border py-5">
+      <div className="marquee">
+        <div className="marquee__track">
+          {doubled.map((item, index) => (
+            <div
+              key={`${item.label}-${String(index)}`}
+              className="flex shrink-0 items-center gap-3 rounded-card border border-surface-border bg-surface-raised px-5 py-3"
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${item.ok ? 'bg-verified' : 'bg-blocked'}`}
+                aria-hidden
+              />
+              <span className="text-[13px]">{item.label}</span>
+              <span className="text-[12px] text-muted">{item.detail}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
-function Proof({ label, value }: { label: string; value: string }) {
-  return <div className="pr-4"><p className="font-mono text-xs font-semibold text-ivory">{value}</p><p className="mt-1 text-xs text-muted">{label}</p></div>;
-}
-
 function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <article className="panel p-6"><p className="eyebrow">{label}</p><p className="mt-8 font-mono text-3xl">{value}</p><p className="mt-2 text-xs text-muted">{detail}</p></article>;
+  return (
+    <div className="panel p-7">
+      <p className="eyebrow">{label}</p>
+      <p className="mt-4 font-display text-5xl">{value}</p>
+      <p className="mt-2 text-[12px] text-muted">{detail}</p>
+    </div>
+  );
 }
 
-function EmptyState({ title, copy }: { title: string; copy: string }) {
-  return <div className="border border-surface-border bg-surface-soft p-6"><p className="text-sm font-medium">{title}</p><p className="mt-2 text-xs text-muted">{copy}</p></div>;
+function Empty({ title, copy }: { title: string; copy: string }) {
+  return (
+    <div className="px-6 py-10 text-center">
+      <p className="text-[13px]">{title}</p>
+      <p className="mx-auto mt-2 max-w-[46ch] text-[12px] leading-6 text-muted">{copy}</p>
+    </div>
+  );
 }
