@@ -12,10 +12,10 @@
  * tree to run it.
  *
  * Usage:
- *   npm run mcp --workspace backend
+ *   npm run mcp
  *
  * Claude Code:
- *   claude mcp add notice -- npm run mcp --workspace backend
+ *   claude mcp add notice -- npm run mcp
  *
  * Environment:
  *   NOTICE_API_BASE   defaults to the deployed API

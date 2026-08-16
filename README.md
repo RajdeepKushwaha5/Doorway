@@ -64,6 +64,10 @@ proposed repair before it reaches production.
 
 NOTICE is the part that decides.
 
+Put another way: getting a collector working is an afternoon. Keeping it right
+for a year is the actual job, and today that needs a person who happens to
+notice. This automates that person.
+
 ---
 
 ## How it works
@@ -104,7 +108,7 @@ The two sensors are both Bright Data, used against each other. The collector is 
 ## Use it from an AI agent
 
 ```bash
-claude mcp add notice -- npm run mcp --workspace backend
+claude mcp add notice -- npm run mcp
 ```
 
 NOTICE speaks MCP, so an agent can ask it for web data directly. Bright Data's

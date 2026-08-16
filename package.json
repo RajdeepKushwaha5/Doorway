@@ -19,7 +19,12 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
-    "phase0": "npm run phase0 --workspace backend"
+    "phase0": "npm run phase0 --workspace backend",
+    "live": "npm run live --workspace backend --",
+    "prove": "npm run prove --workspace backend",
+    "mcp": "npm run mcp --workspace backend",
+    "notice": "npm run notice --workspace backend --",
+    "seed": "npm run seed --workspace backend"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

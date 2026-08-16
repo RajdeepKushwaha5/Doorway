@@ -18,7 +18,7 @@
  *      NOTICE would decide
  *
  * Usage:
- *   npm run prove --workspace backend
+ *   npm run prove
  *
  * Needs BRIGHTDATA_API_KEY, BRIGHTDATA_UNLOCKER_ZONE and DRIFTMART_ADMIN_TOKEN.
  */
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
     // poisons the next run is worse than no demo.
     await setMode('baseline').catch(() => {
       out('');
-      out('Could not reset the fixture. Run: npm run live --workspace backend -- mode baseline');
+      out('Could not reset the fixture. Run: npm run live -- mode baseline');
     });
   }
 

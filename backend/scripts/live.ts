@@ -9,7 +9,7 @@
  * other.
  *
  * Usage:
- *   npm run live --workspace backend -- <command>
+ *   npm run live -- <command>
  *
  *   status                     the fleet, its contracts and open incidents
  *   run <collector>            observe once and classify
@@ -226,7 +226,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     out(`registered ${id}`);
     out(`notice id  ${created.id}`);
     out('');
-    out('Next:  npm run live --workspace backend -- run ' + id);
+    out('Next:  npm run live -- run ' + id);
   },
 
   async modes() {
