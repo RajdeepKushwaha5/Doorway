@@ -44,21 +44,49 @@ async function api(path) {
   return response.json();
 }
 
+/**
+ * A failure this step should report but never enforce.
+ *
+ * `fail-on-unverified: false` means tell me, do not block. Anything that
+ * represents the state of the data, including there being none yet, belongs in
+ * that bargain.
+ */
+class Soft extends Error {}
+
+/**
+ * A failure that must always stop the build, whatever the flags say.
+ *
+ * Reserved for a step that cannot do its job at all. Passing silently in that
+ * situation is worse than failing, because a gate that always says yes is
+ * indistinguishable from no gate and nobody finds out for months.
+ */
+class Fatal extends Error {}
+
 async function collectorsToCheck() {
   const all = await api('/api/collectors');
-  if (all.length === 0) {
-    throw new Error('NOTICE has no registered collectors, so there is nothing to verify.');
+
+  if (COLLECTOR === '') {
+    if (all.length === 0) {
+      // Nothing registered is a state, not a misconfiguration. On a host with
+      // no persistent disk it is also what a restart looks like.
+      throw new Soft('NOTICE has no registered collectors, so there is nothing to verify.');
+    }
+    return all;
   }
-  if (COLLECTOR === '') return all;
 
   const match = all.find(
     (candidate) => candidate.id === COLLECTOR || candidate.brightDataCollectorId === COLLECTOR,
   );
   if (match === undefined) {
-    throw new Error(
-      `No collector matching "${COLLECTOR}". Known: ${all
-        .map((candidate) => candidate.brightDataCollectorId)
-        .join(', ')}`,
+    // A named collector that does not exist is always fatal, even in
+    // report-only mode. A typo here would otherwise verify nothing, pass every
+    // time, and look exactly like success.
+    throw new Fatal(
+      all.length === 0
+        ? `Asked to verify "${COLLECTOR}" but NOTICE has no collectors registered.`
+        : `No collector matching "${COLLECTOR}". Known: ${all
+            .map((candidate) => candidate.brightDataCollectorId)
+            .join(', ')}`,
     );
   }
   return [match];
@@ -66,8 +94,9 @@ async function collectorsToCheck() {
 
 async function main() {
   if (API === '') {
-    log('::error::api-base is required, for example https://notice-api.onrender.com');
-    process.exit(1);
+    // Always fatal: without a base URL this step can never do anything, and a
+    // silent pass would hide that forever.
+    throw new Fatal('api-base is required, for example https://notice-api.onrender.com');
   }
 
   const collectors = await collectorsToCheck();
@@ -136,6 +165,20 @@ async function main() {
 }
 
 main().catch((error) => {
-  log(`::error::${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (error instanceof Fatal) {
+    log(`::error::${message}`);
+    process.exit(1);
+  }
+
+  // Everything else describes the data rather than the setup, so it honours
+  // the caller's choice about whether this blocks.
+  if (SHOULD_FAIL) {
+    log(`::error::${message}`);
+    process.exit(1);
+  }
+
+  log(`::warning::${message}`);
+  log('fail-on-unverified is false, so this is reported and not enforced.');
 });
