@@ -212,6 +212,7 @@ async function main(): Promise<void> {
     affectedFields: classification.affectedFields,
     evidence: classification.evidence,
     witness: observation,
+    screenshotId: null,
     repairPrompt: prompt.text,
     history,
     gateResults: [

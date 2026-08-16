@@ -2,11 +2,12 @@ import { createServer } from 'node:http';
 import {
   BrightDataClient,
   createWitnessFetcher,
+  fetchWitnessScreenshot,
   scrapeMarkdown,
 } from './brightdata/index.js';
 import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
-import { FileStore } from './store/index.js';
+import { FileStore, ScreenshotStore } from './store/index.js';
 
 /**
  * NOTICE API entry point.
@@ -26,6 +27,7 @@ function main(): void {
 
   const port = Number(process.env['PORT'] ?? 4000);
   const store = new FileStore(process.env['NOTICE_DATA_FILE']);
+  const screenshots = new ScreenshotStore(process.env['NOTICE_DATA_FILE']);
   const client = new BrightDataClient({
     apiKey,
     ...(process.env['BRIGHTDATA_API_BASE'] === undefined
@@ -57,7 +59,34 @@ function main(): void {
     );
   }
 
-  const router = buildRouter({ store, client, fetchMarkdown });
+  // Capture a picture of the page when an incident opens, if a zone exists.
+  // Without one there is nothing to capture through, and the pipeline simply
+  // records no image rather than failing.
+  const zone = process.env['BRIGHTDATA_UNLOCKER_ZONE'];
+  const captureScreenshot =
+    zone === undefined || zone.trim() === ''
+      ? undefined
+      : async (target: string): Promise<string> => {
+          const shot = await fetchWitnessScreenshot(
+            {
+              apiKey,
+              zone: zone.trim(),
+              ...(process.env['BRIGHTDATA_UNLOCKER_COUNTRY'] === undefined
+                ? {}
+                : { country: process.env['BRIGHTDATA_UNLOCKER_COUNTRY'] }),
+            },
+            target,
+          );
+          return screenshots.save(shot.png);
+        };
+
+  const router = buildRouter({
+    store,
+    client,
+    fetchMarkdown,
+    screenshots,
+    ...(captureScreenshot === undefined ? {} : { captureScreenshot }),
+  });
   const server = createServer((request, response) => {
     void router.handle(request, response);
   });

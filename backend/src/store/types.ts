@@ -57,6 +57,18 @@ export interface IncidentRecord {
   witness: WitnessObservation | null;
   /** Prompt sent to Self-Healing, when one was generated. */
   repairPrompt: string | null;
+  /**
+   * Id of a rendered capture of the page at the moment the incident opened.
+   *
+   * The markdown witness records what the page said; this records what it
+   * showed. An operator deciding whether to approve a repair is really asking
+   * "what was actually on the page", and two numbers in a table cannot answer
+   * that as convincingly as the page itself.
+   *
+   * Null when capture was not attempted or failed. Never blocks an incident:
+   * an illustration is worth having and never worth failing detection for.
+   */
+  screenshotId: string | null;
   history: TransitionRecord[];
   gateResults: GateCaseResult[];
   quarantined: boolean;

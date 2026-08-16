@@ -1,4 +1,5 @@
 export { FileStore } from './file-store.js';
+export { ScreenshotStore } from './screenshots.js';
 
 export type {
   AuditEvent,

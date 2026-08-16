@@ -23,6 +23,13 @@ export interface ObserveDeps {
   fetchMarkdown?: (
     url: string,
   ) => Promise<{ markdown: string; fetchedAt: string; country?: string }>;
+  /**
+   * Capture a rendered image of the page and return an id for it.
+   *
+   * Optional on purpose. Every test runs without it, and a deployment without
+   * an Unlocker zone simply records no picture rather than failing.
+   */
+  captureScreenshot?: (url: string) => Promise<string>;
   now?: () => Date;
 }
 
@@ -158,6 +165,9 @@ export async function observeOnce(
         'without a second sensor there is no way to tell a broken extractor from a changed page, so this run is quarantined rather than judged',
       ],
       witness: null,
+      // No picture either: if the witness could not read the page, a capture
+      // of it is unlikely to succeed and would delay a quarantine decision.
+      screenshotId: null,
       repairPrompt: null,
       history: [
         transition('observed', 'validating', { actor: 'system', reason: 'collector run ingested' }),
@@ -252,6 +262,19 @@ export async function observeOnce(
       }).text
     : null;
 
+  // Illustrate the incident, but never let the illustration decide whether
+  // there is one. Capture costs a request and roughly 200KB, so it happens
+  // only for verdicts a human will have to rule on, and a failure here is
+  // swallowed: an incident without a picture is still an incident.
+  let screenshotId: string | null = null;
+  if (deps.captureScreenshot !== undefined && classification.verdict !== 'healthy') {
+    try {
+      screenshotId = await deps.captureScreenshot(url);
+    } catch {
+      screenshotId = null;
+    }
+  }
+
   const incident: IncidentRecord = {
     id: randomUUID(),
     collectorId: collector.id,
@@ -261,6 +284,7 @@ export async function observeOnce(
     affectedFields: classification.affectedFields,
     evidence: classification.evidence,
     witness: observation,
+    screenshotId,
     repairPrompt,
     history,
     gateResults: [],

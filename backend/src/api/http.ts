@@ -149,6 +149,16 @@ export class Router {
         body,
         request,
       });
+      if (isBinaryResponse(result)) {
+        response.writeHead(200, {
+          'content-type': result.contentType,
+          'content-length': String(result.body.byteLength),
+          ...(result.cacheControl === undefined ? {} : { 'cache-control': result.cacheControl }),
+        });
+        response.end(Buffer.from(result.body));
+        return;
+      }
+
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify(result ?? null));
     } catch (caught) {
@@ -160,6 +170,43 @@ export class Router {
       response.end(JSON.stringify({ error: message }));
     }
   };
+}
+
+/**
+ * A handler result that is bytes rather than JSON.
+ *
+ * Screenshots are the only current use. Returning a tagged object keeps every
+ * handler a plain function of request to value, rather than handing some of
+ * them the raw ServerResponse and hoping each one remembers to set a status,
+ * a content type and a length.
+ */
+export interface BinaryResponse {
+  readonly kind: 'binary';
+  readonly contentType: string;
+  readonly body: Uint8Array;
+  readonly cacheControl?: string;
+}
+
+export function binary(
+  contentType: string,
+  body: Uint8Array,
+  cacheControl?: string,
+): BinaryResponse {
+  return {
+    kind: 'binary',
+    contentType,
+    body,
+    ...(cacheControl === undefined ? {} : { cacheControl }),
+  };
+}
+
+function isBinaryResponse(value: unknown): value is BinaryResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { kind?: unknown }).kind === 'binary' &&
+    (value as { body?: unknown }).body instanceof Uint8Array
+  );
 }
 
 const MAX_BODY_BYTES = 1_000_000;

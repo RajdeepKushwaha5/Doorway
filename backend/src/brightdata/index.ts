@@ -50,6 +50,7 @@ export {
 export {
   createWitnessFetcher,
   fetchWitnessMarkdown,
+  fetchWitnessScreenshot,
   type UnlockerConfig,
   type WitnessFetch,
 } from './unlocker.js';

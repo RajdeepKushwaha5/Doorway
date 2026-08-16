@@ -94,6 +94,8 @@ export interface Incident {
   affectedFields: string[];
   evidence: string[];
   witness: WitnessObservation | null;
+  /** Id of a rendered capture of the page when the incident opened, if any. */
+  screenshotId: string | null;
   repairPrompt: string | null;
   history: TransitionRecord[];
   gateResults: GateCaseResult[];

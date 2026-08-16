@@ -189,6 +189,55 @@ describe('NOTICE end-to-end', () => {
     expect(JSON.stringify(feed.data)).not.toContain('"value":25,"currency":"USD"');
   });
 
+  /**
+   * Capture costs a Bright Data request and roughly 200KB per incident, so
+   * when it happens is a spending decision as much as a product one.
+   */
+  it('captures a picture of the page only when an incident is opened', async () => {
+    const captured: string[] = [];
+    const capture = async (url: string): Promise<string> => {
+      captured.push(url);
+      return 'shot-1';
+    };
+
+    fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+    const healthy = await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+      captureScreenshot: capture,
+    });
+    expect(healthy.incident).toBeNull();
+    expect(captured).toEqual([]);
+
+    fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
+    const drifted = await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+      captureScreenshot: capture,
+    });
+    expect(captured).toEqual([INCIDENT_URL]);
+    expect(drifted.incident?.screenshotId).toBe('shot-1');
+  });
+
+  it('still records the incident when the capture fails', async () => {
+    // An illustration is worth having and never worth failing detection for.
+    fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
+    const result = await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+      captureScreenshot: async () => {
+        throw new Error('unlocker refused');
+      },
+    });
+
+    expect(result.incident).not.toBeNull();
+    expect(result.incident?.classification).toBe('extractor_drift');
+    expect(result.incident?.screenshotId).toBeNull();
+  });
+
   it('sends the incident URL to Self-Healing, which the CLI would have dropped', async () => {
     fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
     const observed = await observeOnce(collector, INCIDENT_URL, {

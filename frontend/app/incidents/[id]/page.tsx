@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, Wrench } from '@phosphor-icons/react/dist/ssr';
 import { EvidenceTimeline, WitnessComparison } from '@/components/EvidenceTimeline';
+import { apiBase } from '@/lib/env';
 import { GateMatrix } from '@/components/GateMatrix';
 import { IncidentActions } from '@/components/IncidentActions';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
@@ -72,6 +73,34 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         <div className="evidence-section__heading"><p>02</p><div><p className="eyebrow">Second signal</p><h2>Independent Bright Data witness</h2></div></div>
         <WitnessComparison incident={incident} />
       </section>
+
+      {incident.screenshotId !== null ? (
+        <section data-reveal data-delay="2" className="evidence-section">
+          <div className="evidence-section__heading">
+            <p>03</p>
+            <div>
+              <p className="eyebrow">What the page showed</p>
+              <h2>The page at the moment it broke</h2>
+            </div>
+          </div>
+          <p className="mb-6 max-w-2xl text-sm text-muted">
+            Captured through Bright Data Web Unlocker when this incident opened. The witness above
+            records what the page said; this records what it showed. Before approving a repair, the
+            question is what was actually on the page, and two numbers in a table answer that less
+            well than the page itself.
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a PNG of
+              arbitrary size served from the API, not a bundled asset, so the
+              image optimizer has nothing to optimize and would only add a
+              failure mode between the reader and their evidence. */}
+          <img
+            src={`${apiBase()}/api/incidents/${incident.id}/screenshot`}
+            alt="Rendered capture of the page when the incident opened"
+            className="w-full border border-surface-border bg-surface-soft"
+            loading="lazy"
+          />
+        </section>
+      ) : null}
 
       {incident.repairPrompt !== null ? (
         <section data-reveal data-delay="3" className="evidence-section">

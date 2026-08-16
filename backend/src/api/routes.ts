@@ -10,10 +10,10 @@ import {
   observeOnce,
   promoteRepair,
 } from '../pipeline/index.js';
-import type { CollectorRecord, JobRecord, Store } from '../store/index.js';
+import type { CollectorRecord, JobRecord, ScreenshotStore, Store } from '../store/index.js';
 import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
-import { assertAdmin, HttpError, Router } from './http.js';
+import { assertAdmin, binary, HttpError, Router } from './http.js';
 
 /**
  * Ceiling on a candidate replay.
@@ -41,6 +41,10 @@ const registerCollectorSchema = z.object({
 export interface ApiDeps {
   store: Store;
   client: BrightDataClient;
+  /** Reads rendered page captures. Absent means the feature is simply off. */
+  screenshots?: ScreenshotStore;
+  /** Captures a page and returns its id. Absent means no capture is attempted. */
+  captureScreenshot?: (url: string) => Promise<string>;
   /** Independent witness acquisition. Injected so deploys need no CLI. */
   fetchMarkdown?: (url: string) => Promise<{ markdown: string; fetchedAt: string }>;
 }
@@ -49,7 +53,10 @@ export interface ApiDeps {
 export function buildRouter(deps: ApiDeps): Router {
   const router = new Router();
   const { store, client } = deps;
-  const witnessDeps = deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown };
+  const witnessDeps = {
+    ...(deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown }),
+    ...(deps.captureScreenshot === undefined ? {} : { captureScreenshot: deps.captureScreenshot }),
+  };
 
   router.get('/api/health', async () => ({ status: 'ok', at: new Date().toISOString() }));
 
@@ -335,6 +342,35 @@ export function buildRouter(deps: ApiDeps): Router {
    * on the verified feed. When the two disagree, the difference is the whole
    * point of the project expressed as a decision rather than a status.
    */
+  /**
+   * The rendered page as it looked when the incident opened.
+   *
+   * Unauthenticated on purpose. It is an image of a page the collector was
+   * already fetching publicly, it carries no account data, and requiring a
+   * bearer token would mean the dashboard could not put it in an `img` tag
+   * without proxying it. The id is a random uuid, so it cannot be guessed or
+   * enumerated from an incident id.
+   */
+  router.get('/api/incidents/:id/screenshot', async ({ params }) => {
+    const incident = await store.getIncident(params['id'] ?? '');
+    if (incident === null) throw new HttpError(404, 'incident not found');
+    if (incident.screenshotId === null) {
+      throw new HttpError(404, 'no capture was recorded for this incident');
+    }
+
+    const png = await deps.screenshots?.read(incident.screenshotId) ?? null;
+    if (png === null) {
+      // Expected on a host without a persistent disk: the record outlives the
+      // file after a redeploy. Say so plainly rather than returning a broken
+      // image, which reads as a bug in the dashboard.
+      throw new HttpError(410, 'the capture is no longer stored on this instance');
+    }
+
+    // Immutable: a capture is a fact about a moment, and its id never points
+    // at different bytes.
+    return binary('image/png', png, 'public, max-age=31536000, immutable');
+  });
+
   router.get('/api/consumer/best-deal', async () => compareBestDeal(store));
 
   /** What a downstream consumer sees, including quarantine and staleness. */

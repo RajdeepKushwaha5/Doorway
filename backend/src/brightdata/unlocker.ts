@@ -198,6 +198,99 @@ export async function fetchWitnessMarkdown(
   };
 }
 
+export interface WitnessScreenshot {
+  /** PNG bytes, exactly as Bright Data rendered them. */
+  png: Uint8Array;
+  capturedAt: string;
+  url: string;
+}
+
+/**
+ * Capture what the page looked like, as a picture.
+ *
+ * The markdown witness proves what the page said. This proves what it showed.
+ * They answer different questions, and the second one is the one an operator
+ * actually asks before approving a repair: not "what did the extractor claim"
+ * but "what was on the page". A disagreement between two numbers is an
+ * argument; a disagreement next to an image of the page is a fact.
+ *
+ * Deliberately not fetched on every run. A screenshot costs a request and
+ * roughly 200KB, and a healthy observation has nothing to illustrate, so the
+ * pipeline captures one only when an incident is being opened.
+ *
+ * Uses a direct fetch rather than the shared request helper, because that
+ * helper reads every response as text and PNG bytes do not survive the trip.
+ */
+export async function fetchWitnessScreenshot(
+  config: UnlockerConfig,
+  url: string,
+  signal?: AbortSignal,
+): Promise<WitnessScreenshot> {
+  assertPublicHttpUrl(url);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), config.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  const onCallerAbort = (): void => controller.abort();
+  signal?.addEventListener('abort', onCallerAbort, { once: true });
+
+  try {
+    const response = await fetch(`${config.baseUrl ?? 'https://api.brightdata.com'}/request`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${config.apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        zone: config.zone,
+        url,
+        format: 'raw',
+        data_format: 'screenshot',
+        ...(config.country === undefined || config.country.trim() === ''
+          ? {}
+          : { country: config.country.trim().toLowerCase() }),
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new BrightDataRequestError(
+        `screenshot request failed with HTTP ${String(response.status)}`,
+        response.status,
+        '',
+      );
+    }
+
+    // Same trap as the markdown path: the outer 200 only means the request
+    // reached the unlocker.
+    assertUnlockSucceeded(response.headers);
+
+    const png = new Uint8Array(await response.arrayBuffer());
+
+    // The response is labelled `Content-Type: application/json` even though the
+    // body is a PNG, so the header cannot be used to tell success from an error
+    // payload. Check the magic number instead: an error would arrive as JSON
+    // text and fail this.
+    const isPng =
+      png.length > 8 &&
+      png[0] === 0x89 &&
+      png[1] === 0x50 &&
+      png[2] === 0x4e &&
+      png[3] === 0x47;
+    if (!isPng) {
+      throw new BrightDataRequestError(
+        'Web Unlocker returned something that is not a PNG for the screenshot',
+        502,
+        '',
+      );
+    }
+
+    return { png, capturedAt: new Date().toISOString(), url };
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onCallerAbort);
+  }
+}
+
 /**
  * Build a witness fetcher for the pipeline.
  *
