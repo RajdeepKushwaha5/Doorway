@@ -96,3 +96,54 @@ describe('the witness refuses anything that is not a page', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+describe('retrying an unlock failure', () => {
+  it('retries a block, because each attempt uses a different peer', async () => {
+    // Bright Data's reference: "Retrying is worth doing for errors caused by
+    // the peer or by the unlock attempt." A transient block that failed
+    // permanently turned a readable page into a quarantined incident, which is
+    // a false alarm dressed up as caution.
+    let attempts = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        attempts += 1;
+        return attempts === 1
+          ? respond('blocked', { 'x-brd-error-code': 'reject_block', 'x-brd-status-code': '502' })
+          : respond('# Nova Headphones\n\nPrice: $249', { 'x-brd-status-code': '200' });
+      }),
+    );
+
+    const result = await fetchWitnessMarkdown(
+      { apiKey: 'k', zone: 'z', retryPolicy: { maxRetries: 2, baseDelayMs: 1, maxDelayMs: 2 } },
+      URL_UNDER_TEST,
+    );
+
+    expect(attempts).toBe(2);
+    expect(result.markdown).toContain('$249');
+  });
+
+  it('does not retry a certificate error, which returns the same answer every time', async () => {
+    let attempts = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        attempts += 1;
+        return respond('bad cert', {
+          'x-brd-error-code': 'net_err_cert_date_invalid',
+          'x-brd-status-code': '502',
+        });
+      }),
+    );
+
+    await expect(
+      fetchWitnessMarkdown(
+        { apiKey: 'k', zone: 'z', retryPolicy: { maxRetries: 3, baseDelayMs: 1, maxDelayMs: 2 } },
+        URL_UNDER_TEST,
+      ),
+    ).rejects.toThrow(/net_err_cert_date_invalid/);
+
+    // Spending three more requests to be told the same thing helps nobody.
+    expect(attempts).toBe(1);
+  });
+});

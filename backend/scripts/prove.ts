@@ -3,8 +3,8 @@
  *
  * NOTICE rests on one idea: two Bright Data sensors read the same page, and
  * their disagreement tells you the collector broke rather than the world
- * changing. That is easy to assert and easy to doubt. This script demonstrates
- * it against the deployed fixture, with no scripted client and no fixtures on
+ * changing. That is easy to assert and easy to doubt. This demonstrates it
+ * against the deployed fixture, with no scripted client and no fixtures on
  * disk, so a reader can watch it happen instead of trusting a test count.
  *
  * For each mode it:
@@ -23,6 +23,7 @@
  * Needs BRIGHTDATA_API_KEY, BRIGHTDATA_UNLOCKER_ZONE and DRIFTMART_ADMIN_TOKEN.
  */
 import { extractField } from '../src/witness/extract.js';
+import { fetchWitnessMarkdown } from '../src/brightdata/unlocker.js';
 import { compareValues } from '../src/shared/normalize.js';
 import type { WitnessFieldSpec } from '../src/witness/spec.js';
 
@@ -65,6 +66,9 @@ const SCENARIOS: readonly Scenario[] = [
   },
 ];
 
+const out = (line: string): void => void process.stdout.write(`${line}\n`);
+const RULE = '='.repeat(64);
+
 async function setMode(mode: string): Promise<void> {
   const token = process.env['DRIFTMART_ADMIN_TOKEN'];
   if (token === undefined || token.trim() === '') {
@@ -100,68 +104,108 @@ async function collectorReading(): Promise<string | null> {
   return />([^<]+)</.exec(element)?.[1]?.trim() ?? null;
 }
 
-/** Sensor 2. The independent witness, with no selectors to drift. */
+/**
+ * Sensor 2. The independent witness, with no selectors to drift.
+ *
+ * Uses the production fetcher rather than its own request. This began as a
+ * bare fetch and so skipped the retry the real path has, and a transient 502
+ * from Bright Data ended the whole demonstration on its second case. Calling
+ * the same function the pipeline calls makes this both more robust and a
+ * better proof: what a viewer watches is the code that actually runs.
+ */
 async function witnessReading(): Promise<{ value: unknown; line: string } | null> {
-  const key = process.env['BRIGHTDATA_API_KEY'];
+  const apiKey = process.env['BRIGHTDATA_API_KEY'];
   const zone = process.env['BRIGHTDATA_UNLOCKER_ZONE'];
-  if (key === undefined || zone === undefined) {
+  if (apiKey === undefined || zone === undefined) {
     throw new Error('BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE are both required.');
   }
 
-  const response = await fetch('https://api.brightdata.com/request', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-    body: JSON.stringify({ zone, url: PAGE, format: 'raw', data_format: 'markdown' }),
-  });
-  if (!response.ok) throw new Error(`unlocker failed: ${String(response.status)}`);
+  const { markdown } = await fetchWitnessMarkdown(
+    {
+      apiKey,
+      zone,
+      ...(process.env['BRIGHTDATA_UNLOCKER_COUNTRY'] === undefined
+        ? {}
+        : { country: process.env['BRIGHTDATA_UNLOCKER_COUNTRY'] }),
+    },
+    PAGE,
+  );
 
-  const found = extractField(await response.text(), PRICE);
+  const found = extractField(markdown, PRICE);
   return found === null ? null : { value: found.value, line: found.evidence.line };
 }
 
+async function runScenario(scenario: Scenario): Promise<void> {
+  await setMode(scenario.mode);
+
+  const collector = await collectorReading();
+  const witness = await witnessReading();
+
+  const comparison =
+    witness === null
+      ? { kind: 'incomparable' as const, note: 'the witness could not read a price' }
+      : compareValues(collector, witness.value);
+
+  // A disagreement means the collector broke. Agreement means the page is
+  // telling the truth, and whether that truth moved is a separate question
+  // the contract answers, not the witness.
+  const verdict =
+    comparison.kind === 'disagree'
+      ? 'EXTRACTOR DRIFT, heal the collector'
+      : comparison.kind === 'incomparable'
+        ? 'INCONCLUSIVE, quarantine and ask a human'
+        : scenario.semanticChange
+          ? 'GENUINE SOURCE CHANGE, do not heal'
+          : 'HEALTHY, publish';
+
+  out(`collector   ${collector ?? 'nothing'}   (bound to .selling-price)`);
+  out(
+    `witness     ${witness === null ? 'not found' : JSON.stringify(witness.value)}   (no selectors)`,
+  );
+  if (witness !== null) out(`evidence    "${witness.line}"`);
+  out(`comparison  ${comparison.kind}: ${comparison.note}`);
+  out(`verdict     ${verdict}`);
+  out(`expected    ${scenario.expect}`);
+}
+
 async function main(): Promise<void> {
-  process.stdout.write(`Fixture: ${PAGE}\n`);
-  process.stdout.write('Two Bright Data sensors, same page, read against each other.\n');
+  out(`Fixture: ${PAGE}`);
+  out('Two Bright Data sensors, same page, read against each other.');
 
-  for (const scenario of SCENARIOS) {
-    await setMode(scenario.mode);
+  let failures = 0;
 
-    const collector = await collectorReading();
-    const witness = await witnessReading();
+  try {
+    for (const scenario of SCENARIOS) {
+      out('');
+      out(RULE);
+      out(`mode        ${scenario.mode}`);
 
-    const comparison =
-      witness === null
-        ? { kind: 'incomparable' as const, note: 'the witness could not read a price' }
-        : compareValues(collector, witness.value);
-
-    // A disagreement means the collector broke. Agreement means the page is
-    // telling the truth, and whether that truth moved is a separate question
-    // the contract answers, not the witness.
-    const verdict =
-      comparison.kind === 'disagree'
-        ? 'EXTRACTOR DRIFT, heal the collector'
-        : comparison.kind === 'incomparable'
-          ? 'INCONCLUSIVE, quarantine and ask a human'
-          : scenario.semanticChange
-            ? 'GENUINE SOURCE CHANGE, do not heal'
-            : 'HEALTHY, publish';
-
-    process.stdout.write(`\n${'='.repeat(64)}\n`);
-    process.stdout.write(`mode        ${scenario.mode}\n`);
-    process.stdout.write(`collector   ${collector ?? 'nothing'}   (bound to .selling-price)\n`);
-    process.stdout.write(
-      `witness     ${witness === null ? 'not found' : JSON.stringify(witness.value)}   (no selectors)\n`,
-    );
-    if (witness !== null) process.stdout.write(`evidence    "${witness.line}"\n`);
-    process.stdout.write(`comparison  ${comparison.kind}: ${comparison.note}\n`);
-    process.stdout.write(`verdict     ${verdict}\n`);
-    process.stdout.write(`expected    ${scenario.expect}\n`);
+      // One case failing must not end the demonstration. The network sits
+      // between here and two services, and a transient error on the second of
+      // four cases used to discard the two that would have worked.
+      try {
+        await runScenario(scenario);
+      } catch (caught) {
+        failures += 1;
+        out(`SKIPPED     ${caught instanceof Error ? caught.message : String(caught)}`);
+        out('            Re-run to retry this case.');
+      }
+    }
+  } finally {
+    // Leave the fixture as it was found, even after a failure. A demo that
+    // poisons the next run is worse than no demo.
+    await setMode('baseline').catch(() => {
+      out('');
+      out('Could not reset the fixture. Run: npm run live --workspace backend -- mode baseline');
+    });
   }
 
-  // Leave the fixture as it was found. A demo that poisons the next run is
-  // worse than no demo.
-  await setMode('baseline');
-  process.stdout.write(`\n${'='.repeat(64)}\nFixture reset to baseline.\n`);
+  out('');
+  out(RULE);
+  out('Fixture reset to baseline.');
+  if (failures > 0) {
+    out(`${String(failures)} of ${String(SCENARIOS.length)} cases could not be read.`);
+  }
 }
 
 main().catch((error: unknown) => {

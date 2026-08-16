@@ -197,8 +197,18 @@ export async function brightDataRequest(
           caught,
         );
       } else if (caught instanceof Error && 'retryable' in caught) {
-        // Already a typed BrightDataError thrown above.
-        throw caught;
+        // A typed BrightDataError. Most were thrown from the non-ok branch
+        // above, which already decided not to retry, and rethrowing those is
+        // correct.
+        //
+        // But `onResponseHeaders` also throws from inside the ok branch, for
+        // responses that are 200 at the transport layer and report a failure
+        // in headers, which is how Web Unlocker reports a block. Rethrowing a
+        // retryable one of those unconditionally meant a transient block
+        // failed permanently, so the witness gave up on a page a second
+        // attempt would have read.
+        if (caught.retryable !== true) throw caught;
+        lastError = caught as BrightDataError;
       } else {
         lastError = new BrightDataServerError(
           `Bright Data request to ${options.path} failed at the transport layer`,

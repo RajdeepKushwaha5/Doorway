@@ -1,5 +1,5 @@
 import { brightDataRequest, type RetryPolicy } from './http.js';
-import { BrightDataRequestError } from './errors.js';
+import { BrightDataRequestError, BrightDataServerError } from './errors.js';
 
 /**
  * The independent witness, over HTTP.
@@ -69,14 +69,39 @@ const DEFAULT_TIMEOUT_MS = 120_000;
  * Throws rather than returns, so an unusable witness can never be mistaken for
  * a witness that saw an empty page.
  */
+/**
+ * Unlock failures that a different peer may not hit.
+ *
+ * Bright Data's error reference splits its codes by whether a retry can help:
+ * "Retrying is worth doing for errors caused by the peer or by the unlock
+ * attempt, because each request uses a different peer." A block or a failed
+ * resolution is in that class. A bad certificate, an unroutable host or a
+ * zone misconfiguration is not, and retrying those just spends the allowance
+ * to reach the same answer more slowly.
+ */
+function isTransientUnlockFailure(code: string | null): boolean {
+  if (code === null) return false;
+  return code === 'reject_block' || code.startsWith('resolve_failed');
+}
+
 function assertUnlockSucceeded(headers: Headers): void {
   const error = headers.get('x-brd-error');
   const code = headers.get('x-brd-error-code') ?? headers.get('x-brd-err-code');
   const status = Number(headers.get('x-brd-status-code') ?? '200');
 
   if (error !== null || code !== null) {
+    const message = `Web Unlocker could not read the page: ${code ?? 'unknown'} ${error ?? ''}`.trim();
+
+    // Thrown as a server error so the request helper's backoff retries it. A
+    // transient block that fails permanently turns a page NOTICE could have
+    // read into a quarantined incident, which is a false alarm dressed up as
+    // caution.
+    if (isTransientUnlockFailure(code)) {
+      throw new BrightDataServerError(message, Number.isFinite(status) ? status : 502);
+    }
+
     throw new BrightDataRequestError(
-      `Web Unlocker could not read the page: ${code ?? 'unknown'} ${error ?? ''}`.trim(),
+      message,
       Number.isFinite(status) ? status : 502,
       code ?? '',
     );
