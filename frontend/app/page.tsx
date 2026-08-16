@@ -122,7 +122,10 @@ export default async function HomePage() {
             </div>
             <div className="hero-proof mt-16 grid grid-cols-3 border border-x-0 border-b-0 border-surface-border pt-6">
               <Proof label="Bright Data" value="2 live signals" />
-              <Proof label="Safety suite" value="97 tests passing" />
+              {/* Keep in step with `npm test`. A number on the landing page
+                  that no longer matches the suite is the one claim a reader
+                  can check in ten seconds. */}
+              <Proof label="Safety suite" value="127 tests passing" />
               <Proof label="Default policy" value="Read only until proven" />
             </div>
           </div>

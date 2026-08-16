@@ -74,7 +74,7 @@ Detection lives in `backend/src/contracts`, the independent sensor in `backend/s
 
 ## Conventions
 
-- Run `npm test` before proposing changes. 110 tests, no network needed.
+- Run `npm test` before proposing changes. 127 tests, no network needed.
 - Invariants are user-declared facts and may hard-fail a run. Learned statistics may only warn. Do not promote a statistical signal to a hard failure.
 - `unknown` and `incomparable` are real outcomes. Never collapse them into pass or fail.
 - No emojis and no em dashes in code, comments, UI copy or commit messages.
