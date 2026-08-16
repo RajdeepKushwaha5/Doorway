@@ -14,6 +14,7 @@ import type { CollectorRecord, JobRecord, ScreenshotStore, Store } from '../stor
 import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, binary, HttpError, Router } from './http.js';
+import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
 
 /**
  * Ceiling on a candidate replay.
@@ -370,6 +371,21 @@ export function buildRouter(deps: ApiDeps): Router {
     // at different bytes.
     return binary('image/png', png, 'public, max-age=31536000, immutable');
   });
+
+  /**
+   * This month's monitoring spend against the account's free tier.
+   *
+   * Surfaced because the constraint is invisible otherwise. Both sensors draw
+   * from the same 5,000-a-month pool, so an operator tightening an interval
+   * has no way to see what it costs until the scheduler pauses or a bill
+   * arrives, and neither is a good first notification.
+   */
+  router.get('/api/budget', async () =>
+    monitoringSpend(
+      store,
+      Number(process.env['NOTICE_MONTHLY_PAGE_LOAD_BUDGET'] ?? DEFAULT_MONTHLY_BUDGET),
+    ),
+  );
 
   router.get('/api/consumer/best-deal', async () => compareBestDeal(store));
 

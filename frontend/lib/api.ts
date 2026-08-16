@@ -1,5 +1,6 @@
 import { serverApiBase } from './env';
 import type {
+  BudgetStatus,
   CollectorContract,
   CollectorSummary,
   DealComparison,
@@ -10,7 +11,17 @@ import type {
 } from './types';
 
 /**
- * Thin API client.
+ * Thin API client, for reads only.
+ *
+ * Mutations are absent on purpose. Every write requires the admin bearer
+ * token, which must never reach a browser bundle, and the API's CORS policy
+ * does not allow an `authorization` header from one anyway. Writes therefore
+ * live in `app/actions.ts`, where they run on the Next.js server.
+ *
+ * This file previously carried `runCollector`, `heal` and `approve` as well.
+ * Nothing called them, and anything that had would have received a 401 for
+ * reasons that look nothing like the cause. Removed rather than left as a
+ * trap for whoever reaches for the obvious method next.
  *
  * No Bright Data credential ever reaches this layer. The browser talks only to
  * the NOTICE backend, which holds the key server-side, so nothing here can
@@ -73,16 +84,8 @@ export const api = {
     incidents: Incident[];
   }> => request(`/api/collectors/${encodeURIComponent(id)}`),
 
-  getJob: (id: string): Promise<JobRecord> => request(`/api/jobs/${encodeURIComponent(id)}`),
-
   listJobs: (incidentId?: string): Promise<JobRecord[]> =>
     request(`/api/jobs${incidentId === undefined ? '' : `?incidentId=${incidentId}`}`),
-
-  runCollector: (id: string, url?: string): Promise<unknown> =>
-    request(`/api/collectors/${encodeURIComponent(id)}/run`, {
-      method: 'POST',
-      body: JSON.stringify(url === undefined ? {} : { url }),
-    }),
 
   listIncidents: (collectorId?: string): Promise<Incident[]> =>
     request(`/api/incidents${collectorId === undefined ? '' : `?collectorId=${collectorId}`}`),
@@ -90,11 +93,7 @@ export const api = {
   getIncident: (id: string): Promise<{ incident: Incident }> =>
     request(`/api/incidents/${encodeURIComponent(id)}`),
 
-  heal: (id: string): Promise<unknown> =>
-    request(`/api/incidents/${encodeURIComponent(id)}/heal`, { method: 'POST' }),
-
-  approve: (id: string): Promise<Incident> =>
-    request(`/api/incidents/${encodeURIComponent(id)}/approve`, { method: 'POST' }),
+  budget: (): Promise<BudgetStatus> => request('/api/budget'),
 
   bestDeal: (): Promise<DealComparison> => request('/api/consumer/best-deal'),
 

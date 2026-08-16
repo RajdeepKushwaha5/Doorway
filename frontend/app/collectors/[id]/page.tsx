@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BaselineReview, RunNowButton } from '@/components/CollectorControls';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
+import { ConsumerFeed } from '@/components/ConsumerFeed';
 import { api, ApiError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -93,6 +94,8 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
           ))}
         </ul>
       </section>
+
+      <ConsumerFeed collectorId={collector.id} url={collector.watchUrls[0]} />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">

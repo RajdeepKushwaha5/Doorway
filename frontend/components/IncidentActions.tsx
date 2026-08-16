@@ -145,6 +145,9 @@ function JobProgress({ jobId }: { jobId: string }) {
     const poll = async (): Promise<void> => {
       while (!cancelled) {
         try {
+          // Reads go straight to the API. A job poll needs no token, and
+          // routing it through a server action would add a round trip per
+          // tick for no benefit.
           const response = await fetch(`${base}/api/jobs/${jobId}`, { cache: 'no-store' });
           if (response.ok) {
             const next = (await response.json()) as JobRecord;

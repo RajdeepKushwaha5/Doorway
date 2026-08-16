@@ -13,6 +13,8 @@ import { StatusChip } from '@/components/StatusChip';
 import { ProofLedger } from '@/components/ProofLedger';
 import { WordReveal } from '@/components/WordReveal';
 import { VerificationDiagram } from '@/components/VerificationDiagram';
+import { RegisterCollector } from '@/components/RegisterCollector';
+import { OperationsPanel } from '@/components/OperationsPanel';
 import { api } from '@/lib/api';
 import type { CollectorSummary, Incident } from '@/lib/types';
 
@@ -271,9 +273,12 @@ export default async function HomePage() {
               <p className="eyebrow">Live control room</p>
               <h2 className="mt-6 text-4xl font-medium tracking-tight md:text-5xl">Every claim comes with a receipt.</h2>
             </div>
-            <Link href="/verified" className="secondary-button">
-              See verified deals <ArrowUpRight size={18} />
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              {offline || collectors.length === 0 ? null : <RegisterCollector />}
+              <Link href="/verified" className="secondary-button">
+                See verified deals <ArrowUpRight size={18} />
+              </Link>
+            </div>
           </div>
 
           <div data-reveal="scale" data-delay="1" className="mt-12 grid gap-4 sm:grid-cols-3">
@@ -281,6 +286,12 @@ export default async function HomePage() {
             <Metric label="Quarantined incidents" value={offline ? ', ' : String(open.length)} detail="Bad rows held back" />
             <Metric label="Decision engine" value="6 states" detail="Including inconclusive" />
           </div>
+
+          {offline || collectors.length === 0 ? null : (
+            <div data-reveal data-delay="2" className="mt-6">
+              <OperationsPanel />
+            </div>
+          )}
 
           <div data-reveal data-delay="2" className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
             <section className="panel p-6">
@@ -295,7 +306,10 @@ export default async function HomePage() {
                 {offline ? (
                   <EmptyState title="Control room is waiting" copy="Start the NOTICE backend to connect the live collector fleet. The product story remains available while data is offline." />
                 ) : collectors.length === 0 ? (
-                  <EmptyState title="No collectors yet" copy="Register a Scraper Studio collector to begin learning its verified baseline." />
+                  <div className="space-y-4">
+                    <EmptyState title="No collectors yet" copy="Register a Scraper Studio collector to begin learning its verified baseline." />
+                    <RegisterCollector />
+                  </div>
                 ) : (
                   collectors.slice(0, 5).map((collector) => (
                     <Link

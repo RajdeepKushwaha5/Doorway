@@ -182,3 +182,13 @@ export interface CollectorContract {
   requiredFields: string[];
   invariants: unknown[];
 }
+
+/** This month's monitoring spend against the account's free tier. */
+export interface BudgetStatus {
+  /** Page loads attributable to scheduled monitoring this calendar month. */
+  spent: number;
+  budget: number;
+  remaining: number;
+  /** True when the scheduler has paused until the month rolls over. */
+  exhausted: boolean;
+}
