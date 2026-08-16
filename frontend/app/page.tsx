@@ -155,8 +155,8 @@ export default async function HomePage() {
                 <div className="mt-6 font-mono text-sm text-ivory/75">
                   <p>{'{'}</p>
                   <p className="pl-6">&quot;status&quot;: &quot;success&quot;,</p>
-                  <p className="pl-6 text-blocked">&quot;price&quot;: ₹2,500,</p>
-                  <p className="pl-6">&quot;currency&quot;: &quot;INR&quot;</p>
+                  <p className="pl-6 text-blocked">&quot;price&quot;: 25.00,</p>
+                  <p className="pl-6">&quot;currency&quot;: &quot;USD&quot;</p>
                   <p>{'}'}</p>
                 </div>
                 <p className="mt-8 text-sm text-blocked">The selector captured the refundable deposit.</p>
@@ -172,7 +172,7 @@ export default async function HomePage() {
                 <p className="text-sm text-muted">Independent witness</p>
                 <div className="mt-6 font-mono text-sm text-ivory/75">
                   <p>Purchase price</p>
-                  <p className="mt-2 text-3xl text-verified">₹24,000</p>
+                  <p className="mt-2 text-3xl text-verified">$249</p>
                   <p className="mt-4 text-muted">labelled line, 93% confidence</p>
                 </div>
                 <p className="mt-8 text-sm text-verified">The corrupt row is quarantined before it reaches the buyer.</p>

@@ -12,7 +12,7 @@ export function VerificationDiagram() {
         <SignalCard
           index="01"
           label="SCRAPER STUDIO"
-          value="₹2,500"
+          value="$25"
           detail="Valid JSON · request succeeded"
           icon={<Check size={18} weight="bold" />}
         />
@@ -23,7 +23,7 @@ export function VerificationDiagram() {
         <SignalCard
           index="02"
           label="INDEPENDENT WITNESS"
-          value="₹24,000"
+          value="$249"
           detail="Purchase price · labelled line"
           icon={<Eye size={18} weight="bold" />}
         />

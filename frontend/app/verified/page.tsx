@@ -124,7 +124,10 @@ function formatPrice(price: number | null, currency: string | null | undefined) 
   if (price === null) return 'no price';
   if (currency === null || currency === undefined || currency.length !== 3) return String(price);
   try {
-    return new Intl.NumberFormat('en-IN', {
+    // The locale controls digit grouping only. en-IN groups as 2,49,000, which
+    // reads as a typo next to the dollar amounts the fixture serves. The
+    // currency code still comes from the row, so any currency renders right.
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
       maximumFractionDigits: 2,
