@@ -27,7 +27,9 @@ export interface WorkerConfig {
   /** How a pending candidate is executed. Injected so tests need no network. */
   runCandidate: (collectorId: string, url: string) => Promise<unknown[]>;
   /** Independent witness acquisition, so a deploy needs no CLI. */
-  fetchMarkdown?: (url: string) => Promise<{ markdown: string; fetchedAt: string }>;
+  fetchMarkdown?: (
+    url: string,
+  ) => Promise<{ markdown: string; fetchedAt: string; country?: string }>;
   log?: (message: string) => void;
 }
 

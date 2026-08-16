@@ -40,7 +40,11 @@ function main(): void {
   // has no `bdata` binary, and the witness is the one thing that must keep
   // working there.
   const fetchMarkdown = createWitnessFetcher(
-    { apiKey, zone: process.env['BRIGHTDATA_UNLOCKER_ZONE'] },
+    {
+      apiKey,
+      zone: process.env['BRIGHTDATA_UNLOCKER_ZONE'],
+      country: process.env['BRIGHTDATA_UNLOCKER_COUNTRY'],
+    },
     (url) => scrapeMarkdown(url),
   );
   if (process.env['BRIGHTDATA_UNLOCKER_ZONE'] === undefined) {

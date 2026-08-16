@@ -20,7 +20,9 @@ export interface ObserveDeps {
   client: BrightDataClient;
   store: Store;
   /** Injected so tests can drive the witness without touching the network. */
-  fetchMarkdown?: (url: string) => Promise<{ markdown: string; fetchedAt: string }>;
+  fetchMarkdown?: (
+    url: string,
+  ) => Promise<{ markdown: string; fetchedAt: string; country?: string }>;
   now?: () => Date;
 }
 
@@ -31,8 +33,20 @@ export interface ObserveResult {
   publishable: boolean;
 }
 
-function contextFrom(url: string, at: string): AcquisitionContext {
-  return { requestedUrl: url, deviceType: 'unknown', variantMarkers: [], observedAt: at };
+/**
+ * @param country ISO 3166-1 alpha-2 exit country, when the fetch pinned one.
+ *   Recording it is what lets the classifier tell a region-priced page apart
+ *   from a broken extractor. Left undefined it stays absent rather than being
+ *   guessed, because a wrong country here produces a confident wrong verdict.
+ */
+function contextFrom(url: string, at: string, country?: string): AcquisitionContext {
+  return {
+    requestedUrl: url,
+    deviceType: 'unknown',
+    variantMarkers: [],
+    observedAt: at,
+    ...(country === undefined || country === '' ? {} : { country }),
+  };
 }
 
 /**
@@ -126,7 +140,7 @@ export async function observeOnce(
   // `inconclusive` incident rather than an exception, because an exception
   // here leaves a suspicious run unrecorded and the downstream feed still
   // serving as though nothing happened.
-  let witnessFetch: { markdown: string; fetchedAt: string };
+  let witnessFetch: { markdown: string; fetchedAt: string; country?: string };
   try {
     witnessFetch = await fetchMarkdown(url);
   } catch (caught) {
@@ -189,7 +203,7 @@ export async function observeOnce(
     checks,
     reconciliation,
     collectorContext: contextFrom(url, startedAt),
-    witnessContext: contextFrom(url, witnessFetch.fetchedAt),
+    witnessContext: contextFrom(url, witnessFetch.fetchedAt, witnessFetch.country),
     departsFromBaseline: checks.some((check) => check.status === 'warn' || check.status === 'fail'),
   });
 

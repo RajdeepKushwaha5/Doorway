@@ -21,6 +21,20 @@ export interface UnlockerConfig {
   apiKey: string;
   /** Zone to bill and route through. The CLI creates `cli_unlocker` on login. */
   zone: string;
+  /**
+   * ISO 3166-1 alpha-2, lowercased, pinning where the page is fetched from.
+   *
+   * Not cosmetic. The two sensors are only comparable when they saw the same
+   * page, and a store that prices by region will hand them different numbers
+   * for reasons that have nothing to do with extraction. Left unset, Bright
+   * Data picks the optimal exit for the domain, which is a sensible default
+   * for scraping and a poor one for arbitration, because it can differ between
+   * two calls to the same URL.
+   *
+   * The value is recorded on the observation so the classifier can return
+   * `access_anomaly` rather than blaming the collector.
+   */
+  country?: string;
   baseUrl?: string;
   timeoutMs?: number;
   retryPolicy?: RetryPolicy;
@@ -31,6 +45,8 @@ export interface WitnessFetch {
   fetchedAt: string;
   /** The URL actually requested, for the acquisition context. */
   url: string;
+  /** Exit country used, when one was pinned. Recorded as acquisition context. */
+  country?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -142,6 +158,9 @@ export async function fetchWitnessMarkdown(
       // no HTML parsing happens here and the witness shares no code with the
       // collector's parser.
       data_format: 'markdown',
+      ...(config.country === undefined || config.country.trim() === ''
+        ? {}
+        : { country: config.country.trim().toLowerCase() }),
     },
     timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     onResponseHeaders: assertUnlockSucceeded,
@@ -171,7 +190,12 @@ export async function fetchWitnessMarkdown(
     throw new BrightDataRequestError('Web Unlocker returned an empty document', 502, '');
   }
 
-  return { markdown, fetchedAt: new Date().toISOString(), url };
+  return {
+    markdown,
+    fetchedAt: new Date().toISOString(),
+    url,
+    ...(config.country === undefined ? {} : { country: config.country.trim().toLowerCase() }),
+  };
 }
 
 /**
@@ -182,11 +206,19 @@ export async function fetchWitnessMarkdown(
  * with `BRIGHTDATA_UNLOCKER_ZONE` set never touches the CLI at all.
  */
 export function createWitnessFetcher(
-  config: { apiKey: string; zone: string | undefined },
+  config: { apiKey: string; zone: string | undefined; country?: string | undefined },
   cliFallback: (url: string) => Promise<{ markdown: string; fetchedAt: string }>,
 ): (url: string) => Promise<{ markdown: string; fetchedAt: string }> {
   if (config.zone === undefined || config.zone.trim() === '') {
     return cliFallback;
   }
-  return async (url: string) => fetchWitnessMarkdown({ apiKey: config.apiKey, zone: config.zone as string }, url);
+  return async (url: string) =>
+    fetchWitnessMarkdown(
+      {
+        apiKey: config.apiKey,
+        zone: config.zone as string,
+        ...(config.country === undefined ? {} : { country: config.country }),
+      },
+      url,
+    );
 }

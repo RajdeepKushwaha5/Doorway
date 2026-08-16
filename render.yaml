@@ -53,6 +53,11 @@ services:
       # installed here, and the independent sensor cannot run at all.
       - key: BRIGHTDATA_UNLOCKER_ZONE
         sync: false
+      # Pin where the witness fetches from. Two sensors are only comparable
+      # when they saw the same page, and an unpinned exit can differ between
+      # two calls to the same URL.
+      - key: BRIGHTDATA_UNLOCKER_COUNTRY
+        value: us
       # Set to the deployed dashboard origin once Vercel has given you one.
       - key: NOTICE_CORS_ORIGIN
         sync: false
