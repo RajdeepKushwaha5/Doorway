@@ -7,7 +7,7 @@ import {
 } from './brightdata/index.js';
 import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
-import { FileStore, ScreenshotStore } from './store/index.js';
+import { FileStore, ScreenshotStore, seedCollectors } from './store/index.js';
 import { notifyIncident, reportIncidentToGitHub } from './pipeline/index.js';
 
 /**
@@ -119,6 +119,19 @@ function main(): void {
   const server = createServer((request, response) => {
     void router.handle(request, response);
   });
+
+  // Restore the fleet when the store comes up empty, which on a host with no
+  // persistent disk is after every restart and every wake from idle. Only when
+  // it is empty, so a curated fleet is never overwritten, and without running
+  // anything, because a restart must not quietly spend the monthly allowance.
+  void seedCollectors(store, process.env['NOTICE_SEED_FILE'] ?? '../seed-collectors.json').then(
+    (result) => {
+      if (result.seeded > 0) {
+        process.stdout.write(`Seeded ${String(result.seeded)} collector(s) into an empty store.
+`);
+      }
+    },
+  );
 
   server.listen(port, () => {
     process.stdout.write(`NOTICE API listening on http://localhost:${port}\n`);

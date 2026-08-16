@@ -1,0 +1,74 @@
+[
+  {
+    "brightDataCollectorId": "c_msvllpds1n1dcoz8qx",
+    "name": "DriftMart headphones",
+    "targetDomain": "driftmart-3ut8.onrender.com",
+    "schedule": "every 6 hours",
+    "watchUrls": ["https://driftmart-3ut8.onrender.com/product/headphones"],
+    "witnessSpecs": [
+      {
+        "path": "price",
+        "meaning": "The purchase price of the product, not a refundable deposit, shipping fee or sponsored listing price.",
+        "labels": ["price", "purchase price"],
+        "excludeLabels": ["deposit", "refundable", "security", "sponsored"],
+        "kind": "money",
+        "allowed": []
+      },
+      {
+        "path": "availability",
+        "meaning": "Whether the product can be bought right now.",
+        "labels": ["availability", "stock"],
+        "excludeLabels": [],
+        "kind": "text",
+        "allowed": []
+      }
+    ],
+    "invariants": [
+      { "kind": "required", "field": "price" },
+      { "kind": "range", "field": "price", "min": 1 },
+      { "kind": "required", "field": "product_name" }
+    ],
+    "protectedFields": ["price", "product_name"],
+    "goldenCases": [
+      {
+        "label": "baseline",
+        "url": "https://driftmart-3ut8.onrender.com/fixtures/baseline",
+        "expected": { "price": 249 }
+      }
+    ]
+  },
+  {
+    "brightDataCollectorId": "c_msvk2zahnc2mizts6",
+    "name": "Books to Scrape",
+    "targetDomain": "books.toscrape.com",
+    "schedule": "every 6 hours",
+    "watchUrls": [
+      "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "price_excl_tax",
+        "meaning": "The price of the book excluding tax, not the tax amount and not a shipping fee.",
+        "labels": ["price", "price excl"],
+        "excludeLabels": ["shipping", "sponsored", "incl"],
+        "kind": "money",
+        "allowed": []
+      },
+      {
+        "path": "availability",
+        "meaning": "Whether the book can be bought right now.",
+        "labels": ["availability", "stock"],
+        "excludeLabels": [],
+        "kind": "text",
+        "allowed": []
+      }
+    ],
+    "invariants": [
+      { "kind": "required", "field": "price_excl_tax" },
+      { "kind": "range", "field": "price_excl_tax", "min": 1 },
+      { "kind": "required", "field": "book_title" }
+    ],
+    "protectedFields": ["price_excl_tax", "book_title"],
+    "goldenCases": []
+  }
+]

@@ -197,7 +197,9 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   async register([only]) {
     const known = [
       {
-        id: process.env['NOTICE_DEMO_COLLECTOR'] ?? 'c_mstkc1rkr8mit6wut',
+        // Rebuilt on 2026-08-16 against the labelled markup. The previous
+        // collector returned 0 and Self-Healing would not promote a fix.
+        id: process.env['NOTICE_DEMO_COLLECTOR'] ?? 'c_msvllpds1n1dcoz8qx',
         name: 'DriftMart headphones',
         url: `${FIXTURE}/product/headphones`,
         field: 'price',

@@ -1,5 +1,6 @@
 export { FileStore } from './file-store.js';
 export { ScreenshotStore } from './screenshots.js';
+export { seedCollectors, type SeedResult } from './seed.js';
 
 export type {
   AuditEvent,
