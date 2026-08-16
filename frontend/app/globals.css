@@ -122,10 +122,10 @@
 .site-footer {
   position: relative;
   /* The wordmark is absolutely positioned and scales with the viewport, so it
-     contributes no height. Reserve exactly its footprint: 23vw for the SVG
-     (its viewBox is 1000x230), plus the mark and the gap above it. Without
+     contributes no height. Reserve exactly its footprint: 17vw for the SVG
+     (its viewBox is 1000x170), plus the mark and the gap above it. Without
      this the giant word sits on top of the footer links. */
-  padding-bottom: calc(23vw + 196px);
+  padding-bottom: calc(17vw + 196px);
   overflow: hidden;
   border-top: 1px solid #171714;
   background: #ff5a36;
@@ -152,8 +152,12 @@
 .site-footer__sign { position: absolute; z-index: 1; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 40px; }
 .site-footer__word { width: 100%; line-height: 0; }
 .site-footer__word svg { display: block; width: 100%; height: auto; }
-.site-footer__word text { font-family: var(--font-geist), system-ui, sans-serif; font-size: 270px; font-weight: 600; fill: rgba(255,254,251,0.15); }
-.site-footer__mark { display: grid; width: 156px; height: 156px; transform: rotate(2deg); place-items: center; border: 1px solid rgba(23,23,20,0.35); background: #fffefb; box-shadow: 0 0 72px rgba(255,254,251,0.62), 8px 8px 0 #171714; animation: footer-mark 5s var(--ease-fluid) infinite; }
+/* Sized so the natural width sits comfortably inside the 1000-unit viewBox.
+   textLength then expands the tracking to fill, rather than compressing to
+   fit, so the word still spans the full width if a browser ignores the
+   attribute instead of overflowing and clipping its first and last letters. */
+.site-footer__word text { font-family: var(--font-geist), system-ui, sans-serif; font-size: 190px; font-weight: 600; fill: rgba(255,254,251,0.15); }
+.site-footer__mark { display: grid; width: 156px; height: 156px; transform: rotate(2deg); place-items: center; border: 1px solid rgba(23,23,20,0.28); background: rgba(255,254,251,0.82); box-shadow: 0 0 72px rgba(255,254,251,0.45), 8px 8px 0 rgba(23,23,20,0.55); animation: footer-mark 5s var(--ease-fluid) infinite; }
 .site-footer__mark .notice-logo { color: #171714; }
 .site-footer__mark .notice-logo svg { width: 72px; height: 58px; }
 
@@ -500,7 +504,7 @@
 }
 
 @media (max-width: 900px) {
-  .site-footer { padding-bottom: calc(23vw + 148px); }
+  .site-footer { padding-bottom: calc(17vw + 148px); }
   .site-footer__grid { grid-template-columns: repeat(2, 1fr); gap: 48px 24px; padding: 64px 24px; }
   .site-footer__intro { grid-column: 1 / -1; }
   .site-footer__legal { justify-content: flex-start; flex-wrap: wrap; padding: 24px; }

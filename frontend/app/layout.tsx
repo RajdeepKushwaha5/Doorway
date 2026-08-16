@@ -73,8 +73,8 @@ function SiteFooter() {
             at its clamp ceiling. lengthAdjust="spacing" tightens the gaps and
             leaves the glyph shapes undistorted.
           */}
-          <svg viewBox="0 0 1000 230" preserveAspectRatio="xMidYMax meet" role="presentation">
-            <text x="500" y="215" textLength="980" lengthAdjust="spacing" textAnchor="middle">
+          <svg viewBox="0 0 1000 170" preserveAspectRatio="xMidYMax meet" role="presentation">
+            <text x="500" y="155" textLength="960" lengthAdjust="spacing" textAnchor="middle">
               NOTICE
             </text>
           </svg>
