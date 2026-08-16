@@ -1,4 +1,4 @@
-import { BrightDataClient, runScraper } from '../brightdata/index.js';
+import { BrightDataClient } from '../brightdata/index.js';
 import { attemptRepair } from '../pipeline/index.js';
 import { observeOnce } from '../pipeline/index.js';
 import { FileStore, type CollectorRecord, type JobRecord, type Store } from '../store/index.js';
@@ -187,12 +187,19 @@ function main(): void {
     process.exit(1);
   }
 
+  const client = new BrightDataClient({ apiKey });
+
   const config: WorkerConfig = {
     store: new FileStore(process.env['NOTICE_DATA_FILE']),
-    client: new BrightDataClient({ apiKey }),
+    client,
     workerId: `${process.pid}@${process.env['RENDER_INSTANCE_ID'] ?? 'local'}`,
     runCandidate: async (collectorId, url) => {
-      const { rows } = await runScraper(collectorId, [url], { version: 'dev' });
+      // The HTTP API, never the `bdata` CLI. A worker runs on a host with no
+      // CLI installed, so shelling out would fail every gate replay.
+      const { rows } = await client.runCollector(collectorId, [url], {
+        version: 'dev',
+        timeoutMs: 600_000,
+      });
       return rows;
     },
     tickIntervalMs: Number(process.env['NOTICE_SCHEDULER_INTERVAL_S'] ?? 60) * 1000,

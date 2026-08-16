@@ -2,7 +2,6 @@ import { createServer } from 'node:http';
 import {
   BrightDataClient,
   createWitnessFetcher,
-  runScraper,
   scrapeMarkdown,
 } from './brightdata/index.js';
 import { startWorkerLoop } from './worker/index.js';
@@ -77,7 +76,13 @@ function main(): void {
       client,
       workerId: `inproc-${String(process.pid)}`,
       runCandidate: async (collectorId, url) => {
-        const { rows } = await runScraper(collectorId, [url], { version: 'dev' });
+        // The HTTP API, not the `bdata` CLI. There is no CLI binary on a
+        // deployed host, so shelling out here left the repair gate working on
+        // a laptop and broken everywhere it actually runs.
+        const { rows } = await client.runCollector(collectorId, [url], {
+          version: 'dev',
+          timeoutMs: 600_000,
+        });
         return rows;
       },
       tickIntervalMs: Number(process.env['NOTICE_SCHEDULER_INTERVAL_S'] ?? 60) * 1000,

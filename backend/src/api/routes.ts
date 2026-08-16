@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { BrightDataClient } from '../brightdata/index.js';
-import { runScraper } from '../brightdata/index.js';
 import { learnContract, type BaselineRun } from '../contracts/index.js';
 import { invariantSchema } from '../contracts/index.js';
 import {
@@ -15,6 +14,15 @@ import type { CollectorRecord, JobRecord, Store } from '../store/index.js';
 import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, HttpError, Router } from './http.js';
+
+/**
+ * Ceiling on a candidate replay.
+ *
+ * Matches the observation path in observe.ts. A gate run triggers the same
+ * collector against the same page, so it has no reason to be quicker, and a
+ * shorter limit would fail the repair for being slow rather than wrong.
+ */
+const CANDIDATE_RUN_TIMEOUT_MS = 600_000;
 
 const registerCollectorSchema = z.object({
   brightDataCollectorId: z.string().regex(/^c_[a-z0-9]+$/i, 'expected a c_... collector id'),
@@ -300,7 +308,13 @@ export function buildRouter(deps: ApiDeps): Router {
           client,
           store,
           runCandidate: async (collectorId, url) => {
-            const { rows } = await runScraper(collectorId, [url], { version: 'dev' });
+            // The HTTP API, not the `bdata` CLI. A deployed host has no CLI
+            // binary, so shelling out here made the gate unreachable in
+            // production while working perfectly on a laptop.
+            const { rows } = await client.runCollector(collectorId, [url], {
+              version: 'dev',
+              timeoutMs: CANDIDATE_RUN_TIMEOUT_MS,
+            });
             return rows;
           },
         },
