@@ -13,7 +13,8 @@
     "notice": "node --env-file-if-exists=../.env dist/scripts/notice.js",
     "phase0": "node --env-file-if-exists=../.env dist/scripts/phase0-matrix.js",
     "clean": "rimraf dist *.tsbuildinfo",
-    "seed": "node --env-file-if-exists=../.env dist/scripts/seed-demo.js"
+    "seed": "node --env-file-if-exists=../.env dist/scripts/seed-demo.js",
+    "prove": "node --env-file-if-exists=../.env dist/scripts/prove.js"
   },
   "dependencies": {
     "zod": "^3.24.1"
