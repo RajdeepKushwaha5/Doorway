@@ -20,7 +20,7 @@
  *   notice feed <collectorId> [--url U]      what a consumer receives
  */
 
-import { BrightDataClient, runScraper } from '../src/brightdata/index.js';
+import { BrightDataClient } from '../src/brightdata/index.js';
 import { attemptRepair, buildFeed, observeOnce, promoteRepair } from '../src/pipeline/index.js';
 import { FileStore, type CollectorRecord, type Store } from '../src/store/index.js';
 
@@ -75,8 +75,18 @@ async function findCollector(store: Store, idOrBrightDataId: string): Promise<Co
   return match;
 }
 
+/**
+ * Replay a candidate over the HTTP API rather than the `bdata` CLI.
+ *
+ * The CLI is not installed on most machines, including the ones this project
+ * deploys to, so shelling out made the repair gate fail for reasons that had
+ * nothing to do with the repair.
+ */
 const runCandidate = async (collectorId: string, url: string): Promise<unknown[]> => {
-  const { rows } = await runScraper(collectorId, [url], { version: 'dev' });
+  const { rows } = await requireClient().runCollector(collectorId, [url], {
+    version: 'dev',
+    timeoutMs: 600_000,
+  });
   return rows;
 };
 
