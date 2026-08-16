@@ -74,9 +74,9 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     html: `
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
-  <span class="selling-price" data-testid="price">$249</span>
-  <span class="security-deposit">$25</span>
-  <span class="stock">In stock</span>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$249</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
 </div>`.trim(),
   },
 
@@ -88,9 +88,9 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     html: `
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
-  <span class="selling-price" data-testid="price">$229</span>
-  <span class="security-deposit">$25</span>
-  <span class="stock">In stock</span>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$229</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
 </div>`.trim(),
   },
 
@@ -102,13 +102,18 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     label: 'Layout redesigned. Meaning unchanged. A brittle collector reads the deposit as price.',
     semanticChange: false,
     expected: BASELINE_EXPECTED,
+    // The visible labels move with their values, which is what a real redesign
+    // does. That is precisely why the witness survives it and the collector
+    // does not: the collector is bound to `.selling-price`, which now wraps
+    // the deposit, while the page still says in plain words which is which.
     html: `
 <section data-product="Nova Headphones">
+  <h1 class="product-title">Nova Headphones</h1>
   <div class="payment-summary">
-    <span class="selling-price" data-type="refundable">$25</span>
-    <strong data-type="purchase-price">$249</strong>
+    <p class="row"><span class="label">Refundable deposit:</span> <span class="selling-price" data-type="refundable">$25</span></p>
+    <p class="row"><span class="label">Purchase price:</span> <strong data-type="purchase-price">$249</strong></p>
   </div>
-  <span class="stock">In stock</span>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
 </section>`.trim(),
   },
 
@@ -120,9 +125,9 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     html: `
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
-  <span class="selling-price" data-testid="price" data-amount="0" data-currency="USD">$249</span>
-  <span class="security-deposit">$25</span>
-  <span class="stock">In stock</span>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price" data-amount="0" data-currency="USD">$249</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
 </div>`.trim(),
   },
 
@@ -134,8 +139,8 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     html: `
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
-  <span class="selling-price" data-testid="price">$249</span>
-  <span class="security-deposit">$25</span>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$249</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
   <p class="delivery-note">Ships within 24 hours while supplies last.</p>
 </div>`.trim(),
   },
@@ -148,13 +153,13 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     html: `
 <div class="sponsored" data-sponsored="true">
   <h1 class="product-title">Vega Headphones (Sponsored)</h1>
-  <span class="selling-price" data-testid="price">$99</span>
+  <p class="row"><span class="label">Sponsored price:</span> <span class="selling-price" data-testid="price">$99</span></p>
 </div>
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
-  <span class="selling-price" data-testid="price">$249</span>
-  <span class="security-deposit">$25</span>
-  <span class="stock">In stock</span>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$249</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
 </div>`.trim(),
   },
 
@@ -166,9 +171,9 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
     html: `
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
-  <span class="selling-price" data-testid="price">$249</span>
-  <span class="security-deposit">$25</span>
-  <span class="stock">In stock</span>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$249</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
 </div>
 <nav class="pager"><a href="?page=2">Next</a></nav>`.trim(),
   },
