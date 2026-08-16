@@ -113,10 +113,19 @@ export class Router {
 
   /** Node request handler. Serializes results and maps errors to statuses. */
   handle = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
-    const origin = process.env['NOTICE_CORS_ORIGIN'] ?? '*';
+    // Blank is not the same as unset. A hosting dashboard stores an empty
+    // field as an empty string, and `??` does not fall back on one, so a
+    // half-filled variable would emit `access-control-allow-origin:` with no
+    // value. Every browser request then fails while curl keeps working, which
+    // is the worst way to discover a misconfiguration.
+    const configured = process.env['NOTICE_CORS_ORIGIN']?.trim();
+    const origin = configured === undefined || configured === '' ? '*' : configured;
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('access-control-allow-headers', 'content-type');
     response.setHeader('access-control-allow-methods', 'GET,POST,PUT,OPTIONS');
+    // Responses differ by origin once one is configured, so shared caches must
+    // not serve one origin's response to another.
+    if (origin !== '*') response.setHeader('vary', 'Origin');
 
     if (request.method === 'OPTIONS') {
       response.writeHead(204).end();
