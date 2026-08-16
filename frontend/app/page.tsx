@@ -123,7 +123,10 @@ export default async function HomePage() {
           </div>
 
           <div className="flex justify-center lg:justify-end" data-reveal="scale">
-            <Globe />
+            {/* Markers name the sources actually under watch, so the globe
+                reports something rather than decorating. Spread around the
+                sphere so at most a couple are facing the reader at once. */}
+            <Globe markers={globeMarkers(collectors)} />
           </div>
         </div>
 
@@ -512,6 +515,26 @@ function FleetMarquee({
       </div>
     </div>
   );
+}
+
+/**
+ * Place monitored domains around the sphere.
+ *
+ * Positions are derived from the name rather than being real coordinates: this
+ * is an illustration of what is being watched, not a map, and inventing
+ * plausible-looking latitudes would imply a precision that does not exist.
+ */
+function globeMarkers(collectors: CollectorSummary[]): { lat: number; lon: number; label: string }[] {
+  const sources =
+    collectors.length > 0
+      ? collectors.map((collector) => collector.targetDomain)
+      : ['books.toscrape.com', 'driftmart', 'scraper studio'];
+
+  return sources.slice(0, 4).map((label, index) => ({
+    lat: 32 - index * 26,
+    lon: index * 95,
+    label: `${label} → verified`,
+  }));
 }
 
 function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {

@@ -93,63 +93,6 @@
 /* Rotating wireframe globe                                            */
 /* ------------------------------------------------------------------ */
 
-/**
- * Drawn as an SVG of meridians and parallels rather than a 3D scene, and spun
- * by animating the meridian widths. It costs no library, no canvas and no
- * WebGL context, and it degrades to a still globe when a reader has asked for
- * reduced motion, which a rendered scene would not.
- */
-.globe {
-  width: 100%;
-  max-width: 460px;
-  aspect-ratio: 1;
-  color: #0c0c0a;
-}
-
-.globe__sphere {
-  animation: globe-spin 28s linear infinite;
-  transform-origin: 50% 50%;
-}
-
-.globe__meridian {
-  animation: globe-meridian 14s ease-in-out infinite;
-  transform-origin: 50% 50%;
-}
-
-.globe__meridian:nth-child(2) {
-  animation-delay: -2.3s;
-}
-.globe__meridian:nth-child(3) {
-  animation-delay: -4.6s;
-}
-.globe__meridian:nth-child(4) {
-  animation-delay: -7s;
-}
-.globe__meridian:nth-child(5) {
-  animation-delay: -9.3s;
-}
-.globe__meridian:nth-child(6) {
-  animation-delay: -11.6s;
-}
-
-@keyframes globe-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Squashing each meridian horizontally reads as rotation without the cost of
-   actually rendering a sphere. */
-@keyframes globe-meridian {
-  0%,
-  100% {
-    transform: scaleX(1);
-  }
-  50% {
-    transform: scaleX(0.06);
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Infinite marquee                                                    */
 /* ------------------------------------------------------------------ */
@@ -248,8 +191,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .globe__sphere,
-  .globe__meridian,
   .marquee__track {
     animation: none;
   }
@@ -262,9 +203,6 @@
 @media (max-width: 860px) {
   .display-heading {
     @apply text-4xl;
-  }
-  .globe {
-    max-width: 300px;
   }
 }
 
