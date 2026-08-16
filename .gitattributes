@@ -1,0 +1,16 @@
+# Normalise line endings.
+#
+# Development happens on Windows and the build hosts are Linux. Without this,
+# every checkout rewrites line endings and git reports whole files as modified
+# when nothing changed, which buries real diffs during a review.
+* text=auto eol=lf
+
+# Binary, never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
