@@ -42,8 +42,31 @@
     @apply font-mono text-[11px] uppercase tracking-eyebrow text-muted;
   }
 
+  /**
+   * Display type is rendered without anti-aliasing.
+   *
+   * That is what produces the hard, stair-stepped edges: the browser draws
+   * each glyph as whole pixels instead of smoothing the curves, so a serif at
+   * this size reads as a bitmap rather than as print. It only looks right
+   * large, which is why it is scoped to display sizes and never to body text,
+   * where the same setting would simply be hard to read.
+   *
+   * Support is uneven by design of the platforms, not of this rule. Chrome and
+   * Safari honour `-webkit-font-smoothing: none`; elsewhere the heading falls
+   * back to an ordinary smoothed serif, which is a graceful loss rather than a
+   * broken one.
+   */
+  .display-heading,
+  .section-heading,
+  .font-display {
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    font-smooth: never;
+    text-rendering: geometricPrecision;
+  }
+
   .display-heading {
-    @apply font-display text-5xl leading-[1.02] tracking-[-0.01em] text-ivory sm:text-6xl lg:text-7xl;
+    @apply font-display text-5xl leading-[1.02] tracking-[-0.005em] text-ivory sm:text-6xl lg:text-7xl;
   }
 
   .section-heading {
