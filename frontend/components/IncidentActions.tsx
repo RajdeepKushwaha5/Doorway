@@ -9,6 +9,7 @@ import {
   retryWitnessAction,
   type ActionResult,
 } from '@/app/actions';
+import { apiBase } from '@/lib/env';
 import type { Incident, JobRecord } from '@/lib/types';
 
 /**
@@ -136,7 +137,7 @@ export function IncidentActions({ incident }: { incident: Incident }) {
 function JobProgress({ jobId }: { jobId: string }) {
   const router = useRouter();
   const [job, setJob] = useState<JobRecord | null>(null);
-  const base = process.env['NEXT_PUBLIC_NOTICE_API_BASE'] ?? 'http://localhost:4000';
+  const base = apiBase();
 
   useEffect(() => {
     let cancelled = false;

@@ -8,8 +8,12 @@ const nextConfig = {
   // The dashboard is a pure client of the backend API. Keeping the base URL in
   // an env var lets the same build point at a local worker or a deployed one,
   // and keeps every Bright Data credential on the server side where it belongs.
+  // A hosting dashboard stores a blank field as an empty string rather than
+  // leaving the variable unset, and `??` does not fall back on an empty
+  // string. Normalise here so the inlined value is never blank.
   env: {
-    NEXT_PUBLIC_NOTICE_API_BASE: process.env.NEXT_PUBLIC_NOTICE_API_BASE ?? 'http://localhost:4000',
+    NEXT_PUBLIC_NOTICE_API_BASE:
+      process.env.NEXT_PUBLIC_NOTICE_API_BASE?.trim() || 'http://localhost:4000',
   },
 
   // Security headers live here rather than in a host config file so they apply

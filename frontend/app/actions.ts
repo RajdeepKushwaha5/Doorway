@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { serverApiBase } from '@/lib/env';
 
 /**
  * Server actions: the only place the admin token exists.
@@ -16,7 +17,7 @@ import { revalidatePath } from 'next/cache';
  * the middle of a demo.
  */
 
-const BASE = process.env['NOTICE_API_BASE'] ?? process.env['NEXT_PUBLIC_NOTICE_API_BASE'] ?? 'http://localhost:4000';
+const BASE = serverApiBase();
 
 export type ActionResult<T = unknown> =
   | { ok: true; data: T }

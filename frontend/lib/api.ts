@@ -1,3 +1,4 @@
+import { apiBase } from './env';
 import type {
   CollectorContract,
   CollectorSummary,
@@ -16,8 +17,7 @@ import type {
  * leak one into a bundle or a screen recording.
  */
 
-const BASE =
-  process.env['NEXT_PUBLIC_NOTICE_API_BASE'] ?? 'http://localhost:4000';
+const BASE = apiBase();
 
 export class ApiError extends Error {
   constructor(
