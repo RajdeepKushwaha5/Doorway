@@ -155,3 +155,89 @@ describe('markdown syntax in captured values', () => {
     expect(extractField('Nova Headphones #4400', NAME)?.value).toBe('Nova Headphones #4400');
   });
 });
+
+/**
+ * Real pages are not as tidy as our own fixture.
+ *
+ * These cases come from books.toscrape.com, a public site NOTICE was pointed
+ * at to check the witness works outside DriftMart. It did not: price returned
+ * nothing at all while the page displayed it three times, because a markdown
+ * converter had put each table cell on its own line and stranded the label
+ * above its value.
+ */
+describe('the witness on real-world markup', () => {
+  const PRICE_ONLY: WitnessFieldSpec = {
+    path: 'price',
+    meaning: 'The purchase price.',
+    labels: ['price', 'purchase price'],
+    excludeLabels: ['deposit', 'refundable', 'shipping', 'sponsored'],
+    kind: 'money',
+    allowed: [],
+  };
+
+  const toscrape = `
+# A Light in the Attic
+
+£51.77
+
+In stock (22 available)
+
+Product Information
+
+Price (excl. tax)
+
+£51.77
+
+Price (incl. tax)
+
+£51.77
+
+Tax
+
+£0.00
+`;
+
+  it('reads a value from the line below its label', () => {
+    const found = extractField(toscrape, PRICE_ONLY);
+    expect((found?.value as { value: number }).value).toBe(51.77);
+    expect(found?.evidence.line).toContain('Price (excl. tax)');
+  });
+
+  it('records both lines as evidence, so the receipt shows where it looked', () => {
+    expect(extractField(toscrape, PRICE_ONLY)?.evidence.line).toBe('Price (excl. tax) / £51.77');
+  });
+
+  it('does not reach past the next non-empty line', () => {
+    // Two lines down belongs to something else. Guessing across a gap is how a
+    // witness confidently reports a shipping fee as a price.
+    //
+    // The amount is still found here, by bare-currency, because it is the only
+    // one on the page and that is a sound reading. What must not happen is
+    // labelled-line claiming a value it never found beside a label.
+    const stranded = '# Product\n\nPrice\n\n\nSome unrelated heading\n\n£99.00\n';
+    expect(extractField(stranded, PRICE_ONLY)?.evidence.strategy).not.toBe('labelled-line');
+  });
+
+  it('ignores a second label below the first, which is a heading list', () => {
+    const headings = '# Product\n\nPrice\n\nPurchase price\n\n£10.00\n';
+    const found = extractField(headings, PRICE_ONLY);
+
+    // "Price" must not claim "Purchase price" as its value, because a label is
+    // not an amount. It moves on, and "Purchase price" then legitimately owns
+    // the £10.00 below it, so the evidence names that pair and not the first.
+    expect(found?.evidence.line).toBe('Purchase price / £10.00');
+    expect((found?.value as { value: number }).value).toBe(10);
+  });
+
+  it('still refuses bare amounts when the page shows genuinely different ones', () => {
+    // No labels anywhere: 51.77 and 0.00 with nothing to distinguish them is
+    // the ambiguity worth refusing.
+    const bare = '# Product\n\n£51.77\n\n£0.00\n';
+    expect(extractField(bare, PRICE_ONLY)).toBeNull();
+  });
+
+  it('accepts one amount repeated, which is evidence rather than ambiguity', () => {
+    const repeated = '# Product\n\n£51.77\n\n£51.77\n\n£51.77\n';
+    expect((extractField(repeated, PRICE_ONLY)?.value as { value: number }).value).toBe(51.77);
+  });
+});

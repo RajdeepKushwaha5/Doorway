@@ -138,13 +138,49 @@ function fromLabelledLine(lines: readonly string[], spec: WitnessFieldSpec): Wit
     const separator = line.search(/[:–—-]/);
     const candidate = separator === -1 ? line : line.slice(separator + 1);
     const coerced = coerce(candidate.trim(), spec);
-    if (coerced === null) continue;
+
+    if (coerced !== null) {
+      return {
+        path: spec.path,
+        value: coerced,
+        confidence: CONFIDENCE.labelledLine,
+        evidence: { line, lineNumber: index + 1, strategy: 'labelled-line' },
+      };
+    }
+
+    // The label carried no value of its own, so look at the line below it.
+    //
+    // Converting a table to markdown routinely puts each cell on its own line,
+    // which leaves a label stranded above the number it describes:
+    //
+    //   Price (excl. tax)
+    //   £51.77
+    //
+    // Found on a live site, where this returned nothing at all for price while
+    // the page displayed it three times. Only the next non-empty line is
+    // considered: reaching further turns a near miss into a confident guess
+    // about a value that belongs to something else entirely.
+    const next = lines.slice(index + 1).find((following) => normalizeText(following) !== '');
+    if (next === undefined) continue;
+
+    const below = normalizeText(next);
+    if (below.includes('|') || lineMatchesAny(below, spec.excludeLabels)) continue;
+
+    // A second label below the first is a list of headings, not a value.
+    if (lineMatchesAny(below, spec.labels)) continue;
+
+    const fromBelow = coerce(below, spec);
+    if (fromBelow === null) continue;
 
     return {
       path: spec.path,
-      value: coerced,
+      value: fromBelow,
       confidence: CONFIDENCE.labelledLine,
-      evidence: { line, lineNumber: index + 1, strategy: 'labelled-line' },
+      evidence: {
+        line: `${line} / ${below}`,
+        lineNumber: index + 1,
+        strategy: 'labelled-line',
+      },
     };
   }
   return null;
@@ -244,8 +280,23 @@ function fromBareCurrency(lines: readonly string[], spec: WitnessFieldSpec): Wit
     }
   }
 
-  if (candidates.length !== 1) return null;
-  const only = candidates[0];
+  // Refuse only when the page shows genuinely different amounts. Requiring a
+  // single occurrence looked safe and was not: a real product page repeats its
+  // price several times, in a heading, a summary and a tax table, and this
+  // abandoned the field every time. Verified on a live site where "£51.77"
+  // appeared three times and nothing was extracted.
+  //
+  // Three readings of the same number is more evidence than one, not less.
+  // Two different numbers with no label to tell them apart is the ambiguity
+  // worth refusing, and that still refuses.
+  const distinct = new Map<string, (typeof candidates)[number]>();
+  for (const candidate of candidates) {
+    const key = JSON.stringify(candidate.value);
+    if (!distinct.has(key)) distinct.set(key, candidate);
+  }
+
+  if (distinct.size !== 1) return null;
+  const only = [...distinct.values()][0];
   if (only === undefined) return null;
 
   return {
