@@ -6,6 +6,26 @@ NOTICE is the incident-to-verified-repair layer for Bright Data Scraper Studio. 
 
 ---
 
+## Live
+
+| | |
+|---|---|
+| Dashboard | https://notice-frontend-bay.vercel.app |
+| API | https://notice-api-0vfo.onrender.com/api/health |
+| DriftMart fixture | https://driftmart-3ut8.onrender.com |
+
+The two Render services are on the free plan and spin down after 15 minutes
+idle, so the first request after a quiet period takes around 30 seconds. Open
+the DriftMart link first and let it wake up.
+
+DriftMart is the page Bright Data actually scrapes. It serves the same product
+at seven different markups on demand, so a redesign, a genuine price change and
+a silent corruption can each be produced deliberately rather than waited for.
+Every mode is permanently reachable at `/fixtures/<mode>`, which is what makes
+a regression corpus possible.
+
+---
+
 ## The problem
 
 A scraper that returns nothing is easy. You see the empty output, you run `heal`, you move on.
