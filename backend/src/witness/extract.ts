@@ -46,8 +46,29 @@ function coerce(raw: unknown, spec: WitnessFieldSpec): unknown | null {
       return match ?? null;
     }
     case 'text':
-      return typeof raw === 'string' ? normalizeText(raw) : null;
+      return typeof raw === 'string' ? normalizeText(stripMarkdown(raw)) : null;
   }
+}
+
+/**
+ * Remove markdown syntax from a captured value.
+ *
+ * The witness reports what a person reads on the page, and a person does not
+ * read the `#` in front of a heading. Extracting a product name from a heading
+ * line returned `"# Nova Headphones"`, which survives comparison only because
+ * comparisonKey happens to strip punctuation, and which reads as a bug in
+ * every incident timeline that shows it.
+ *
+ * Deliberately conservative: leading block markers and paired emphasis only.
+ * A `#` inside a value can be meaningful, as in a model number.
+ */
+function stripMarkdown(raw: string): string {
+  return raw
+    .replace(/^\s*(?:#{1,6}\s+|>\s+|[-*+]\s+)/, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/(?<![\w*])\*(?!\*)(.+?)(?<!\*)\*(?![\w*])/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .trim();
 }
 
 /**

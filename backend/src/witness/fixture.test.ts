@@ -127,3 +127,31 @@ Availability: In stock
     expect(extractField(baseline, AVAILABILITY)?.value).toBe('In stock');
   });
 });
+
+describe('markdown syntax in captured values', () => {
+  const NAME: WitnessFieldSpec = {
+    path: 'name',
+    meaning: 'The product name as shown to a shopper.',
+    labels: ['nova', 'headphones'],
+    excludeLabels: ['sponsored'],
+    kind: 'text',
+    allowed: [],
+  };
+
+  it('reports a heading without its marker', () => {
+    // The live Unlocker returns the product name as a markdown heading. It
+    // extracted as "# Nova Headphones", which comparison survived only because
+    // comparisonKey strips punctuation, and which read as a bug wherever the
+    // evidence line was displayed.
+    expect(extractField(baseline, NAME)?.value).toBe('Nova Headphones');
+  });
+
+  it('unwraps bold and code spans', () => {
+    expect(extractField('**Nova Headphones**', NAME)?.value).toBe('Nova Headphones');
+    expect(extractField('`Nova Headphones`', NAME)?.value).toBe('Nova Headphones');
+  });
+
+  it('leaves a hash inside a value alone, since a model number may need it', () => {
+    expect(extractField('Nova Headphones #4400', NAME)?.value).toBe('Nova Headphones #4400');
+  });
+});
