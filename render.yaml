@@ -1,0 +1,84 @@
+# Render blueprint for the NOTICE backend and the DriftMart fixture.
+#
+# The dashboard goes to Vercel and is not defined here. It needs no config file:
+# set the project's Root Directory to `frontend` and take every default. Vercel
+# detects the npm workspace root on its own and installs from there. Overriding
+# installCommand is what breaks that, because the override runs inside
+# frontend/ and scopes the install to one workspace, leaving the build unable
+# to resolve tailwindcss.
+#
+# Two services, both on the free plan.
+#
+# The API runs the monitoring worker in its own process, via
+# NOTICE_RUN_WORKER_IN_PROCESS. That is not laziness: the file store lives on
+# the instance's filesystem, and Render's persistent disks require a paid plan,
+# so a separate worker service would have its own filesystem and its own
+# divergent copy of every incident. One process owning both is the only correct
+# arrangement without shared storage.
+#
+# To split them later, add a paid plan with a shared disk or swap FileStore for
+# Postgres behind the existing Store interface, then set
+# NOTICE_RUN_WORKER_IN_PROCESS to false and add a `type: worker` service.
+#
+# Free-plan caveats worth knowing before you record anything:
+#   - services spin down after 15 minutes idle, so the first request after a
+#     quiet period is slow. Warm both URLs before a demo.
+#   - there is no persistent disk, so a redeploy resets the store. Re-seed or
+#     re-run collectors afterwards.
+
+services:
+  - type: web
+    name: notice-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace backend
+    startCommand: npm run start --workspace backend
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 22.11.0
+      # Render assigns the port. `next start` and the API both read PORT.
+      - key: NOTICE_RUN_WORKER_IN_PROCESS
+        value: "true"
+      # Required. Mutating routes are disabled entirely when this is unset,
+      # rather than defaulting to open.
+      - key: NOTICE_ADMIN_TOKEN
+        sync: false
+      - key: BRIGHTDATA_API_KEY
+        sync: false
+      # Without this the witness falls back to the bdata CLI, which is not
+      # installed here, and the independent sensor cannot run at all.
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        sync: false
+      # Set to the deployed dashboard origin once Vercel has given you one.
+      - key: NOTICE_CORS_ORIGIN
+        sync: false
+      # Six hours. Monitoring is about catching a redesign, which happens over
+      # days, and polling harder mostly burns credits.
+      - key: NOTICE_MIN_INTERVAL_S
+        value: 21600
+      - key: NOTICE_MAX_PER_TICK
+        value: 5
+
+  # DriftMart is the controlled fault-injection fixture that Bright Data
+  # scrapes. It must be a running instance rather than serverless functions:
+  # its current mode is stored on disk, and on an ephemeral per-request
+  # filesystem a mode switch would apply to some requests and not others,
+  # which looks exactly like a flaky scraper and wastes an hour on demo day.
+  - type: web
+    name: driftmart
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace driftmart
+    startCommand: npm run start --workspace driftmart
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 22.11.0
+      - key: DRIFTMART_ADMIN_TOKEN
+        sync: false

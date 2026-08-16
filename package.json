@@ -1,0 +1,29 @@
+{
+  "name": "notice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Incident-to-verified-repair control plane for Bright Data Scraper Studio",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "workspaces": [
+    "backend",
+    "frontend",
+    "driftmart"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace backend & npm run dev --workspace frontend",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "phase0": "npm run phase0 --workspace backend"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

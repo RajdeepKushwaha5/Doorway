@@ -1,0 +1,179 @@
+/**
+ * DriftMart page modes.
+ *
+ * DriftMart is a controlled fault-injection fixture. It is not a real store
+ * and its incidents are not spontaneous external failures. Both the README and
+ * the demo video must say so.
+ *
+ * The single most important property here: the live product page and the
+ * permanent fixture pages render from the *same* definitions below. If the
+ * fixtures drifted from what the live page actually served, the regression
+ * corpus would be testing something that never happened, and the approval gate
+ * would be verifying a fiction.
+ */
+
+export const MODE_IDS = [
+  'baseline',
+  'genuine_price_change',
+  'selector_drift',
+  'silent_zero',
+  'missing_field',
+  'sponsored_insertion',
+  'pagination_collapse',
+] as const;
+
+export type ModeId = (typeof MODE_IDS)[number];
+
+export function isModeId(value: string): value is ModeId {
+  return (MODE_IDS as readonly string[]).includes(value);
+}
+
+/** What a correct collector should extract from a given mode. */
+export interface ExpectedRecord {
+  name: string;
+  price: number;
+  deposit: number | null;
+  currency: string;
+  availability: 'in_stock' | 'out_of_stock' | 'preorder';
+}
+
+export interface ModeDefinition {
+  id: ModeId;
+  /** One line shown on the admin panel and in the demo. */
+  label: string;
+  /**
+   * Whether a correct collector's output should change in this mode.
+   *
+   * This is the field that makes NOTICE more than a diff tool. In
+   * `genuine_price_change` the extraction is fine and the world moved, so the
+   * correct action is to record a source change and leave the collector alone.
+   * In `selector_drift` the world is unchanged and the extraction moved, which
+   * is the only case that should ever reach Self-Healing.
+   */
+  semanticChange: boolean;
+  /** What a correct collector should return when this mode is live. */
+  expected: ExpectedRecord;
+  /** The markup served. Kept as data so live and fixture cannot diverge. */
+  html: string;
+}
+
+const BASELINE_EXPECTED: ExpectedRecord = {
+  name: 'Nova Headphones',
+  price: 249,
+  deposit: 25,
+  currency: 'USD',
+  availability: 'in_stock',
+};
+
+export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
+  baseline: {
+    id: 'baseline',
+    label: 'Baseline. Correct extraction, stable layout.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <span class="selling-price" data-testid="price">$249</span>
+  <span class="security-deposit">$25</span>
+  <span class="stock">In stock</span>
+</div>`.trim(),
+  },
+
+  genuine_price_change: {
+    id: 'genuine_price_change',
+    label: 'The price really changed. The collector is fine and must not be healed.',
+    semanticChange: true,
+    expected: { ...BASELINE_EXPECTED, price: 229 },
+    html: `
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <span class="selling-price" data-testid="price">$229</span>
+  <span class="security-deposit">$25</span>
+  <span class="stock">In stock</span>
+</div>`.trim(),
+  },
+
+  selector_drift: {
+    id: 'selector_drift',
+    // The visible meaning is unchanged: purchase price is still $249. Only the
+    // DOM moved. A collector bound to the old position now reads the deposit,
+    // producing schema-valid, plausible, wrong output.
+    label: 'Layout redesigned. Meaning unchanged. A brittle collector reads the deposit as price.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
+<section data-product="Nova Headphones">
+  <div class="payment-summary">
+    <span class="selling-price" data-type="refundable">$25</span>
+    <strong data-type="purchase-price">$249</strong>
+  </div>
+  <span class="stock">In stock</span>
+</section>`.trim(),
+  },
+
+  silent_zero: {
+    id: 'silent_zero',
+    label: 'Structured metadata says 0 USD while the visible price is correct.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <span class="selling-price" data-testid="price" data-amount="0" data-currency="USD">$249</span>
+  <span class="security-deposit">$25</span>
+  <span class="stock">In stock</span>
+</div>`.trim(),
+  },
+
+  missing_field: {
+    id: 'missing_field',
+    label: 'Availability disappears from its usual location.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <span class="selling-price" data-testid="price">$249</span>
+  <span class="security-deposit">$25</span>
+  <p class="delivery-note">Ships within 24 hours while supplies last.</p>
+</div>`.trim(),
+  },
+
+  sponsored_insertion: {
+    id: 'sponsored_insertion',
+    label: 'A sponsored card is inserted above the organic product.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
+<div class="sponsored" data-sponsored="true">
+  <h1 class="product-title">Vega Headphones (Sponsored)</h1>
+  <span class="selling-price" data-testid="price">$99</span>
+</div>
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <span class="selling-price" data-testid="price">$249</span>
+  <span class="security-deposit">$25</span>
+  <span class="stock">In stock</span>
+</div>`.trim(),
+  },
+
+  pagination_collapse: {
+    id: 'pagination_collapse',
+    label: 'Pagination parameter changes but the content repeats.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <span class="selling-price" data-testid="price">$249</span>
+  <span class="security-deposit">$25</span>
+  <span class="stock">In stock</span>
+</div>
+<nav class="pager"><a href="?page=2">Next</a></nav>`.trim(),
+  },
+};
+
+export function getMode(id: ModeId): ModeDefinition {
+  return MODES[id];
+}

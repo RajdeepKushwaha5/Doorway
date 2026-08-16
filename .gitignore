@@ -1,0 +1,59 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+
+# environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Bright Data CLI local credentials
+.brightdata/
+brightdata-credentials.json
+
+# evidence captures that may contain raw page content
+docs/evidence/raw/
+*.warc
+*.warc.gz
+
+# runtime store: contains scraped page excerpts and incident evidence
+data/
+backend/data/
+
+# local databases
+*.sqlite
+*.sqlite-journal
+*.db
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# editor and OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# test artifacts
+coverage/
+test-results/
+playwright-report/
+
+# planning and rehearsal material, not part of the submission
+build-plan.md
+notice-demo-script.md
+
+# local visual QA captures (hundreds of MB of screenshots)
+.visual-qa/

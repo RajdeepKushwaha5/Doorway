@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # A fresh clone with nothing but npm install is the reproducibility
+      # claim in the README. This job is what makes that claim checkable.
+      - name: Install
+        run: npm install
+
+      - name: Typecheck and build all workspaces
+        run: npm run build
+
+      # No network, no Bright Data credentials, no credits spent. The whole
+      # detection-to-blocked-repair loop runs against a scripted client.
+      - name: Test
+        run: npm test
+
+      - name: Assert no secrets are committed
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$|\.env\.(local|production)$'; then
+            echo "An environment file is tracked in git."
+            exit 1
+          fi
+          if git grep -nE '\b[a-f0-9]{32,}\b' -- ':!*.lock' ':!package-lock.json' ':!*.md'; then
+            echo "A long hex string that looks like an API key is committed."
+            exit 1
+          fi
+          echo "No tracked env files and no key-shaped strings."
