@@ -10,7 +10,13 @@ import {
   observeOnce,
   promoteRepair,
 } from '../pipeline/index.js';
-import type { CollectorRecord, JobRecord, ScreenshotStore, Store } from '../store/index.js';
+import type {
+  CollectorRecord,
+  IncidentRecord,
+  JobRecord,
+  ScreenshotStore,
+  Store,
+} from '../store/index.js';
 import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, binary, HttpError, Router } from './http.js';
@@ -46,6 +52,8 @@ export interface ApiDeps {
   screenshots?: ScreenshotStore;
   /** Captures a page and returns its id. Absent means no capture is attempted. */
   captureScreenshot?: (url: string) => Promise<string>;
+  /** Announces an incident. Absent means notification is off. */
+  notifyIncident?: (incident: IncidentRecord, collectorName: string) => Promise<unknown>;
   /** Independent witness acquisition. Injected so deploys need no CLI. */
   fetchMarkdown?: (url: string) => Promise<{ markdown: string; fetchedAt: string }>;
 }
@@ -57,6 +65,7 @@ export function buildRouter(deps: ApiDeps): Router {
   const witnessDeps = {
     ...(deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown }),
     ...(deps.captureScreenshot === undefined ? {} : { captureScreenshot: deps.captureScreenshot }),
+    ...(deps.notifyIncident === undefined ? {} : { notifyIncident: deps.notifyIncident }),
   };
 
   router.get('/api/health', async () => ({ status: 'ok', at: new Date().toISOString() }));

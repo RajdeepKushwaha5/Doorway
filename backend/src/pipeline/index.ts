@@ -14,3 +14,5 @@ export {
   type DealCandidate,
   type DealComparison,
 } from './consumer.js';
+
+export { notifyIncident, type NotifyConfig } from './notify.js';

@@ -30,6 +30,14 @@ export interface ObserveDeps {
    * an Unlocker zone simply records no picture rather than failing.
    */
   captureScreenshot?: (url: string) => Promise<string>;
+  /**
+   * Announce an incident to whoever is on the hook for the data.
+   *
+   * Optional, and never allowed to affect the verdict. Detection that reaches
+   * no human is indistinguishable from no detection, but a chat service being
+   * down must not cost a quarantine.
+   */
+  notifyIncident?: (incident: IncidentRecord, collectorName: string) => Promise<unknown>;
   now?: () => Date;
 }
 
@@ -187,6 +195,17 @@ export async function observeOnce(
     };
 
     await deps.store.saveIncident(inconclusive);
+
+    // Worth telling someone about, arguably more than a clean drift: the
+    // system has stopped being able to check, and silence here looks exactly
+    // like everything being fine.
+    if (deps.notifyIncident !== undefined) {
+      try {
+        await deps.notifyIncident(inconclusive, collector.name);
+      } catch {
+        // Courtesy, not correctness.
+      }
+    }
     await deps.store.appendAudit({
       id: randomUUID(),
       actor: 'system',
@@ -296,6 +315,17 @@ export async function observeOnce(
   };
 
   await deps.store.saveIncident(incident);
+
+  // After the record is durable, never before. A notification describing an
+  // incident that failed to save would send someone looking for something
+  // that does not exist.
+  if (deps.notifyIncident !== undefined) {
+    try {
+      await deps.notifyIncident(incident, collector.name);
+    } catch {
+      // Courtesy, not correctness.
+    }
+  }
   await deps.store.appendAudit({
     id: randomUUID(),
     actor: 'system',

@@ -71,6 +71,12 @@ services:
       # aggressive interval spends it with nothing visibly going wrong.
       - key: NOTICE_MONTHLY_PAGE_LOAD_BUDGET
         value: 4000
+      # Slack, Discord or any inbound webhook. Without it an incident opens
+      # and nobody is told, which is indistinguishable from no detection.
+      - key: NOTICE_WEBHOOK_URL
+        sync: false
+      - key: NOTICE_DASHBOARD_URL
+        sync: false
 
   # DriftMart is the controlled fault-injection fixture that Bright Data
   # scrapes. It must be a running instance rather than serverless functions:

@@ -2,7 +2,13 @@ import { BrightDataClient } from '../brightdata/index.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from './budget.js';
 import { attemptRepair } from '../pipeline/index.js';
 import { observeOnce } from '../pipeline/index.js';
-import { FileStore, type CollectorRecord, type JobRecord, type Store } from '../store/index.js';
+import {
+  FileStore,
+  type CollectorRecord,
+  type IncidentRecord,
+  type JobRecord,
+  type Store,
+} from '../store/index.js';
 
 /**
  * The monitoring worker.
@@ -38,6 +44,8 @@ export interface WorkerConfig {
   fetchMarkdown?: (
     url: string,
   ) => Promise<{ markdown: string; fetchedAt: string; country?: string }>;
+  /** Announces an incident found by the scheduler. */
+  notifyIncident?: (incident: IncidentRecord, collectorName: string) => Promise<unknown>;
   log?: (message: string) => void;
 }
 
@@ -157,6 +165,7 @@ export async function tick(config: WorkerConfig): Promise<number> {
           client: config.client,
           store: config.store,
           ...(config.fetchMarkdown === undefined ? {} : { fetchMarkdown: config.fetchMarkdown }),
+          ...(config.notifyIncident === undefined ? {} : { notifyIncident: config.notifyIncident }),
         });
         observed += 1;
 

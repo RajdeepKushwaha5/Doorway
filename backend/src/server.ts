@@ -8,6 +8,7 @@ import {
 import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
 import { FileStore, ScreenshotStore } from './store/index.js';
+import { notifyIncident } from './pipeline/index.js';
 
 /**
  * NOTICE API entry point.
@@ -80,12 +81,23 @@ function main(): void {
           return screenshots.save(shot.png);
         };
 
+  // Announce incidents to a webhook, when one is configured. Slack, Discord
+  // and every incident tool accept an inbound URL taking JSON, so one
+  // mechanism covers all of them.
+  const notify = {
+    webhookUrl: process.env['NOTICE_WEBHOOK_URL'],
+    dashboardUrl: process.env['NOTICE_DASHBOARD_URL'],
+  };
+  const announce = async (incident: Parameters<typeof notifyIncident>[1], name: string) =>
+    notifyIncident(notify, incident, name);
+
   const router = buildRouter({
     store,
     client,
     fetchMarkdown,
     screenshots,
     ...(captureScreenshot === undefined ? {} : { captureScreenshot }),
+    notifyIncident: announce,
   });
   const server = createServer((request, response) => {
     void router.handle(request, response);
@@ -122,6 +134,7 @@ function main(): void {
       minIntervalMs: Number(process.env['NOTICE_MIN_INTERVAL_S'] ?? 21_600) * 1000,
       maxPerTick: Number(process.env['NOTICE_MAX_PER_TICK'] ?? 5),
       ...(fetchMarkdown === undefined ? {} : { fetchMarkdown }),
+      notifyIncident: announce,
     });
   }
 
