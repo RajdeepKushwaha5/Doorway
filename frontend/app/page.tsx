@@ -127,7 +127,7 @@ export default async function HomePage() {
               {/* Keep in step with `npm test`. A number on the landing page
                   that no longer matches the suite is the one claim a reader
                   can check in ten seconds. */}
-              <Proof label="Safety suite" value="188 tests passing" />
+              <Proof label="Safety suite" value="192 tests passing" />
               <Proof label="Default policy" value="Read only until proven" />
             </div>
           </div>

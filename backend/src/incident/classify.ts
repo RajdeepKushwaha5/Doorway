@@ -89,14 +89,42 @@ export function classify(input: ClassificationInput): Classification {
     input.reconciliation === undefined || input.reconciliation.disagreed.length === 0;
 
   if (contractsQuiet && witnessQuiet) {
+    // Say what was actually confirmed, field by field.
+    //
+    // This used to read "all contract checks passed and the independent
+    // witness agrees" whenever nothing disagreed. On a live external site the
+    // witness read availability, failed to find the price at all, and the
+    // incident still claimed agreement. A witness cannot agree about a field
+    // it never saw, and a system built to catch confident overstatement has no
+    // business making one on its own summary line.
+    //
+    // The verdict is unchanged: nothing contradicted the collector, so there
+    // is no incident. What changes is that the record no longer implies more
+    // corroboration than exists.
+    const evidenceLines: string[] = ['all contract checks passed'];
+
+    if (input.reconciliation !== undefined) {
+      const { agreed, incomparable } = input.reconciliation;
+      if (agreed.length > 0) {
+        evidenceLines.push(`the independent witness agrees on ${agreed.join(', ')}`);
+      }
+      if (incomparable.length > 0) {
+        evidenceLines.push(
+          `the witness could not read ${incomparable.join(', ')}, so ${
+            incomparable.length === 1 ? 'that value is' : 'those values are'
+          } unconfirmed by a second sensor`,
+        );
+      }
+      if (agreed.length === 0 && incomparable.length === 0) {
+        evidenceLines.push('the witness found nothing to compare');
+      }
+    }
+
     return {
       verdict: 'healthy',
       confidence: Math.max(0.5, summary.coverage),
       affectedFields: [],
-      evidence:
-        input.reconciliation === undefined
-          ? ['all contract checks passed']
-          : ['all contract checks passed and the independent witness agrees'],
+      evidence: evidenceLines,
       capturedInstead: {},
     };
   }

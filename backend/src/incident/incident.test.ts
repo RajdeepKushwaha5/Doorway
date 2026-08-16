@@ -337,3 +337,49 @@ describe('incident state machine', () => {
     expect(currentState([])).toBe('observed');
   });
 });
+
+describe('a healthy verdict states what was actually confirmed', () => {
+  /**
+   * Found on a live external site. The witness read availability, could not
+   * find the price at all, and the incident still recorded "the independent
+   * witness agrees". A witness cannot agree about a field it never saw, and a
+   * project built to catch confident overstatement must not make one on its
+   * own summary line.
+   */
+  const quiet = {
+    checks: [],
+    reconciliation: {
+      comparisons: [],
+      agreed: ['availability'],
+      disagreed: [],
+      incomparable: ['price'],
+      agreementRate: 1,
+      coverage: 0.5,
+      weakestWitnessConfidence: 1,
+    },
+  };
+
+  it('names the fields the witness confirmed', () => {
+    const result = classify(quiet as never);
+    expect(result.verdict).toBe('healthy');
+    expect(result.evidence.join(' ')).toContain('agrees on availability');
+  });
+
+  it('says plainly which fields no second sensor could read', () => {
+    const evidence = classify(quiet as never).evidence.join(' ');
+    expect(evidence).toContain('could not read price');
+    expect(evidence).toContain('unconfirmed by a second sensor');
+  });
+
+  it('never claims blanket agreement', () => {
+    const evidence = classify(quiet as never).evidence.join(' ');
+    expect(evidence).not.toContain('the independent witness agrees and');
+    expect(evidence).not.toMatch(/witness agrees$/);
+  });
+
+  it('still reports healthy, because nothing contradicted the collector', () => {
+    // The wording changes, the decision does not. An unread field is not
+    // evidence of a fault.
+    expect(classify(quiet as never).verdict).toBe('healthy');
+  });
+});
