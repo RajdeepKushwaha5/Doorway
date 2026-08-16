@@ -1,4 +1,5 @@
 import { BrightDataClient } from '../brightdata/index.js';
+import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from './budget.js';
 import { attemptRepair } from '../pipeline/index.js';
 import { observeOnce } from '../pipeline/index.js';
 import { FileStore, type CollectorRecord, type JobRecord, type Store } from '../store/index.js';
@@ -22,6 +23,13 @@ export interface WorkerConfig {
   minIntervalMs: number;
   /** Ceiling on collectors observed per tick, to bound credit burn. */
   maxPerTick: number;
+  /**
+   * Monthly page-load ceiling for scheduled monitoring.
+   *
+   * Both sensors draw from the account's 5,000-a-month free tier, so an
+   * aggressive interval spends it without anything visibly going wrong.
+   */
+  monthlyBudget?: number;
   /** Identifies this worker when claiming jobs. */
   workerId: string;
   /** How a pending candidate is executed. Injected so tests need no network. */
@@ -118,10 +126,25 @@ export async function tick(config: WorkerConfig): Promise<number> {
   const log = config.log ?? ((message: string): void => void process.stdout.write(`${message}\n`));
   const collectors = await config.store.listCollectors();
 
+  // Stop before the account's free tier is gone, not after. A paused
+  // scheduler is recoverable and obvious; a surprise bill is neither.
+  const budget = await monitoringSpend(
+    config.store,
+    config.monthlyBudget ?? DEFAULT_MONTHLY_BUDGET,
+  );
+  if (budget.exhausted) {
+    log(
+      `monitoring paused: ${String(budget.spent)} of ${String(budget.budget)} page loads used this month. ` +
+        'Raise NOTICE_MONTHLY_PAGE_LOAD_BUDGET, lengthen NOTICE_MIN_INTERVAL_S, or wait for the month to roll.',
+    );
+    return 0;
+  }
+
   const due = collectors
     .filter((collector) => isDue(collector, config.minIntervalMs))
     .filter((collector) => !inFlight.has(collector.id))
-    .slice(0, config.maxPerTick);
+    // Never start more observations than the remaining allowance can pay for.
+    .slice(0, Math.min(config.maxPerTick, Math.floor(budget.remaining / 2)));
 
   let observed = 0;
 
@@ -209,6 +232,9 @@ function main(): void {
     // happens on a scale of days, and polling harder mostly burns credits.
     minIntervalMs: Number(process.env['NOTICE_MIN_INTERVAL_S'] ?? 21_600) * 1000,
     maxPerTick: Number(process.env['NOTICE_MAX_PER_TICK'] ?? 5),
+    monthlyBudget: Number(
+      process.env['NOTICE_MONTHLY_PAGE_LOAD_BUDGET'] ?? DEFAULT_MONTHLY_BUDGET,
+    ),
   };
 
   process.stdout.write(

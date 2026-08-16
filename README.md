@@ -45,6 +45,23 @@ Bright Data's own documentation is explicit that detection is not their job:
 
 > "The CLI never decides on its own that a scraper is broken, you inspect the run output and decide."
 
+Asked directly in a June 2025 Scraper Studio webinar whether healing can fire
+by itself, Bright Data's technical product manager for Scraper Studio answered:
+
+> "How is the self-healing triggered? Do you have to ask it to fix it or can it be triggered automatically? **For now, it is you going to trigger it.**"
+
+> "**We don't have the fully automated solution yet**, but we're looking into it."
+
+And on how to close that gap in the meantime:
+
+> "When a scraper breaks, you can trigger a self-healing. In our documentation we also have an API for the Scraper Studio. You can basically run self-healing when something is broken so that you can continuously fix that, **so that you don't have to intervene manually**."
+
+That is the seam this project sits in. Bright Data builds and repairs the
+collector and exposes the API to drive the repair. What nobody supplies is the
+judgement in between: noticing that a run is wrong when it looks right,
+deciding whether the page changed or the extractor drifted, and proving a
+proposed repair before it reaches production.
+
 NOTICE is the part that decides.
 
 ---
@@ -214,7 +231,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 166 tests, no network required
+npm test                      # 172 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -263,7 +280,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 166 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 172 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

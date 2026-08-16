@@ -67,6 +67,10 @@ services:
         value: 21600
       - key: NOTICE_MAX_PER_TICK
         value: 5
+      # Both sensors draw from the account's 5,000-a-month free tier, so an
+      # aggressive interval spends it with nothing visibly going wrong.
+      - key: NOTICE_MONTHLY_PAGE_LOAD_BUDGET
+        value: 4000
 
   # DriftMart is the controlled fault-injection fixture that Bright Data
   # scrapes. It must be a running instance rather than serverless functions:
