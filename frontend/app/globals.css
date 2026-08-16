@@ -121,7 +121,11 @@
 
 .site-footer {
   position: relative;
-  min-height: 720px;
+  /* The wordmark is absolutely positioned and scales with the viewport, so it
+     contributes no height. Reserve exactly its footprint: 23vw for the SVG
+     (its viewBox is 1000x230), plus the mark and the gap above it. Without
+     this the giant word sits on top of the footer links. */
+  padding-bottom: calc(23vw + 196px);
   overflow: hidden;
   border-top: 1px solid #171714;
   background: #ff5a36;
@@ -144,13 +148,18 @@
 .site-footer__column a { font-size: 15px; transition: transform 700ms var(--ease-fluid), color 700ms var(--ease-fluid); }
 .site-footer__column a:hover { transform: translateX(6px); color: #171714; }
 .site-footer__legal { position: relative; z-index: 2; display: flex; justify-content: flex-end; gap: 16px; max-width: 1280px; margin: 0 auto; padding: 32px; font-family: var(--font-geist-mono), monospace; font-size: 10px; letter-spacing: 0.14em; color: rgba(255,254,251,0.62); }
-.site-footer__word { position: absolute; left: 50%; bottom: 16px; width: max-content; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: clamp(96px, 14vw, 210px); font-weight: 600; line-height: 1; letter-spacing: -0.08em; color: rgba(255,254,251,0.15); animation: footer-drift 10s var(--ease-fluid) infinite alternate; }
-.site-footer__mark { position: absolute; z-index: 3; left: 50%; bottom: 62px; display: grid; width: 156px; height: 156px; transform: translateX(-50%) rotate(2deg); place-items: center; border: 1px solid rgba(23,23,20,0.35); background: #fffefb; box-shadow: 0 0 72px rgba(255,254,251,0.62), 8px 8px 0 #171714; animation: footer-mark 5s var(--ease-fluid) infinite; }
+/* Mark stacked above the word, never over it. */
+.site-footer__sign { position: absolute; z-index: 1; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.site-footer__word { width: 100%; line-height: 0; }
+.site-footer__word svg { display: block; width: 100%; height: auto; }
+.site-footer__word text { font-family: var(--font-geist), system-ui, sans-serif; font-size: 270px; font-weight: 600; fill: rgba(255,254,251,0.15); }
+.site-footer__mark { display: grid; width: 156px; height: 156px; transform: rotate(2deg); place-items: center; border: 1px solid rgba(23,23,20,0.35); background: #fffefb; box-shadow: 0 0 72px rgba(255,254,251,0.62), 8px 8px 0 #171714; animation: footer-mark 5s var(--ease-fluid) infinite; }
 .site-footer__mark .notice-logo { color: #171714; }
 .site-footer__mark .notice-logo svg { width: 72px; height: 58px; }
 
-@keyframes footer-drift { from { transform: translateX(calc(-50% - 12px)); } to { transform: translateX(calc(-50% + 12px)); } }
-@keyframes footer-mark { 0%, 100% { transform: translateX(-50%) translateY(0) rotate(2deg); } 50% { transform: translateX(-50%) translateY(-10px) rotate(-2deg); } }
+/* The mark is laid out in a flex column now, so it no longer carries a
+   centring translate that the keyframes have to preserve. */
+@keyframes footer-mark { 0%, 100% { transform: translateY(0) rotate(2deg); } 50% { transform: translateY(-10px) rotate(-2deg); } }
 @keyframes index-travel { from { transform: translateX(0); } to { transform: translateX(1180px); } }
 
 .hero-line {
@@ -491,12 +500,12 @@
 }
 
 @media (max-width: 900px) {
-  .site-footer { min-height: 920px; }
+  .site-footer { padding-bottom: calc(23vw + 148px); }
   .site-footer__grid { grid-template-columns: repeat(2, 1fr); gap: 48px 24px; padding: 64px 24px; }
   .site-footer__intro { grid-column: 1 / -1; }
   .site-footer__legal { justify-content: flex-start; flex-wrap: wrap; padding: 24px; }
-  .site-footer__word { bottom: 16px; font-size: clamp(72px, 20vw, 112px); }
-  .site-footer__mark { bottom: 88px; width: 112px; height: 112px; }
+  .site-footer__sign { gap: 24px; }
+  .site-footer__mark { width: 112px; height: 112px; }
   .verified-hero { grid-template-columns: 1fr; gap: 40px; }
   .verified-hero__aside { border-left: 0; padding-left: 0; }
   .decision-banner { grid-template-columns: auto 1fr; }

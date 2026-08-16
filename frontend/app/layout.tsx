@@ -58,8 +58,28 @@ function SiteFooter() {
         <FooterColumn title="Company" links={[["Privacy", "/privacy"], ["Terms", "/terms"], ["Home", "/"]]} />
       </div>
       <div className="site-footer__legal"><span>© 2026 NOTICE</span><span>BUILT WITH BRIGHT DATA</span></div>
-      <div className="site-footer__word" aria-hidden>NOTICE</div>
-      <div className="site-footer__mark" aria-hidden><NoticeLogo inverse compact /></div>
+      {/*
+        Mark above word, in a column, so the logo can never sit on top of the
+        letters. Both were absolutely positioned and centred before, which put
+        the square over the middle of the word and hid two characters.
+      */}
+      <div className="site-footer__sign" aria-hidden>
+        <div className="site-footer__mark"><NoticeLogo inverse compact /></div>
+        <div className="site-footer__word">
+          {/*
+            textLength pins the rendered width to the viewBox regardless of the
+            font's metrics, so the word spans the full footer at any viewport
+            instead of being guessed at with a vw font size that stops growing
+            at its clamp ceiling. lengthAdjust="spacing" tightens the gaps and
+            leaves the glyph shapes undistorted.
+          */}
+          <svg viewBox="0 0 1000 230" preserveAspectRatio="xMidYMax meet" role="presentation">
+            <text x="500" y="215" textLength="980" lengthAdjust="spacing" textAnchor="middle">
+              NOTICE
+            </text>
+          </svg>
+        </div>
+      </div>
     </footer>
   );
 }
