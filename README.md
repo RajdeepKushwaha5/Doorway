@@ -105,6 +105,33 @@ The two sensors are both Bright Data, used against each other. The collector is 
 
 ---
 
+## Stop a deploy that depends on data nobody checked
+
+```yaml
+- uses: prabhatkumar67/notice/actions/verify@main
+  with:
+    api-base: https://notice-api-0vfo.onrender.com
+    collector: c_msvk2zahnc2mizts6
+```
+
+A pipeline already refuses to ship on a failing test or a type error. It will
+happily ship a price, a dashboard or a model trained on a number a broken
+scraper invented last Tuesday, because nothing in it distinguishes data from
+correct data.
+
+This step fails the build when two independent Bright Data sensors do not
+currently agree on the data the repository consumes, and prints which source
+and why. `allow-stale` decides whether a value nobody has re-checked is good
+enough for your case, because that depends on what the build does with it.
+
+Incidents can also be filed where the team already works. Set
+`NOTICE_GITHUB_REPO` and `NOTICE_GITHUB_TOKEN` and a break opens an issue
+carrying both readings, the line the witness read, and the rendered capture of
+the page. One issue per collector and field, not per run: a collector observed
+every six hours would otherwise file four a day about one unresolved fault.
+
+---
+
 ## Use it from an AI agent
 
 ```bash
@@ -241,7 +268,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 192 tests, no network required
+npm test                      # 199 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -290,7 +317,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 192 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 199 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

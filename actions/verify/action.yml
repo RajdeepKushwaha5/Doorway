@@ -1,0 +1,59 @@
+name: 'NOTICE data verification gate'
+description: >-
+  Fail a build when the web data it depends on is not currently verified by two
+  independent Bright Data sensors.
+author: 'NOTICE'
+
+branding:
+  icon: 'shield'
+  color: 'orange'
+
+inputs:
+  collector:
+    description: >-
+      Collector to check. Accepts the Scraper Studio id (c_...) or the NOTICE
+      id. Omit to check every registered collector.
+    required: false
+  api-base:
+    description: 'Base URL of the NOTICE API.'
+    required: true
+  url:
+    description: 'Specific watched URL. Defaults to the collector''s first.'
+    required: false
+  allow-stale:
+    description: >-
+      Treat a stale value as acceptable. A stale value is one two sensors
+      agreed on previously but not now. False by default, because shipping
+      against data nobody has re-checked is the failure this guards.
+    required: false
+    default: 'false'
+  fail-on-unverified:
+    description: >-
+      Set to false to report without failing the build, which is useful while
+      adopting this on an existing pipeline.
+    required: false
+    default: 'true'
+
+outputs:
+  status:
+    description: 'verified, stale, quarantined or unavailable.'
+    value: ${{ steps.check.outputs.status }}
+  reason:
+    description: 'Machine-readable cause when not verified.'
+    value: ${{ steps.check.outputs.reason }}
+  incident:
+    description: 'Incident id when one is open.'
+    value: ${{ steps.check.outputs.incident }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      shell: bash
+      run: node "${{ github.action_path }}/verify.mjs"
+      env:
+        NOTICE_API_BASE: ${{ inputs.api-base }}
+        NOTICE_COLLECTOR: ${{ inputs.collector }}
+        NOTICE_URL: ${{ inputs.url }}
+        NOTICE_ALLOW_STALE: ${{ inputs.allow-stale }}
+        NOTICE_FAIL_ON_UNVERIFIED: ${{ inputs.fail-on-unverified }}

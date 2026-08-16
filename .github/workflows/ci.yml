@@ -41,3 +41,20 @@ jobs:
             exit 1
           fi
           echo "No tracked env files and no key-shaped strings."
+
+  # NOTICE gating on NOTICE. Reports rather than blocks, because the demo API
+  # runs on a free tier that sleeps after fifteen minutes idle, and a CI job
+  # that fails because a service was asleep teaches people to ignore it.
+  #
+  # A real consumer would set fail-on-unverified to true, which is the point:
+  # a pipeline already refuses to ship on a failing test, and this makes it
+  # refuse to ship on data nobody has checked.
+  verify-data:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./actions/verify
+        with:
+          api-base: https://notice-api-0vfo.onrender.com
+          fail-on-unverified: 'false'

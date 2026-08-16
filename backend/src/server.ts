@@ -8,7 +8,7 @@ import {
 import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
 import { FileStore, ScreenshotStore } from './store/index.js';
-import { notifyIncident } from './pipeline/index.js';
+import { notifyIncident, reportIncidentToGitHub } from './pipeline/index.js';
 
 /**
  * NOTICE API entry point.
@@ -88,8 +88,25 @@ function main(): void {
     webhookUrl: process.env['NOTICE_WEBHOOK_URL'],
     dashboardUrl: process.env['NOTICE_DASHBOARD_URL'],
   };
-  const announce = async (incident: Parameters<typeof notifyIncident>[1], name: string) =>
-    notifyIncident(notify, incident, name);
+  // Two destinations, one call. A chat message tells people now; an issue
+  // gives the defect an owner and a close date, which is what a team actually
+  // works from. Both are optional and neither can affect the verdict.
+  const github = {
+    repository: process.env['NOTICE_GITHUB_REPO'],
+    token: process.env['NOTICE_GITHUB_TOKEN'],
+    dashboardUrl: process.env['NOTICE_DASHBOARD_URL'],
+    apiUrl: process.env['NOTICE_PUBLIC_API_URL'],
+  };
+
+  const announce = async (
+    incident: Parameters<typeof notifyIncident>[1],
+    name: string,
+  ): Promise<void> => {
+    await Promise.allSettled([
+      notifyIncident(notify, incident, name),
+      reportIncidentToGitHub(github, incident, name),
+    ]);
+  };
 
   const router = buildRouter({
     store,

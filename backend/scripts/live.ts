@@ -183,50 +183,84 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
    * is deliberately a separate step, because a run spends page loads and the
    * operator should choose when.
    */
-  async register([collectorId]) {
-    const id = collectorId ?? process.env['NOTICE_DEMO_COLLECTOR'] ?? 'c_mstkc1rkr8mit6wut';
-    const fixture = `${FIXTURE}/product/headphones`;
+  /**
+   * Recreate the demo state in one command.
+   *
+   * The free tier has no persistent disk, so the store resets whenever the
+   * service restarts or wakes from idle. Rebuilding it by hand before a
+   * recording is how a demo starts late, so this registers every known
+   * collector and skips the ones already there.
+   *
+   * Running them is deliberately separate: a run spends page loads, and the
+   * operator should choose when.
+   */
+  async register([only]) {
+    const known = [
+      {
+        id: process.env['NOTICE_DEMO_COLLECTOR'] ?? 'c_mstkc1rkr8mit6wut',
+        name: 'DriftMart headphones',
+        url: `${FIXTURE}/product/headphones`,
+        field: 'price',
+        meaning:
+          'The purchase price of the product, not a refundable deposit, shipping fee or sponsored listing price.',
+        labels: ['price', 'purchase price'],
+        exclude: ['deposit', 'refundable', 'security', 'sponsored'],
+        golden: [{ label: 'baseline', url: `${FIXTURE}/fixtures/baseline`, expected: { price: 249 } }],
+      },
+      {
+        id: 'c_msvk2zahnc2mizts6',
+        name: 'Books to Scrape',
+        url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
+        field: 'price_excl_tax',
+        meaning: 'The price of the book excluding tax, not the tax amount and not a shipping fee.',
+        labels: ['price', 'price excl'],
+        exclude: ['shipping', 'sponsored', 'incl'],
+        golden: [],
+      },
+    ].filter((candidate) => only === undefined || candidate.id === only);
 
     const existing = (await call('/api/collectors')) as { brightDataCollectorId: string }[];
-    const already = existing.find((candidate) => candidate.brightDataCollectorId === id);
-    if (already !== undefined) {
-      out(`${id} is already registered. Nothing to do.`);
-      return;
+
+    for (const entry of known) {
+      if (existing.some((candidate) => candidate.brightDataCollectorId === entry.id)) {
+        out(`${entry.id}  already registered`);
+        continue;
+      }
+
+      const created = (await authed('/api/collectors', {
+        brightDataCollectorId: entry.id,
+        name: entry.name,
+        targetDomain: new URL(entry.url).hostname,
+        watchUrls: [entry.url],
+        witnessSpecs: [
+          {
+            path: entry.field,
+            meaning: entry.meaning,
+            labels: entry.labels,
+            excludeLabels: entry.exclude,
+            kind: 'money',
+            allowed: [],
+          },
+        ],
+        // Declared, never inferred. A rule learned from a broken run protects
+        // nothing, so the field must exist and must be at least 1, which is
+        // what catches a silent zero with no baseline at all.
+        invariants: [
+          { kind: 'required', field: entry.field },
+          { kind: 'range', field: entry.field, min: 1 },
+        ],
+        protectedFields: [entry.field],
+        goldenCases: entry.golden,
+        // Non-null so the scheduler will observe it. isDue skips a collector
+        // with no schedule, which quietly made autonomy impossible.
+        schedule: 'every 6 hours',
+      })) as { id: string };
+
+      out(`${entry.id}  registered as ${created.id}`);
     }
 
-    const created = (await authed('/api/collectors', {
-      brightDataCollectorId: id,
-      name: 'DriftMart headphones',
-      targetDomain: new URL(FIXTURE).hostname,
-      watchUrls: [fixture],
-      witnessSpecs: [
-        {
-          path: 'price',
-          meaning:
-            'The purchase price of the product, not a refundable deposit, shipping fee or sponsored listing price.',
-          labels: ['price', 'purchase price'],
-          excludeLabels: ['deposit', 'refundable', 'security', 'sponsored'],
-          kind: 'money',
-          allowed: [],
-        },
-      ],
-      // Declared, never inferred. `price` must exist and must be at least 1,
-      // which is what catches the silent zero without any learned baseline.
-      invariants: [
-        { kind: 'required', field: 'price' },
-        { kind: 'range', field: 'price', min: 1 },
-      ],
-      protectedFields: ['price'],
-      goldenCases: [
-        { label: 'baseline', url: `${FIXTURE}/fixtures/baseline`, expected: { price: 249 } },
-      ],
-      schedule: null,
-    })) as { id: string };
-
-    out(`registered ${id}`);
-    out(`notice id  ${created.id}`);
     out('');
-    out('Next:  npm run live -- run ' + id);
+    out('Next:  npm run live -- status');
   },
 
   async modes() {

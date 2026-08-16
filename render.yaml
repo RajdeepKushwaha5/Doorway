@@ -77,6 +77,14 @@ services:
         sync: false
       - key: NOTICE_DASHBOARD_URL
         sync: false
+      # File incidents as GitHub issues. Needs a token with issues: write.
+      - key: NOTICE_GITHUB_REPO
+        sync: false
+      - key: NOTICE_GITHUB_TOKEN
+        sync: false
+      # Lets an issue embed the incident screenshot.
+      - key: NOTICE_PUBLIC_API_URL
+        sync: false
 
   # DriftMart is the controlled fault-injection fixture that Bright Data
   # scrapes. It must be a running instance rather than serverless functions:

@@ -16,3 +16,4 @@ export {
 } from './consumer.js';
 
 export { notifyIncident, type NotifyConfig } from './notify.js';
+export { reportIncidentToGitHub, type GitHubConfig } from './github.js';
