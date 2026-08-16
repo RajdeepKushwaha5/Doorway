@@ -1,4 +1,4 @@
-import { apiBase } from './env';
+import { serverApiBase } from './env';
 import type {
   CollectorContract,
   CollectorSummary,
@@ -17,7 +17,19 @@ import type {
  * leak one into a bundle or a screen recording.
  */
 
-const BASE = apiBase();
+/**
+ * Resolved per request, not once at module load.
+ *
+ * Every caller of this client is a server component, so `NOTICE_API_BASE` is
+ * readable at request time. `NEXT_PUBLIC_NOTICE_API_BASE` is not: Next inlines
+ * it into the bundle at build time, so changing it on the host does nothing
+ * until a rebuild, and a dashboard that was deployed before the backend URL
+ * existed keeps pointing at localhost with no visible reason why.
+ *
+ * Preferring the runtime variable means setting it takes effect on the next
+ * request. The build-time value remains the fallback.
+ */
+const base = (): string => serverApiBase();
 
 export class ApiError extends Error {
   constructor(
@@ -30,7 +42,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, {
+  const response = await fetch(`${base()}${path}`, {
     ...init,
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
     // Monitoring data is only useful when current. A cached incident list is
