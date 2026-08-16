@@ -32,6 +32,17 @@ export interface RequestOptions {
   retryPolicy?: RetryPolicy;
   /** Called before each retry, for logging and cost accounting. */
   onRetry?: (attempt: number, delayMs: number, error: BrightDataError) => void;
+  /**
+   * Inspect the headers of a successful response before its body is read.
+   *
+   * Needed because a 200 does not always mean success. Web Unlocker returns
+   * 200 once the request reaches the unlocker and reports the real outcome in
+   * `x-brd-status-code` and `x-brd-error`, so a caller that trusts the status
+   * alone can hand an error page onward as if it were the page.
+   *
+   * Throw from here to reject the response.
+   */
+  onResponseHeaders?: (headers: Headers) => void;
   signal?: AbortSignal;
 }
 
@@ -149,6 +160,13 @@ export async function brightDataRequest(
       });
 
       if (response.ok) {
+        // Some responses are 200 at the transport layer while reporting a
+        // failure in headers. Web Unlocker does exactly this: the outer status
+        // is 200 once the request reaches the unlocker, and the real outcome
+        // is in x-brd-status-code and x-brd-error. Give callers the chance to
+        // inspect that before the body is interpreted.
+        options.onResponseHeaders?.(response.headers);
+
         const text = await response.text();
         if (text.trim() === '') return null;
         try {

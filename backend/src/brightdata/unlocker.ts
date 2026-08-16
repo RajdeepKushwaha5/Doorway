@@ -35,6 +35,49 @@ export interface WitnessFetch {
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 
+/**
+ * A 200 from `/request` does not mean the page was fetched.
+ *
+ * Bright Data's own reference is explicit: "The outer response is 200 OK once
+ * the request reaches the unlocker. The result status is in the
+ * x-brd-status-code header." Every failure also carries `x-brd-error`, and
+ * most carry a machine-readable `x-brd-error-code`.
+ *
+ * This matters more here than in most clients. The witness is the sensor the
+ * rest of the system trusts to arbitrate whether a collector is broken. If an
+ * unlock failure is accepted as page content, the extractor finds nothing or
+ * finds the wrong thing, and NOTICE reaches a confident conclusion from an
+ * error page. Refusing loudly produces an `inconclusive` incident instead,
+ * which is the honest outcome.
+ *
+ * Throws rather than returns, so an unusable witness can never be mistaken for
+ * a witness that saw an empty page.
+ */
+function assertUnlockSucceeded(headers: Headers): void {
+  const error = headers.get('x-brd-error');
+  const code = headers.get('x-brd-error-code') ?? headers.get('x-brd-err-code');
+  const status = Number(headers.get('x-brd-status-code') ?? '200');
+
+  if (error !== null || code !== null) {
+    throw new BrightDataRequestError(
+      `Web Unlocker could not read the page: ${code ?? 'unknown'} ${error ?? ''}`.trim(),
+      Number.isFinite(status) ? status : 502,
+      code ?? '',
+    );
+  }
+
+  // The target's own status, passed through. A 404 or a 500 from the site is
+  // not an unlock failure, but it is not a page either, and treating a site
+  // error page as evidence is how a witness ends up agreeing with nothing.
+  if (Number.isFinite(status) && status >= 400) {
+    throw new BrightDataRequestError(
+      `the target returned HTTP ${String(status)} to the witness`,
+      status,
+      '',
+    );
+  }
+}
+
 function assertPublicHttpUrl(url: string): URL {
   let parsed: URL;
   try {
@@ -101,6 +144,7 @@ export async function fetchWitnessMarkdown(
       data_format: 'markdown',
     },
     timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    onResponseHeaders: assertUnlockSucceeded,
     ...(config.retryPolicy === undefined ? {} : { retryPolicy: config.retryPolicy }),
     ...(signal === undefined ? {} : { signal }),
   });
@@ -110,7 +154,22 @@ export async function fetchWitnessMarkdown(
       ? response
       : typeof (response as { body?: unknown } | null)?.body === 'string'
         ? (response as { body: string }).body
-        : JSON.stringify(response);
+        : null;
+
+  // Previously this fell back to JSON.stringify, which turned an unexpected
+  // response object into a "page" the extractor would dutifully search. A
+  // witness that cannot produce a document has not seen anything, and saying
+  // so is the whole point of having an `inconclusive` verdict.
+  if (markdown === null) {
+    throw new BrightDataRequestError(
+      'Web Unlocker returned no document body for the witness',
+      502,
+      '',
+    );
+  }
+  if (markdown.trim() === '') {
+    throw new BrightDataRequestError('Web Unlocker returned an empty document', 502, '');
+  }
 
   return { markdown, fetchedAt: new Date().toISOString(), url };
 }
