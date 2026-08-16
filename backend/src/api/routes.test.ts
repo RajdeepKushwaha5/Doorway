@@ -1,0 +1,182 @@
+import { createServer, type Server } from 'node:http';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { AddressInfo } from 'node:net';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { buildRouter } from './routes.js';
+import { FileStore, ScreenshotStore } from '../store/index.js';
+import type { BrightDataClient } from '../brightdata/index.js';
+import type { IncidentRecord } from '../store/index.js';
+
+/**
+ * The HTTP surface had no tests at all.
+ *
+ * Every other suite exercises the pipeline by calling it directly, which
+ * leaves the layer that decides who is allowed to call it entirely unproven.
+ * `assertAdmin` is the only thing between the open internet and chargeable
+ * Bright Data runs, Self-Healing triggers and repair promotion, so its
+ * behaviour deserves the same scrutiny as the promotion guards.
+ *
+ * These drive a real server over a real socket rather than calling handlers
+ * directly, because the things most likely to break here are statuses,
+ * headers and content types, none of which a direct call would exercise.
+ */
+
+const TOKEN = 'a'.repeat(64);
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9, 9, 9]);
+
+let server: Server;
+let base: string;
+let store: FileStore;
+let screenshots: ScreenshotStore;
+
+/** The routes under test never reach Bright Data. */
+const client = {} as BrightDataClient;
+
+function incident(overrides: Partial<IncidentRecord> = {}): IncidentRecord {
+  return {
+    id: 'inc-1',
+    collectorId: 'col-1',
+    runId: 'run-1',
+    classification: 'extractor_drift',
+    confidence: 0.9,
+    affectedFields: ['price'],
+    evidence: ['collector and witness disagree'],
+    witness: null,
+    screenshotId: null,
+    repairPrompt: null,
+    history: [],
+    gateResults: [],
+    quarantined: true,
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+    ...overrides,
+  };
+}
+
+beforeEach(async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'notice-routes-'));
+  store = new FileStore(join(directory, 'notice.json'));
+  screenshots = new ScreenshotStore(join(directory, 'notice.json'));
+  process.env['NOTICE_ADMIN_TOKEN'] = TOKEN;
+
+  const router = buildRouter({ store, client, screenshots });
+  server = createServer((request, response) => void router.handle(request, response));
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  base = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
+});
+
+afterEach(async () => {
+  delete process.env['NOTICE_ADMIN_TOKEN'];
+  delete process.env['NOTICE_CORS_ORIGIN'];
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+});
+
+describe('authorization on mutating routes', () => {
+  it('refuses a write with no token', async () => {
+    const response = await fetch(`${base}/api/collectors`, { method: 'POST' });
+    expect(response.status).toBe(401);
+  });
+
+  it('refuses a write with the wrong token', async () => {
+    const response = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${'b'.repeat(64)}` },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('refuses a token of the right value but the wrong length', async () => {
+    const response = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN.slice(0, 32)}` },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('disables writes entirely when no token is configured, rather than opening them', async () => {
+    delete process.env['NOTICE_ADMIN_TOKEN'];
+    const response = await fetch(`${base}/api/collectors`, { method: 'POST' });
+    expect(response.status).toBe(503);
+  });
+
+  it('lets reads through without a token', async () => {
+    expect((await fetch(`${base}/api/collectors`)).status).toBe(200);
+    expect((await fetch(`${base}/api/health`)).status).toBe(200);
+  });
+});
+
+describe('the screenshot route', () => {
+  it('404s for an unknown incident', async () => {
+    expect((await fetch(`${base}/api/incidents/nope/screenshot`)).status).toBe(404);
+  });
+
+  it('404s when the incident recorded no capture', async () => {
+    await store.saveIncident(incident());
+    const response = await fetch(`${base}/api/incidents/inc-1/screenshot`);
+    expect(response.status).toBe(404);
+  });
+
+  it('410s when the record outlived the file, which happens on a host with no disk', async () => {
+    await store.saveIncident(incident({ screenshotId: '11111111-2222-3333-4444-555555555555' }));
+    const response = await fetch(`${base}/api/incidents/inc-1/screenshot`);
+    // Not a 404: the incident exists and did have a capture. Saying "gone"
+    // rather than "never existed" is the difference between a redeploy and a
+    // bug in the dashboard.
+    expect(response.status).toBe(410);
+  });
+
+  it('serves the bytes as an image, not as JSON', async () => {
+    const id = await screenshots.save(PNG);
+    await store.saveIncident(incident({ screenshotId: id }));
+
+    const response = await fetch(`${base}/api/incidents/inc-1/screenshot`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/png');
+    expect(response.headers.get('content-length')).toBe(String(PNG.byteLength));
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(bytes).toEqual(PNG);
+  });
+
+  it('needs no token, so the dashboard can use a plain img tag', async () => {
+    const id = await screenshots.save(PNG);
+    await store.saveIncident(incident({ screenshotId: id }));
+    delete process.env['NOTICE_ADMIN_TOKEN'];
+
+    expect((await fetch(`${base}/api/incidents/inc-1/screenshot`)).status).toBe(200);
+  });
+});
+
+describe('transport behaviour', () => {
+  it('returns JSON for an unknown path rather than an HTML error page', async () => {
+    const response = await fetch(`${base}/nothing/here`);
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toMatchObject({ error: 'not found' });
+  });
+
+  it('echoes the configured origin and varies on it', async () => {
+    process.env['NOTICE_CORS_ORIGIN'] = 'https://dashboard.example.com';
+    const response = await fetch(`${base}/api/health`);
+    expect(response.headers.get('access-control-allow-origin')).toBe(
+      'https://dashboard.example.com',
+    );
+    expect(response.headers.get('vary')).toContain('Origin');
+  });
+
+  it('treats a blank origin as unset instead of emitting an empty header', async () => {
+    // A hosting dashboard stores a field left blank as an empty string, and an
+    // empty allow-origin header fails every browser request while curl keeps
+    // working.
+    process.env['NOTICE_CORS_ORIGIN'] = '   ';
+    const response = await fetch(`${base}/api/health`);
+    expect(response.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('answers a preflight without running a handler', async () => {
+    const response = await fetch(`${base}/api/collectors`, { method: 'OPTIONS' });
+    expect(response.status).toBe(204);
+  });
+});
