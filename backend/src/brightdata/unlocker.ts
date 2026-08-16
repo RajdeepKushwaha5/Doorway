@@ -35,6 +35,19 @@ export interface UnlockerConfig {
    * `access_anomaly` rather than blaming the collector.
    */
   country?: string;
+  /**
+   * Which layout to ask for. Defaults to desktop, which is also Web Unlocker's
+   * own default.
+   *
+   * Recorded rather than merely set, because the two sensors are comparable
+   * only if they saw the same page, and a mobile layout is a different page.
+   * Scraper Studio can emulate a phone with `emulate_device`, so a collector
+   * on mobile against a witness on desktop is a real configuration, and the
+   * price it disagrees about may be genuinely different rather than wrong.
+   * Recording it lets the classifier call that an access anomaly instead of
+   * blaming the extractor.
+   */
+  device?: 'desktop' | 'mobile';
   baseUrl?: string;
   timeoutMs?: number;
   retryPolicy?: RetryPolicy;
@@ -47,6 +60,8 @@ export interface WitnessFetch {
   url: string;
   /** Exit country used, when one was pinned. Recorded as acquisition context. */
   country?: string;
+  /** Layout requested. Recorded so a device mismatch is detectable. */
+  deviceType: 'desktop' | 'mobile';
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -186,6 +201,8 @@ export async function fetchWitnessMarkdown(
       ...(config.country === undefined || config.country.trim() === ''
         ? {}
         : { country: config.country.trim().toLowerCase() }),
+      // Desktop is the API's default, so only the opt-in needs sending.
+      ...(config.device === 'mobile' ? { ua: 'mobile' } : {}),
     },
     timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     onResponseHeaders: assertUnlockSucceeded,
@@ -219,6 +236,7 @@ export async function fetchWitnessMarkdown(
     markdown,
     fetchedAt: new Date().toISOString(),
     url,
+    deviceType: config.device ?? 'desktop',
     ...(config.country === undefined ? {} : { country: config.country.trim().toLowerCase() }),
   };
 }
@@ -324,7 +342,12 @@ export async function fetchWitnessScreenshot(
  * with `BRIGHTDATA_UNLOCKER_ZONE` set never touches the CLI at all.
  */
 export function createWitnessFetcher(
-  config: { apiKey: string; zone: string | undefined; country?: string | undefined },
+  config: {
+    apiKey: string;
+    zone: string | undefined;
+    country?: string | undefined;
+    device?: 'desktop' | 'mobile' | undefined;
+  },
   cliFallback: (url: string) => Promise<{ markdown: string; fetchedAt: string }>,
 ): (url: string) => Promise<{ markdown: string; fetchedAt: string }> {
   if (config.zone === undefined || config.zone.trim() === '') {
@@ -336,6 +359,7 @@ export function createWitnessFetcher(
         apiKey: config.apiKey,
         zone: config.zone as string,
         ...(config.country === undefined ? {} : { country: config.country }),
+        ...(config.device === undefined ? {} : { device: config.device }),
       },
       url,
     );

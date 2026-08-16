@@ -47,6 +47,7 @@ function main(): void {
       apiKey,
       zone: process.env['BRIGHTDATA_UNLOCKER_ZONE'],
       country: process.env['BRIGHTDATA_UNLOCKER_COUNTRY'],
+      device: process.env['BRIGHTDATA_UNLOCKER_DEVICE'] === 'mobile' ? 'mobile' : 'desktop',
     },
     (url) => scrapeMarkdown(url),
   );

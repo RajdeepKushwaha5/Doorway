@@ -147,3 +147,39 @@ describe('retrying an unlock failure', () => {
     expect(attempts).toBe(1);
   });
 });
+
+describe('device consistency between sensors', () => {
+  it('requests desktop by default and says so', async () => {
+    // Two sensors are comparable only if they saw the same page, and a mobile
+    // layout is a different page. Recording which was asked for is what lets
+    // a mismatch be called an access anomaly instead of extractor drift.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond('# Page\n\nPrice: $10', { 'x-brd-status-code': '200' })),
+    );
+
+    const result = await fetchWitnessMarkdown(CONFIG, URL_UNDER_TEST);
+    expect(result.deviceType).toBe('desktop');
+
+    const body = JSON.parse(
+      (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string,
+    ) as Record<string, unknown>;
+    // Desktop is the API's own default, so nothing needs sending for it.
+    expect(body['ua']).toBeUndefined();
+  });
+
+  it('asks for a mobile layout when told to, and reports it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond('# Page\n\nPrice: $10', { 'x-brd-status-code': '200' })),
+    );
+
+    const result = await fetchWitnessMarkdown({ ...CONFIG, device: 'mobile' }, URL_UNDER_TEST);
+    expect(result.deviceType).toBe('mobile');
+
+    const body = JSON.parse(
+      (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string,
+    ) as Record<string, unknown>;
+    expect(body['ua']).toBe('mobile');
+  });
+});

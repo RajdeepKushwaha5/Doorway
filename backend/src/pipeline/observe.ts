@@ -22,7 +22,12 @@ export interface ObserveDeps {
   /** Injected so tests can drive the witness without touching the network. */
   fetchMarkdown?: (
     url: string,
-  ) => Promise<{ markdown: string; fetchedAt: string; country?: string }>;
+  ) => Promise<{
+    markdown: string;
+    fetchedAt: string;
+    country?: string;
+    deviceType?: 'desktop' | 'mobile';
+  }>;
   /**
    * Capture a rendered image of the page and return an id for it.
    *
@@ -54,10 +59,15 @@ export interface ObserveResult {
  *   from a broken extractor. Left undefined it stays absent rather than being
  *   guessed, because a wrong country here produces a confident wrong verdict.
  */
-function contextFrom(url: string, at: string, country?: string): AcquisitionContext {
+function contextFrom(
+  url: string,
+  at: string,
+  country?: string,
+  deviceType: AcquisitionContext['deviceType'] = 'unknown',
+): AcquisitionContext {
   return {
     requestedUrl: url,
-    deviceType: 'unknown',
+    deviceType,
     variantMarkers: [],
     observedAt: at,
     ...(country === undefined || country === '' ? {} : { country }),
@@ -155,7 +165,12 @@ export async function observeOnce(
   // `inconclusive` incident rather than an exception, because an exception
   // here leaves a suspicious run unrecorded and the downstream feed still
   // serving as though nothing happened.
-  let witnessFetch: { markdown: string; fetchedAt: string; country?: string };
+  let witnessFetch: {
+    markdown: string;
+    fetchedAt: string;
+    country?: string;
+    deviceType?: 'desktop' | 'mobile';
+  };
   try {
     witnessFetch = await fetchMarkdown(url);
   } catch (caught) {
@@ -231,8 +246,21 @@ export async function observeOnce(
   const classification = classify({
     checks,
     reconciliation,
-    collectorContext: contextFrom(url, startedAt),
-    witnessContext: contextFrom(url, witnessFetch.fetchedAt, witnessFetch.country),
+    // The collector's device is declared on the record, never guessed. A
+    // Scraper Studio scraper can emulate a phone with `emulate_device`, and
+    // only whoever built it knows whether it did.
+    collectorContext: contextFrom(
+      url,
+      startedAt,
+      collector.acquisitionContext.country,
+      collector.acquisitionContext.deviceType,
+    ),
+    witnessContext: contextFrom(
+      url,
+      witnessFetch.fetchedAt,
+      witnessFetch.country,
+      witnessFetch.deviceType,
+    ),
     departsFromBaseline: checks.some((check) => check.status === 'warn' || check.status === 'fail'),
   });
 
