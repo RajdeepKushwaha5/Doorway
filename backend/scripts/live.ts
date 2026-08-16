@@ -171,6 +171,64 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     out(JSON.stringify(await call(`/api/feed/${collector.id}`), null, 2));
   },
 
+  /**
+   * Recreate the demo state in one command.
+   *
+   * The free tier has no persistent disk, so the store resets whenever the
+   * service restarts or wakes from idle. That is survivable only if getting
+   * back to a useful state takes seconds. Rebuilding it by hand before a
+   * recording is how a demo starts late and flustered.
+   *
+   * Registers the collector if it is missing and leaves it there. Running it
+   * is deliberately a separate step, because a run spends page loads and the
+   * operator should choose when.
+   */
+  async register([collectorId]) {
+    const id = collectorId ?? process.env['NOTICE_DEMO_COLLECTOR'] ?? 'c_mstkc1rkr8mit6wut';
+    const fixture = `${FIXTURE}/product/headphones`;
+
+    const existing = (await call('/api/collectors')) as { brightDataCollectorId: string }[];
+    const already = existing.find((candidate) => candidate.brightDataCollectorId === id);
+    if (already !== undefined) {
+      out(`${id} is already registered. Nothing to do.`);
+      return;
+    }
+
+    const created = (await authed('/api/collectors', {
+      brightDataCollectorId: id,
+      name: 'DriftMart headphones',
+      targetDomain: new URL(FIXTURE).hostname,
+      watchUrls: [fixture],
+      witnessSpecs: [
+        {
+          path: 'price',
+          meaning:
+            'The purchase price of the product, not a refundable deposit, shipping fee or sponsored listing price.',
+          labels: ['price', 'purchase price'],
+          excludeLabels: ['deposit', 'refundable', 'security', 'sponsored'],
+          kind: 'money',
+          allowed: [],
+        },
+      ],
+      // Declared, never inferred. `price` must exist and must be at least 1,
+      // which is what catches the silent zero without any learned baseline.
+      invariants: [
+        { kind: 'required', field: 'price' },
+        { kind: 'range', field: 'price', min: 1 },
+      ],
+      protectedFields: ['price'],
+      goldenCases: [
+        { label: 'baseline', url: `${FIXTURE}/fixtures/baseline`, expected: { price: 249 } },
+      ],
+      schedule: null,
+    })) as { id: string };
+
+    out(`registered ${id}`);
+    out(`notice id  ${created.id}`);
+    out('');
+    out('Next:  npm run live --workspace backend -- run ' + id);
+  },
+
   async modes() {
     const response = await fetch(`${FIXTURE}/api/admin/mode`);
     out(JSON.stringify(await response.json(), null, 2));

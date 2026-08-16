@@ -158,7 +158,13 @@ Documented because it shaped the architecture, not as criticism.
 
 **4. Self-Healing progress signals the gate through `step`, not `status`.** The live payload is `{id, step, completed_steps, status, diff, success, preview_result}`. At the gate it reads `step: "user_approval"` with `status: "pending_answer"`. Matching on `status` alone reports a waiting job as pending and polls it to timeout.
 
-**5. An approved, completed heal left production still failing.** On collector `c_mstkc1rkr8mit6wut`, approval returned HTTP 200, the job moved to `done` with `success: true`, and the incident page still returned its original parse error. The cause is undetermined: either approval does not promote the code, or the promoted code does not fix it. No public endpoint distinguishes them, so we state the observation and not a cause. This is why post-promotion verification exists.
+**5. An approved, completed heal left production still failing. Reproduced twice.** On collector `c_mstkc1rkr8mit6wut`, approval returned HTTP 200, the job moved to `done` with `success: true`, and the incident page still returned its original value.
+
+Reproduced end to end on 2026-08-16 with full evidence. The collector returned `price: 0` on a page reading `Price: $249`. `refactor_template` (job `ia_msvikpe02i5a3id7b2`) reached `step: user_approval` with `success: true`, and its `preview_result` showed the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval via `resume_automation_job` returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again.
+
+So a green preview, a completed job and `success: true` together are not evidence that production changed. The cause is still undetermined: either approval does not promote the template, or the promoted template does not fix the page. No public endpoint distinguishes them, so this remains an observation rather than a diagnosis.
+
+This is why post-promotion verification exists, and it is the single strongest argument for the gate. A pipeline that trusts `success: true` would have marked this collector repaired and resumed publishing zero.
 
 **6. A screenshot response is labelled `Content-Type: application/json`.** `POST /request` with `data_format: screenshot` returns PNG bytes, verified by the magic number `89 50 4e 47`, under a JSON content type. A client that branches on the header will try to parse an image, and one that trusts it cannot tell a successful capture from an error payload. NOTICE checks the magic number instead.
 

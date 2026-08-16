@@ -245,12 +245,33 @@ export class BrightDataClient {
       promptLength: request.prompt.length,
     });
 
-    await this.#request({
-      method: 'POST',
-      path: `/dca/collectors/${encodeURIComponent(collectorId)}/refactor_template`,
-      body: request,
-      ...(signal === undefined ? {} : { signal }),
-    });
+    try {
+      await this.#request({
+        method: 'POST',
+        path: `/dca/collectors/${encodeURIComponent(collectorId)}/refactor_template`,
+        body: request,
+        ...(signal === undefined ? {} : { signal }),
+      });
+    } catch (caught) {
+      // Bright Data refuses a second heal while a candidate is still waiting
+      // at the approval gate, with a 409 and no explanation. Verified live on
+      // 2026-08-16 against a collector holding a pending candidate.
+      //
+      // Worth translating, because the raw error sends an operator looking for
+      // a fault in the heal they just requested, when the actual problem is a
+      // decision nobody made on the previous one. The gate stays open until it
+      // is answered.
+      if (caught instanceof BrightDataRequestError && caught.status === 409) {
+        throw new BrightDataRequestError(
+          `collector ${collectorId} already has a repair waiting at the approval gate. ` +
+            'Approve or reject it before requesting another; Bright Data allows only one open candidate.',
+          409,
+          '',
+          caught,
+        );
+      }
+      throw caught;
+    }
   }
 
   /** Read the current state of a Self-Healing job. */
