@@ -84,6 +84,36 @@ The two sensors are both Bright Data, used against each other. The collector is 
 
 ---
 
+## Use it from an AI agent
+
+```bash
+claude mcp add notice -- npm run mcp --workspace backend
+```
+
+NOTICE speaks MCP, so an agent can ask it for web data directly. Bright Data's
+own MCP server gives an agent real-time access to the web and is deliberately
+not in the business of deciding whether what it returned is true. A selector
+that drifted onto a deposit still returns a number. The agent receives `25`,
+has no reason to doubt it, and a price, a recommendation or a purchase follows
+from a value nobody checked.
+
+Same protocol, same live data, one difference that is the entire point: **it
+refuses to answer when the evidence does not support an answer.**
+
+| Tool | Behaviour |
+|---|---|
+| `list_monitored_sources` | what can be verified at all |
+| `get_verified_web_data` | the value, or a refusal naming the incident |
+| `list_open_incidents` | what currently cannot be trusted |
+| `explain_verification` | the evidence behind a verdict |
+
+No tool returns a bare value. A quarantined field is withheld rather than
+served with a caveat a model is free to read past, and the corrupt number
+never enters the context window at all. An agent cannot accidentally act on
+unverified data, because unverified data is never what it receives.
+
+---
+
 ## Why it is not a health monitor
 
 A monitor checks whether output arrived. NOTICE checks whether output is still **true**, and it distinguishes four things a monitor collapses into one alarm:
@@ -184,7 +214,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 155 tests, no network required
+npm test                      # 166 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -233,7 +263,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 155 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 166 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 
