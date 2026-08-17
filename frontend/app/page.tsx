@@ -276,6 +276,53 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Automation ----------------------------------------------------- */}
+      <section id="automation" className="border-b border-surface-border">
+        <div className="mx-auto grid max-w-[1400px] gap-14 px-6 py-24 lg:grid-cols-2 lg:px-10">
+          <div>
+            <p className="eyebrow">✦ Automation</p>
+            <h2 className="section-heading mt-6 max-w-[20ch]">
+              It can fix itself, once it has earned the right.
+            </h2>
+            <p className="mt-6 max-w-[54ch] text-[15px] leading-7 text-muted">
+              Bright Data&apos;s own product manager, asked whether repair fires by itself:{' '}
+              <span className="text-ivory">
+                &quot;For now, it is you going to trigger it. We don&apos;t have the fully automated
+                solution yet.&quot;
+              </span>{' '}
+              Set a collector to <code className="font-mono text-ivory">on_gate_pass</code> and the
+              loop closes with nobody in it.
+            </p>
+            <p className="mt-6 max-w-[54ch] text-[15px] leading-7 text-muted">
+              The default is never. A collector earns automation by being understood, not by being
+              registered.
+            </p>
+          </div>
+
+          <div className="grid gap-px overflow-hidden rounded-card border border-surface-border bg-surface-border">
+            {[
+              ['Gate passes on every case', 'Fixes the page that failed, breaks none that worked.'],
+              [
+                'Weakest reading clears 0.7',
+                'A bare number with nothing naming it scores 0.35 and is never enough.',
+              ],
+              [
+                'Production re-verified after',
+                'Held to the full contract. Done often does not mean successful.',
+              ],
+            ].map(([title, copy], index) => (
+              <div key={title} className="bg-surface-raised p-6">
+                <p className="font-display text-2xl text-muted">
+                  {String(index + 1).padStart(2, '0')}
+                </p>
+                <p className="mt-3 text-[13px]">{title}</p>
+                <p className="mt-2 text-[13px] leading-6 text-muted">{copy}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Agents --------------------------------------------------------- */}
       <section id="agents" className="border-b border-surface-border">
         <div className="mx-auto grid max-w-[1400px] gap-14 px-6 py-24 lg:grid-cols-2 lg:px-10">
@@ -392,17 +439,27 @@ this page directly to work around this.`}
                         {collector.brightDataCollectorId} · {collector.targetDomain}
                       </p>
                     </div>
-                    <span
-                      className={`status-chip shrink-0 ${
-                        collector.openIncidents === 0
-                          ? 'border-verified/30 text-verified'
-                          : 'border-blocked/30 text-blocked'
-                      }`}
-                    >
-                      {collector.openIncidents === 0
-                        ? 'verified'
-                        : `${String(collector.openIncidents)} open`}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {/* Whether this one repairs itself. The single setting
+                          that separates a dashboard from an automation, so it
+                          belongs on the row rather than one click in. */}
+                      {collector.autoPromote === 'on_gate_pass' ? (
+                        <span className="status-chip border-surface-border text-muted">
+                          <span aria-hidden>↻</span> self-healing
+                        </span>
+                      ) : null}
+                      <span
+                        className={`status-chip ${
+                          collector.openIncidents === 0
+                            ? 'border-verified/30 text-verified'
+                            : 'border-blocked/30 text-blocked'
+                        }`}
+                      >
+                        {collector.openIncidents === 0
+                          ? 'verified'
+                          : `${String(collector.openIncidents)} open`}
+                      </span>
+                    </div>
                   </Link>
                 ))
               )}

@@ -16,6 +16,7 @@ import { usePathname } from 'next/navigation';
 const links = [
   { href: '/#problem', label: 'Problem' },
   { href: '/#system', label: 'How it works' },
+  { href: '/#automation', label: 'Automation' },
   { href: '/#gate', label: 'Deploy gate' },
   { href: '/#agents', label: 'For agents' },
   { href: '/verified', label: 'Verified feed' },

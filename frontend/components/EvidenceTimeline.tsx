@@ -85,6 +85,18 @@ export function WitnessComparison({ incident }: { incident: Incident }) {
                     line {value.evidence.lineNumber}, {value.evidence.strategy},{' '}
                     {Math.round(value.confidence * 100)}% confidence
                   </span>
+                  {/* Whether this reading is strong enough for a repair to
+                      promote itself. A field below the bar does not block
+                      detection; it means a person decides. */}
+                  <span
+                    className={`mt-1 block text-xs ${
+                      value.confidence >= 0.7 ? 'text-verified' : 'text-suspect'
+                    }`}
+                  >
+                    {value.confidence >= 0.7
+                      ? 'strong enough to auto-promote a repair'
+                      : 'too weak to auto-promote; a human decides'}
+                  </span>
                 </td>
               </tr>
             ))}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BaselineReview, RunNowButton } from '@/components/CollectorControls';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
+import { AutomationPolicy } from '@/components/AutomationPolicy';
 import { ConsumerFeed } from '@/components/ConsumerFeed';
 import { api, ApiError } from '@/lib/api';
 
@@ -94,6 +95,8 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
           ))}
         </ul>
       </section>
+
+      <AutomationPolicy policy={collector.autoPromote} />
 
       <ConsumerFeed collectorId={collector.id} url={collector.watchUrls[0]} />
 

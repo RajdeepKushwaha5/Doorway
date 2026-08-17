@@ -112,6 +112,14 @@ export interface CollectorSummary {
   status: 'active' | 'paused';
   watchUrls: string[];
   protectedFields: string[];
+  /**
+   * Whether a repair that passed the gate may promote itself.
+   *
+   * Surfaced because it is the single setting that decides whether this is a
+   * dashboard or an automation, and an operator should never have to guess
+   * which one they are looking at.
+   */
+  autoPromote: 'never' | 'on_gate_pass';
   openIncidents: number;
   contractVersion: number | null;
   contractConfidence: number;
