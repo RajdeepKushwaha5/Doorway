@@ -68,6 +68,24 @@ function isDue(collector: CollectorRecord, minIntervalMs: number): boolean {
 }
 
 /**
+ * How sure the witness must be before a repair promotes itself.
+ *
+ * The gate checks a candidate against values the witness read, so the gate is
+ * only ever as trustworthy as that reading was. The extractor grades its own
+ * work: 0.95 for structured data the page published about itself, 0.85 for a
+ * value sitting beside its label, 0.35 for a bare amount with nothing naming
+ * it. Promoting on the last of those means changing production on the strength
+ * of a guess that happened to agree with another guess.
+ *
+ * 0.7 sits above heading-adjacent and bare-currency and below labelled-line,
+ * so automation requires the witness to have found the value somewhere that
+ * said what it was. Anything weaker still gets a full incident, a repair and a
+ * gated candidate. It just asks a person before touching production, which is
+ * the honest response to evidence the system knows is thin.
+ */
+const AUTO_PROMOTE_MIN_CONFIDENCE = 0.7;
+
+/**
  * Drain queued repair jobs.
  *
  * This is the half of the worker that makes `POST /heal` able to return
@@ -125,6 +143,23 @@ export async function drainJobs(config: WorkerConfig): Promise<JobRecord | null>
     // Default is `never`. A collector earns automation by being understood,
     // not by being registered.
     if (outcome.kind === 'approved' && collector.autoPromote === 'on_gate_pass') {
+      // Calibrated confidence: automate only where the evidence supports it.
+      const readings = outcome.incident.witness?.values ?? [];
+      const weakest = readings.reduce(
+        (lowest, value) => Math.min(lowest, value.confidence),
+        readings.length === 0 ? 0 : 1,
+      );
+
+      if (weakest < AUTO_PROMOTE_MIN_CONFIDENCE) {
+        const detail =
+          readings.length === 0
+            ? 'gate passed but the witness read nothing, so promotion needs a human'
+            : `gate passed on witness evidence of only ${weakest.toFixed(2)} confidence, below the ${String(AUTO_PROMOTE_MIN_CONFIDENCE)} needed to promote automatically`;
+
+        log(`${new Date().toISOString()} job ${job.id.slice(0, 8)}: ${detail}`);
+        return finish({ status: 'succeeded', outcome: 'approved', detail });
+      }
+
       await config.store.saveJob({
         ...job,
         detail: 'gate passed, promoting without waiting for a human',

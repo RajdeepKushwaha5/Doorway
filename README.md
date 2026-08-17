@@ -182,6 +182,16 @@ contract. A promotion that does not actually fix production escalates instead
 of reporting success, which is precisely the case Bright Data's own
 `success: true` missed on a real collector this month.
 
+Automation also requires the evidence to be strong enough. The gate checks a
+candidate against values the witness read, so it is only as trustworthy as that
+reading. The extractor grades its own work: 0.95 for structured data the page
+published about itself, 0.85 for a value sitting beside its label, 0.35 for a
+bare amount with nothing naming it. A repair promotes itself only when the
+weakest field clears 0.7, judged by the weakest rather than the average,
+because the weak field is the one a wrong repair goes unnoticed on. Below that
+it still gets an incident, a repair and a gated candidate, and then asks a
+person.
+
 The default is `never`. A collector earns automation by being understood, not
 by being registered.
 
@@ -350,7 +360,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 209 tests, no network required
+npm test                      # 215 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -399,7 +409,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 209 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 215 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

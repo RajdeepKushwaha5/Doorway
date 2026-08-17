@@ -441,3 +441,50 @@ describe('auto-promotion policy', () => {
     expect(() => registerCollectorSchema.parse({ ...base, autoPromote: 'always' })).toThrow();
   });
 });
+
+/**
+ * Calibrated confidence.
+ *
+ * The gate checks a candidate against values the witness read, so it is only
+ * as trustworthy as that reading. The extractor grades its own work: 0.95 for
+ * structured data the page published about itself, 0.85 for a value beside its
+ * label, 0.35 for a bare amount with nothing naming it. Automating a promotion
+ * on the last of those is changing production on the strength of a guess.
+ */
+describe('confidence required to promote without a human', () => {
+  const FLOOR = 0.7;
+
+  const weakest = (confidences: number[]): number =>
+    confidences.reduce((lowest, value) => Math.min(lowest, value), confidences.length === 0 ? 0 : 1);
+
+  it('allows a value read beside its label', () => {
+    // labelled-line is 0.85: the page said what the number was.
+    expect(weakest([0.85])).toBeGreaterThanOrEqual(FLOOR);
+  });
+
+  it('allows structured data the page published about itself', () => {
+    expect(weakest([0.95])).toBeGreaterThanOrEqual(FLOOR);
+  });
+
+  it('refuses a bare amount with nothing naming it', () => {
+    // bare-currency is 0.35. The gate may well have passed, but it passed
+    // against a number the witness found by elimination.
+    expect(weakest([0.35])).toBeLessThan(FLOOR);
+  });
+
+  it('refuses a heading-adjacent reading, which is inference rather than a label', () => {
+    expect(weakest([0.6])).toBeLessThan(FLOOR);
+  });
+
+  it('judges by the weakest field, not the average', () => {
+    // One strong reading must not carry a weak one across the line. The weak
+    // field is the one a wrong repair would go unnoticed on.
+    expect(weakest([0.95, 0.85, 0.35])).toBeLessThan(FLOOR);
+  });
+
+  it('refuses when the witness read nothing at all', () => {
+    // No evidence is not high confidence, and treating an empty list as
+    // perfect agreement is how a vacuous check passes forever.
+    expect(weakest([])).toBeLessThan(FLOOR);
+  });
+});
