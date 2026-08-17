@@ -50,11 +50,15 @@ function toCandidate(
   collectorName: string,
   url: string,
   row: unknown,
+  /** The collector's declared currency, used only when the row does not say. */
+  currencyHint?: string | null,
 ): DealCandidate | null {
   if (row === null || typeof row !== 'object') return null;
 
   const priceLookup = getPath(row, priceField);
-  const money = priceLookup.found ? normalizeMoney(priceLookup.value) : null;
+  const money = priceLookup.found
+    ? normalizeMoney(priceLookup.value, currencyHint ?? undefined)
+    : null;
   const titleLookup = getPath(row, titleField);
 
   return {
@@ -129,13 +133,13 @@ export async function compareBestDeal(store: Store): Promise<DealComparison> {
       // face value. This is what a normal pipeline stores and queries.
       const runs = await store.listRuns(collector.id, 1);
       const latestRow = runs[0]?.rows[0] ?? null;
-      const raw = toCandidate(collector.id, collector.name, url, latestRow);
+      const raw = toCandidate(collector.id, collector.name, url, latestRow, collector.currency);
       if (raw !== null) unguarded.push(raw);
 
       // The verified view: only data NOTICE is willing to stand behind, with
       // its health state attached.
       const envelope = await buildFeed(store, collector.id, url);
-      const safe = toCandidate(collector.id, collector.name, url, envelope.data);
+      const safe = toCandidate(collector.id, collector.name, url, envelope.data, collector.currency);
       if (safe !== null) {
         verified.push({
           ...safe,

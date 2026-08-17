@@ -54,6 +54,20 @@ export interface CollectorRecord {
    * count cannot share a threshold. Null takes the default of 24 hours.
    */
   freshnessMinutes: number | null;
+  /**
+   * ISO 4217 code for the currency this source prices in, such as `USD`.
+   *
+   * Declared rather than inferred. `$` is used by more than twenty currencies,
+   * so `normalizeMoney` refuses to resolve it and asks callers who know to say
+   * so. Nobody was saying so, which is why a page reading `$249` produced a
+   * value with no currency at all and rendered as a bare `249`.
+   *
+   * Null means the source did not say and nobody declared it. That is a real
+   * state and is shown as such, because a price without a currency is exactly
+   * the kind of technically-valid, practically-useless value this system is
+   * built to surface rather than paper over.
+   */
+  currency: string | null;
   createdAt: string;
 }
 

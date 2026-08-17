@@ -47,6 +47,17 @@ export const registerCollectorSchema = z.object({
   autoPromote: z.enum(['never', 'on_gate_pass']).default('never'),
   /** Minutes a verified value stays verified. Null takes the 24h default. */
   freshnessMinutes: z.number().int().positive().nullable().default(null),
+  /**
+   * ISO 4217 code this source prices in. Declared, never guessed from `$`.
+   * Uppercased so `usd` and `USD` register the same collector.
+   */
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .transform((code) => code.toUpperCase())
+    .nullable()
+    .default(null),
 });
 
 export interface ApiDeps {

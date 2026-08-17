@@ -35,9 +35,9 @@ export interface SeedResult {
  */
 type SeedEntry = Omit<
   CollectorRecord,
-  'id' | 'status' | 'acquisitionContext' | 'createdAt' | 'autoPromote' | 'freshnessMinutes'
+  'id' | 'status' | 'acquisitionContext' | 'createdAt' | 'autoPromote' | 'freshnessMinutes' | 'currency'
 > &
-  Partial<Pick<CollectorRecord, 'autoPromote' | 'freshnessMinutes'>>;
+  Partial<Pick<CollectorRecord, 'autoPromote' | 'freshnessMinutes' | 'currency'>>;
 
 export async function seedCollectors(
   store: Store,
@@ -76,6 +76,13 @@ export async function seedCollectors(
       freshnessMinutes:
         typeof entry.freshnessMinutes === 'number' && entry.freshnessMinutes > 0
           ? entry.freshnessMinutes
+          : null,
+      // Uppercased and length-checked here for the same reason as the rest:
+      // the file is parsed, not validated, so `usd` or a typo must not reach
+      // the formatter as though it were a currency code.
+      currency:
+        typeof entry.currency === 'string' && entry.currency.trim().length === 3
+          ? entry.currency.trim().toUpperCase()
           : null,
       createdAt: now().toISOString(),
     };
