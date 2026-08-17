@@ -101,12 +101,17 @@ export function BlindspotsMatrix() {
           <span className="font-neuebit text-[9.5px] uppercase tracking-[0.14em] px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-500/40 rounded">
             ✦ DUAL SENSOR
           </span>
+          {/* Not "ground truth". The witness is a second sensor with its own
+              confidence, and it can fail: a value that exists only in an image
+              is invisible to it, and both sensors can agree on a wrong value if
+              a field description is loose. Calling it ground truth would claim
+              a certainty the code deliberately refuses to claim. */}
           <span className="text-gray-300">
-            Holds selector results against Web Unlocker markdown ground-truth.
+            Holds selector results against an independent Web Unlocker reading.
           </span>
         </div>
         <span className="text-gray-400 font-semibold text-[10.5px]">
-          100% BLINDSPOT COVERAGE
+          NONE OF THESE ANSWER CORRECTNESS
         </span>
       </div>
     </div>

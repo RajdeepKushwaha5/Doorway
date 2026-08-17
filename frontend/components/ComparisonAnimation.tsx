@@ -27,10 +27,13 @@ export function ComparisonAnimation() {
       {/* Left Card: The Old Way (Conventional Monitor) */}
       <div className="flex flex-col min-w-0">
         <div className="flex items-center justify-between mb-3 font-mono text-[11px]">
+          {/* The comparison is against the checks a careful team already has,
+              not against a browser agent. That is the claim `npm run blindspot`
+              actually demonstrates, and it is the one a reader can reproduce. */}
           <span className="font-neuebit text-[10px] uppercase tracking-[0.14em] text-gray-400">
-            ✕ THE OLD WAY · BROWSER AGENT
+            ✕ EVERY CHECK YOU ALREADY HAVE
           </span>
-          <span className="tabular-nums text-gray-500 font-semibold">8s · $0.02</span>
+          <span className="tabular-nums text-gray-500 font-semibold">9 PASSED</span>
         </div>
 
         <div className="relative flex-1 rounded-[10px] border border-gray-300 bg-white overflow-hidden shadow-lg card-perspective-left p-0 flex flex-col justify-between min-h-[300px]">
@@ -44,7 +47,7 @@ export function ComparisonAnimation() {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              driftmart.com/product/headphones
+              driftmart-3ut8.onrender.com/product/headphones
             </span>
           </div>
 
@@ -93,15 +96,27 @@ export function ComparisonAnimation() {
         </div>
       </div>
 
-      {/* Middle Gauge: Speed Comparison Meter */}
+      {/*
+        Two sensors reading the same page, not a race.
+
+        This column previously ran the NOTICE track at 3.5x the other and
+        labelled the pair START and FINISH, which asserted that verification is
+        faster than not verifying. It is not, and cannot be: NOTICE performs the
+        collector's read and then a second independent one. Every observation
+        costs two page loads and takes longer than one. Claiming otherwise
+        inverts the actual tradeoff, and it is trivially disproved by running
+        the thing.
+
+        So the bars now fill together, because that is what the two reads do,
+        and the honest cost is printed underneath rather than hidden.
+      */}
       <div className="hidden lg:flex flex-col items-center justify-between py-2 px-3 relative rounded-[10px] border border-gray-200 bg-gray-50/80">
         <div className="font-neuebit text-[9px] uppercase tracking-[0.18em] text-gray-400 text-center">
-          START
+          SAME PAGE
         </div>
 
-        {/* Dual Progress Bars */}
         <div className="relative w-full flex-1 my-3 flex justify-around items-center">
-          {/* Old Way Track (Slow Gray) */}
+          {/* Collector: selector-bound. */}
           <div className="relative w-2 bg-gray-200 h-full rounded-full overflow-hidden">
             <div
               className="w-full bg-gray-400 transition-all duration-100 ease-linear rounded-full"
@@ -109,20 +124,21 @@ export function ComparisonAnimation() {
             />
           </div>
 
-          {/* Dotted Center Divider */}
           <div className="w-[1px] h-full border-r border-dashed border-gray-300" />
 
-          {/* NOTICE Way Track (Fast Green) */}
+          {/* Witness: markdown, no selectors. Reads concurrently. */}
           <div className="relative w-2 bg-emerald-100 h-full rounded-full overflow-hidden">
             <div
-              className="w-full bg-emerald-500 transition-all duration-75 ease-out rounded-full"
-              style={{ height: `${Math.min(progress * 3.5, 100)}%` }}
+              className="w-full bg-emerald-500 transition-all duration-100 ease-linear rounded-full"
+              style={{ height: `${progress}%` }}
             />
           </div>
         </div>
 
-        <div className="font-neuebit text-[9px] uppercase tracking-[0.18em] text-gray-500 text-center">
-          FINISH
+        <div className="font-neuebit text-[9px] uppercase tracking-[0.18em] text-gray-500 text-center leading-tight">
+          2 READS
+          <br />
+          <span className="text-gray-400">2 PAGE LOADS</span>
         </div>
       </div>
 
@@ -136,7 +152,7 @@ export function ComparisonAnimation() {
             THE NOTICE WAY · DUAL SENSOR
           </span>
           <span className="tabular-nums text-parse-accent font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            0.4s
+            1 CAUGHT
           </span>
         </div>
 
@@ -153,8 +169,11 @@ export function ComparisonAnimation() {
                   DUAL_SENSOR_RECONCILIATION
                 </span>
               </div>
+              {/* This panel is a scripted replay of a run that happened, not a
+                  live feed. The control room below is the live surface, and
+                  labelling both the same way would make the real one worthless. */}
               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                LIVE
+                REPLAY
               </span>
             </div>
 

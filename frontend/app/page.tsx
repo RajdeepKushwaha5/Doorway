@@ -153,7 +153,11 @@ export default async function HomePage() {
               The silent failure of web scraping.
             </h2>
             <p className="text-[14px] text-gray-600 leading-relaxed font-mono">
-              A browser monitor checks HTTP status codes &amp; JSON syntax: <span className="text-gray-900 font-semibold">slow, silent, and blind to semantic corruption</span>. NOTICE holds a selector-bound collector against an independent selector-free markdown witness, <span className="text-gray-900 font-semibold font-mono">with no guesswork at all</span>.
+              Status codes, schemas and null checks all answer the same question: did the request
+              work. Every one of them <span className="text-gray-900 font-semibold">passes a price that is wrong by a factor of ten</span>, because none of
+              them ever learns what the value was supposed to be. NOTICE holds a selector-bound
+              collector against an independent selector-free markdown witness, and{' '}
+              <span className="text-gray-900 font-semibold font-mono">withholds the field rather than guessing</span>.
             </p>
           </div>
 
