@@ -21,7 +21,7 @@ export default async function VerifiedConsumerPage() {
     ],
     unguarded: {
       pick: {
-        collectorId: 'c_driftmart_headphones',
+        collectorId: 'c_msvllpds1n1dcoz8qx',
         collectorName: 'DriftMart headphones',
         title: 'Nova Headphones',
         price: 25,
@@ -30,7 +30,7 @@ export default async function VerifiedConsumerPage() {
       },
       considered: [
         {
-          collectorId: 'c_driftmart_headphones',
+          collectorId: 'c_msvllpds1n1dcoz8qx',
           collectorName: 'DriftMart headphones',
           title: 'Nova Headphones',
           price: 25,
@@ -38,7 +38,7 @@ export default async function VerifiedConsumerPage() {
           url: 'https://driftmart-3ut8.onrender.com/product/headphones',
         },
         {
-          collectorId: 'c_books_toscrape',
+          collectorId: 'c_msvk2zahnc2mizts6',
           collectorName: 'Books to Scrape',
           title: 'A Light in the Attic',
           price: 51.77,
@@ -49,7 +49,7 @@ export default async function VerifiedConsumerPage() {
     },
     verified: {
       pick: {
-        collectorId: 'c_books_toscrape',
+        collectorId: 'c_msvk2zahnc2mizts6',
         collectorName: 'Books to Scrape',
         title: 'A Light in the Attic',
         price: 51.77,
@@ -60,7 +60,7 @@ export default async function VerifiedConsumerPage() {
       },
       considered: [
         {
-          collectorId: 'c_driftmart_headphones',
+          collectorId: 'c_msvllpds1n1dcoz8qx',
           collectorName: 'DriftMart headphones',
           title: 'Nova Headphones',
           price: null,
@@ -70,7 +70,7 @@ export default async function VerifiedConsumerPage() {
           stale: true,
         },
         {
-          collectorId: 'c_books_toscrape',
+          collectorId: 'c_msvk2zahnc2mizts6',
           collectorName: 'Books to Scrape',
           title: 'A Light in the Attic',
           price: 51.77,
@@ -84,9 +84,17 @@ export default async function VerifiedConsumerPage() {
   };
 
   const { unguarded, verified, diverged, explanation } = activeComparison;
+  // The fallback exists because the API sleeps on a free tier, and an empty
+  // page reads as a broken product. But unlabelled example data presented as a
+  // live decision is the exact failure this project argues against, so when the
+  // backend could not be reached the page says so rather than implying it ran.
+  const isExample = comparison === null;
   return (
     <div className="bg-surface pt-10">
-      <div className="section-index mx-auto max-w-7xl"><span>VERIFIED DECISIONS</span><span>[ 01 / 03 ]</span></div>
+      <div className="section-index mx-auto max-w-7xl">
+        <span>VERIFIED DECISIONS</span>
+        <span>{isExample ? 'EXAMPLE · API UNREACHABLE' : '[ 01 / 03 ]'}</span>
+      </div>
       <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 lg:px-8">
         <Link href="/#control-room" className="footer-link inline-flex items-center gap-2 text-sm"><ArrowLeft size={16} /> Control room</Link>
 

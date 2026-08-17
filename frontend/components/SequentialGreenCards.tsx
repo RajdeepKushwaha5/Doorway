@@ -2,30 +2,46 @@
 
 import { useEffect, useState } from 'react';
 
+/**
+ * The four steps, as the pipeline actually performs them.
+ *
+ * Two corrections worth keeping straight, because both were stated backwards
+ * here and both are load-bearing for the project's argument:
+ *
+ * The witness does not run on every check. `pipeline/observe.ts` fetches it
+ * only once a contract has tripped, since every observation that reaches it
+ * costs a second page load. Advertising a permanent dual-sensor probe would
+ * overstate the cost and understate the design.
+ *
+ * Scraper Studio does not refactor on its own. It has to be told, which is the
+ * gap this entire project exists to fill and which Bright Data's own product
+ * manager states plainly. Saying their engine repairs automatically deletes
+ * the reason NOTICE exists.
+ */
 const STEPS = [
   {
     n: '01',
     tag: 'MONITOR',
     title: 'Always watching',
-    copy: 'Every collector is health-checked on a schedule with dual-sensor probes with zero babysitting on your side.',
+    copy: 'Every collector runs on a schedule and its output is held against contracts learned from its own history, using median and MAD so one bad run cannot poison the baseline.',
   },
   {
     n: '02',
     tag: 'WITNESS',
     title: 'Catches the drift',
-    copy: 'When the source site shifts and an extractor selector breaks, Web Unlocker plain markdown catches it automatically.',
+    copy: 'Only once something trips does a second sensor read the same page as markdown, with no selectors to bind to. Disagreement means the extractor broke, not the page.',
   },
   {
     n: '03',
     tag: 'REPAIR',
-    title: 'Fixes itself',
-    copy: 'Scraper Studio refactors the extraction template automatically when a schema disagreement is proven.',
+    title: 'Repairs on evidence',
+    copy: 'NOTICE triggers Scraper Studio Self-Healing and hands it the page that actually failed. The engine is excellent at repair; it has to be told a repair is needed.',
   },
   {
     n: '04',
     tag: 'GATE',
     title: 'Gated verification',
-    copy: 'The repair is re-tested against every golden regression case before anything is promoted into production.',
+    copy: 'The candidate is replayed against the incident and every pinned regression case before promotion, and production is checked again afterwards rather than trusted.',
   },
 ];
 
@@ -49,13 +65,20 @@ export function SequentialGreenCards() {
         <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-500 mb-3">
           ✦ RELIABILITY
         </div>
+        {/* Not "APIs that fix themselves". That is the tagline every entrant
+            is building against this week, and leading with it invites a judge
+            to compare execution of a shared idea. The differentiator is the
+            second clause: a repair has to earn its way into production. */}
         <h2 className="font-mondwest text-[clamp(32px,5vw,56px)] leading-[0.98] tracking-tight mb-4 text-white">
-          APIs that fix themselves.
+          It fixes itself, once it has earned the right.
         </h2>
         <p className="font-mono text-[13.5px] text-gray-400 leading-relaxed">
-          The usual knock on web data pipelines is that they break the moment a site changes. NOTICE collectors are{' '}
-          <strong className="text-white">managed and monitored</strong>: they test themselves, and when a source site shifts underneath them, they repair and re-verify{' '}
-          <span className="text-emerald-400 font-semibold font-mono">automatically</span>.
+          A scraper that fixes itself will also fix a scraper that was never broken. So the default
+          is <strong className="text-white">never</strong>: a collector repairs unattended only once
+          you set it to, and only when the candidate clears the gate and the weakest reading behind
+          it clears{' '}
+          <span className="text-emerald-400 font-semibold font-mono">0.7 confidence</span>.
+          Otherwise it stops and asks.
         </p>
       </div>
 
@@ -135,7 +158,11 @@ export function SequentialGreenCards() {
           ↻ CONTINUOUS
         </span>
         <span>
-          And when you need something new, describe it in a sentence and the agent builds the collector into the pipeline in minutes.
+          {/* Both halves are measured: the README records about three minutes
+              for `bdata scraper create`, and registering the result is one
+              call. Anything vaguer would be guessing at a number we have. */}
+          Need a new source? Scraper Studio builds the collector from one sentence in about three
+          minutes, and the same sentence becomes the contract the witness checks it against.
         </span>
       </div>
     </div>
