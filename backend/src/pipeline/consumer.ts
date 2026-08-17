@@ -67,13 +67,49 @@ function toCandidate(
   };
 }
 
-/** Cheapest candidate with a usable price. */
-function cheapest(candidates: readonly DealCandidate[]): DealCandidate | null {
-  const priced = candidates.filter((candidate) => candidate.price !== null && candidate.price > 0);
-  if (priced.length === 0) return null;
-  return priced.reduce((best, candidate) =>
+function lowestNumber(candidates: readonly DealCandidate[]): DealCandidate | null {
+  if (candidates.length === 0) return null;
+  return candidates.reduce((best, candidate) =>
     (candidate.price ?? Infinity) < (best.price ?? Infinity) ? candidate : best,
   );
+}
+
+function priced(candidates: readonly DealCandidate[]): DealCandidate[] {
+  return candidates.filter((candidate) => candidate.price !== null && candidate.price > 0);
+}
+
+/**
+ * What an ordinary pipeline does: sort by the number and take the smallest.
+ *
+ * Currency is a string sitting next to the number, and nothing here reads it.
+ * That is not a strawman. Ranking `price` across rows is the obvious query, and
+ * it silently answers that 25 USD beats 51.77 GBP, which is not a fact about
+ * either product. This is the behaviour the verified side has to improve on.
+ */
+function cheapestNaive(candidates: readonly DealCandidate[]): DealCandidate | null {
+  return lowestNumber(priced(candidates));
+}
+
+/**
+ * Rank only within a single currency, and refuse otherwise.
+ *
+ * `incomparable` is already a first-class outcome when two sensors are held
+ * against each other, and the same rule has to apply here: two prices in
+ * different currencies cannot be ordered without a rate, and this system does
+ * not have one. Converting with a guessed rate would be inventing the fact the
+ * whole project exists to prevent.
+ *
+ * So a mixed set produces no recommendation and names why, rather than
+ * returning whichever number happened to be smaller.
+ */
+function cheapestComparable(candidates: readonly DealCandidate[]): {
+  pick: DealCandidate | null;
+  currencies: string[];
+} {
+  const usable = priced(candidates);
+  const currencies = [...new Set(usable.map((candidate) => candidate.currency ?? 'unknown'))];
+  if (currencies.length > 1) return { pick: null, currencies };
+  return { pick: lowestNumber(usable), currencies };
 }
 
 /**
@@ -110,8 +146,9 @@ export async function compareBestDeal(store: Store): Promise<DealComparison> {
     }
   }
 
-  const unguardedPick = cheapest(unguarded);
-  const verifiedPick = cheapest(verified);
+  const unguardedPick = cheapestNaive(unguarded);
+  const { pick: verifiedPick, currencies } = cheapestComparable(verified);
+  const mixedCurrencies = currencies.length > 1;
 
   const explanation: string[] = [];
   const diverged =
@@ -124,7 +161,14 @@ export async function compareBestDeal(store: Store): Promise<DealComparison> {
         `An unguarded pipeline would recommend "${unguardedPick.title ?? unguardedPick.url}" at ${String(unguardedPick.price)} ${unguardedPick.currency ?? ''}.`.trim(),
       );
     }
-    if (verifiedPick === null) {
+    if (mixedCurrencies) {
+      explanation.push(
+        `The remaining candidates are priced in ${currencies.join(' and ')}, which cannot be ranked without an exchange rate this system does not have.`,
+      );
+      explanation.push(
+        'NOTICE recommends nothing rather than answering that one currency is cheaper than another.',
+      );
+    } else if (verifiedPick === null) {
       explanation.push(
         'NOTICE has no verified price it is willing to stand behind, so it recommends nothing rather than guessing.',
       );

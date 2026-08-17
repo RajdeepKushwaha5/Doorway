@@ -305,8 +305,44 @@
   @apply border-t border-surface-border pt-8 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0;
 }
 
+.verified-hero__aside > p {
+  @apply text-[13px] leading-6 text-muted;
+}
+
+/**
+ * The question the page answers, labelled.
+ *
+ * The label and the question were adjacent inline elements with no styling, so
+ * they rendered as one run of text reading "QUESTIONWhich product...". Stacking
+ * them makes the label an eyebrow rather than the first word of the sentence.
+ */
+.verified-hero__aside > div {
+  @apply mt-6 flex flex-col gap-2 border-t border-surface-border pt-6;
+}
+
+.verified-hero__aside > div > span {
+  @apply font-mono text-[11px] uppercase tracking-eyebrow text-muted;
+}
+
+.verified-hero__aside > div > strong {
+  @apply text-[15px] font-normal leading-6 text-ivory;
+}
+
+/*
+ * Five children, not three: panel, arrow, panel, arrow, panel. Declaring three
+ * columns wrapped the last arrow and panel onto a second row, which read as a
+ * broken diagram rather than a sequence.
+ */
 .verified-flow {
-  @apply grid items-center gap-5 md:grid-cols-[1fr_auto_1fr];
+  @apply mt-8 grid items-center gap-5 md:grid-cols-[1fr_auto_1fr_auto_1fr];
+}
+
+.verified-flow > div {
+  @apply flex items-center gap-3 rounded-card border border-surface-border bg-surface-raised px-5 py-4 text-[13px];
+}
+
+.verified-flow > svg {
+  @apply mx-auto hidden text-muted md:block;
 }
 
 .deal-panel {

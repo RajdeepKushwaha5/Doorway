@@ -13,11 +13,16 @@ export default async function VerifiedConsumerPage() {
     comparison = null;
   }
 
+  // Mirrors what `compareBestDeal` now returns for this fleet: the naive
+  // pipeline ranks 25 USD against 51.77 GBP and takes the smaller number, and
+  // the verified side refuses to answer at all, because those two prices cannot
+  // be ordered without an exchange rate this system does not have.
   const activeComparison: DealComparison = comparison ?? {
     diverged: true,
     explanation: [
-      'DriftMart collector output drifted from $249.00 to $25.00 deposit due to a DOM redesign.',
-      'NOTICE dual-sensor rejected the candidate and served the verified safe recommendation.',
+      'An unguarded pipeline would recommend "Nova Headphones" at 25 USD, which is the refundable deposit a drifted selector captured.',
+      'The remaining candidates are priced in USD and GBP, which cannot be ranked without an exchange rate this system does not have.',
+      'NOTICE recommends nothing rather than answering that one currency is cheaper than another.',
     ],
     unguarded: {
       pick: {
@@ -48,16 +53,9 @@ export default async function VerifiedConsumerPage() {
       ],
     },
     verified: {
-      pick: {
-        collectorId: 'c_msvk2zahnc2mizts6',
-        collectorName: 'Books to Scrape',
-        title: 'A Light in the Attic',
-        price: 51.77,
-        currency: 'GBP',
-        url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
-        health: 'healthy',
-        stale: false,
-      },
+      // Null on purpose. Withholding is the answer here, and the panel already
+      // renders "No recommendation" for it.
+      pick: null,
       considered: [
         {
           collectorId: 'c_msvllpds1n1dcoz8qx',
