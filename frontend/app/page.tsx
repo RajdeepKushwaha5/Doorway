@@ -117,7 +117,7 @@ export default async function HomePage() {
                 {offline ? 'Backend offline' : `${String(collectors.length)} sources monitored`}
               </span>
               <span>2 independent sensors</span>
-              <span>207 tests</span>
+              <span>209 tests</span>
               <span>Read only until proven</span>
             </div>
           </div>

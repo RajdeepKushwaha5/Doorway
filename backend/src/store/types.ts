@@ -29,6 +29,22 @@ export interface CollectorRecord {
   /** Pinned correct outputs, used as the regression corpus. */
   goldenCases: GoldenCase[];
   acquisitionContext: Partial<AcquisitionContext>;
+  /**
+   * Whether a repair that passed the gate may be promoted without a human.
+   *
+   * `never` is the default, and is the right setting while you are learning
+   * what a collector's incidents look like. `on_gate_pass` closes the loop:
+   * observe, detect, repair, replay against the incident and the regression
+   * corpus, promote, then re-verify production.
+   *
+   * Automating this is defensible only because every step before it is
+   * checked. The gate has to pass on the page that failed and on the pages
+   * that were working, and production is verified again afterwards against the
+   * full contract. A promotion that does not actually fix production escalates
+   * rather than reporting success, which is exactly the case Bright Data's own
+   * `success: true` missed.
+   */
+  autoPromote: 'never' | 'on_gate_pass';
   createdAt: string;
 }
 

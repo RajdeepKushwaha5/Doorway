@@ -105,6 +105,31 @@ The two sensors are both Bright Data, used against each other. The collector is 
 
 ---
 
+## Run it as an automation, not a dashboard
+
+Set a collector's policy to `on_gate_pass` and the loop closes with no human in
+it:
+
+```
+observe → detect → repair → replay → promote → re-verify production
+```
+
+Bright Data's technical product manager, asked whether repair can fire by
+itself: *"For now, it is you going to trigger it. We don't have the fully
+automated solution yet."* This is that, with the part that makes it safe.
+
+Automation here is earned rather than assumed. A candidate is promoted only
+after it has been replayed against the page that failed **and** the pages that
+were already working, and production is re-verified afterwards against the full
+contract. A promotion that does not actually fix production escalates instead
+of reporting success, which is precisely the case Bright Data's own
+`success: true` missed on a real collector this month.
+
+The default is `never`. A collector earns automation by being understood, not
+by being registered.
+
+---
+
 ## Stop a deploy that depends on data nobody checked
 
 ```yaml
@@ -268,7 +293,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 207 tests, no network required
+npm test                      # 209 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -317,7 +342,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 207 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 209 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

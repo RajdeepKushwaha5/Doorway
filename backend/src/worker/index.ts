@@ -1,6 +1,6 @@
 import { BrightDataClient } from '../brightdata/index.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from './budget.js';
-import { attemptRepair } from '../pipeline/index.js';
+import { attemptRepair, promoteRepair } from '../pipeline/index.js';
 import { observeOnce } from '../pipeline/index.js';
 import {
   FileStore,
@@ -111,6 +111,65 @@ export async function drainJobs(config: WorkerConfig): Promise<JobRecord | null>
     });
 
     log(`${new Date().toISOString()} job ${job.id.slice(0, 8)}: ${outcome.kind}`);
+
+    // Close the loop, when the collector's policy allows it.
+    //
+    // This is the whole difference between a monitor and an automation tool,
+    // and it is only defensible because of what has already happened by this
+    // point: the candidate was replayed against the page that failed and the
+    // pages that were working, and every case passed. promoteRepair then
+    // re-verifies production against the full contract afterwards and
+    // escalates instead of claiming success when production is still wrong,
+    // which is exactly the case Bright Data's own `success: true` missed.
+    //
+    // Default is `never`. A collector earns automation by being understood,
+    // not by being registered.
+    if (outcome.kind === 'approved' && collector.autoPromote === 'on_gate_pass') {
+      await config.store.saveJob({
+        ...job,
+        detail: 'gate passed, promoting without waiting for a human',
+      });
+
+      try {
+        const promoted = await promoteRepair(
+          collector,
+          outcome.incident,
+          { client: config.client, store: config.store, runCandidate: config.runCandidate },
+          'system',
+        );
+
+        const state = promoted.history.at(-1)?.to;
+        const recovered = state === 'resolved';
+        log(
+          `${new Date().toISOString()} job ${job.id.slice(0, 8)}: auto-promoted, production ${
+            recovered ? 'recovered' : 'STILL WRONG'
+          }`,
+        );
+
+        // A promotion that did not fix production is worth waking someone for.
+        // It is the failure mode that looks most like success.
+        if (!recovered && config.notifyIncident !== undefined) {
+          await config.notifyIncident(promoted, collector.name).catch(() => undefined);
+        }
+
+        return finish({
+          status: 'succeeded',
+          outcome: 'approved',
+          detail: recovered
+            ? 'repaired, promoted and production re-verified'
+            : 'promoted, but production is still wrong and the incident was escalated',
+        });
+      } catch (caught) {
+        // A refused promotion is the guard doing its job, not a failed job.
+        const message = caught instanceof Error ? caught.message : String(caught);
+        log(`${new Date().toISOString()} job ${job.id.slice(0, 8)}: promotion refused: ${message}`);
+        return finish({
+          status: 'succeeded',
+          outcome: 'approved',
+          detail: `candidate passed the gate but promotion was refused: ${message}`,
+        });
+      }
+    }
 
     return finish({
       status: 'succeeded',

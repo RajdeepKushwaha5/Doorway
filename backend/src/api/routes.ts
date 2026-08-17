@@ -31,7 +31,7 @@ import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
  */
 const CANDIDATE_RUN_TIMEOUT_MS = 600_000;
 
-const registerCollectorSchema = z.object({
+export const registerCollectorSchema = z.object({
   brightDataCollectorId: z.string().regex(/^c_[a-z0-9]+$/i, 'expected a c_... collector id'),
   name: z.string().min(1),
   targetDomain: z.string().min(1),
@@ -43,6 +43,8 @@ const registerCollectorSchema = z.object({
     .array(z.object({ url: z.string().url(), expected: z.record(z.unknown()), label: z.string() }))
     .default([]),
   schedule: z.string().nullable().default(null),
+  /** Default is never: a new collector asks before changing production. */
+  autoPromote: z.enum(['never', 'on_gate_pass']).default('never'),
 });
 
 export interface ApiDeps {

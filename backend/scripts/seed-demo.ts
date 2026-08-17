@@ -94,6 +94,7 @@ async function main(): Promise<void> {
   const collector: CollectorRecord = {
     id: 'demo-driftmart',
     brightDataCollectorId: 'c_demoseed01',
+    autoPromote: 'never',
     name: 'DriftMart headphones',
     targetDomain: 'driftmart.example',
     status: 'active',

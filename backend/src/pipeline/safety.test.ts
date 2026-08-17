@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { registerCollectorSchema } from '../api/routes.js';
 import type { BrightDataClient } from '../brightdata/index.js';
 import { learnContract, type Invariant } from '../contracts/index.js';
 import { evaluateGate, transition, type TransitionRecord } from '../incident/index.js';
@@ -390,5 +391,53 @@ describe('observation degrades safely', () => {
 
     expect(result.publishable).toBe(false);
     expect(await store.getVerifiedSnapshot('col-1', URL_A)).toBeNull();
+  });
+});
+
+/**
+ * Automation is only defensible because of what has to be true before it.
+ *
+ * These pin the policy itself: a collector must opt in, the default must be to
+ * ask, and none of the promotion guards may be softened just because no human
+ * is watching. An automated system that relaxes its own checks is worse than a
+ * manual one, because nobody is left to notice.
+ */
+describe('auto-promotion policy', () => {
+  it('defaults to never on a freshly registered collector', () => {
+    // Registration parses through the same schema the API uses. A collector
+    // earns automation by being understood, not by being registered.
+    const parsed = registerCollectorSchema.parse({
+      brightDataCollectorId: 'c_abc123',
+      name: 'test',
+      targetDomain: 'example.com',
+      watchUrls: ['https://example.com/p'],
+      witnessSpecs: [
+        {
+          path: 'price',
+          meaning: 'the price',
+          labels: ['price'],
+          kind: 'money',
+        },
+      ],
+    });
+
+    expect(parsed.autoPromote).toBe('never');
+  });
+
+  it('only accepts the two policies it knows how to honour', () => {
+    const base = {
+      brightDataCollectorId: 'c_abc123',
+      name: 'test',
+      targetDomain: 'example.com',
+      watchUrls: ['https://example.com/p'],
+      witnessSpecs: [
+        { path: 'price', meaning: 'the price', labels: ['price'], kind: 'money' as const },
+      ],
+    };
+
+    expect(registerCollectorSchema.parse({ ...base, autoPromote: 'on_gate_pass' }).autoPromote).toBe(
+      'on_gate_pass',
+    );
+    expect(() => registerCollectorSchema.parse({ ...base, autoPromote: 'always' })).toThrow();
   });
 });
