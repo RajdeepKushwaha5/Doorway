@@ -75,6 +75,61 @@ function contextFrom(
 }
 
 /**
+ * Close incidents whose source has recovered on its own.
+ *
+ * Until this existed, `resolvedAt` was set in exactly one place: after a
+ * repair was promoted and production re-verified. Every other route out of a
+ * quarantine was a route that did not exist. So a collector that broke and
+ * then came good again, because the site reverted its redesign, or the drift
+ * was transient, or somebody fixed the page, stayed quarantined forever and
+ * its feed kept serving a stale value with a disagreement attached.
+ *
+ * Detecting that something is fixed is the same problem as detecting that it
+ * broke, and it has the same answer: the contracts pass again. A run reaching
+ * here has satisfied every check against the collector's own learned history,
+ * which is the same bar that would have opened an incident had it failed.
+ *
+ * Only incidents for this URL are closed, and only those still open, so a
+ * healthy read of one page cannot vouch for another.
+ */
+async function closeRecoveredIncidents(
+  deps: ObserveDeps,
+  collectorId: string,
+  url: string,
+  runId: string,
+  at: string,
+): Promise<number> {
+  const incidents = await deps.store.listIncidents(collectorId);
+  const open = incidents.filter(
+    (incident) =>
+      incident.resolvedAt === null &&
+      incident.quarantined &&
+      (incident.witness === null || incident.witness.url === url),
+  );
+
+  for (const incident of open) {
+    await deps.store.saveIncident({
+      ...incident,
+      quarantined: false,
+      resolvedAt: at,
+      history: [
+        ...incident.history,
+        {
+          from: incident.history.at(-1)?.to ?? 'observed',
+          to: 'resolved',
+          at,
+          actor: 'system',
+          reason: `source recovered: run ${runId} satisfied every contract for ${url}`,
+          evidenceRefs: [],
+        },
+      ],
+    });
+  }
+
+  return open.length;
+}
+
+/**
  * Run one collector against one URL and decide what happened.
  *
  * @param collector The registered collector, carrying its witness specs,
@@ -153,6 +208,7 @@ export async function observeOnce(
         contentHash: '',
       });
     }
+    await closeRecoveredIncidents(deps, collector.id, url, run.id, startedAt);
     return { run, incident: null, publishable: true };
   }
 

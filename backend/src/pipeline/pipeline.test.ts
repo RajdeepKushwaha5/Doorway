@@ -171,6 +171,64 @@ describe('NOTICE end-to-end', () => {
     expect(result.publishable).toBe(true);
   });
 
+  /**
+   * Breaking is only half a lifecycle.
+   *
+   * `resolvedAt` used to be set in exactly one place, after a promoted repair,
+   * so a source that came good on its own had no route out of quarantine. A
+   * reverted redesign left the collector withheld forever, serving a stale
+   * value with a disagreement attached to it, and no amount of healthy runs
+   * changed that.
+   */
+  it('closes an open incident once the source itself recovers', async () => {
+    fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
+    const broken = await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+    expect(broken.incident?.quarantined).toBe(true);
+    expect((await buildFeed(store, collector.id, INCIDENT_URL)).health.status).not.toBe('verified');
+
+    // The page is fixed at source: same collector, same URL, correct row again.
+    fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+    const recovered = await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+
+    expect(recovered.incident).toBeNull();
+    expect(recovered.publishable).toBe(true);
+
+    const closed = await store.getIncident(broken.incident!.id);
+    expect(closed?.resolvedAt).not.toBeNull();
+    expect(closed?.quarantined).toBe(false);
+    expect(closed?.history.at(-1)?.to).toBe('resolved');
+
+    const feed = await buildFeed(store, collector.id, INCIDENT_URL);
+    expect(feed.health.status).toBe('verified');
+  });
+
+  it('leaves the incident open while the source is still broken', async () => {
+    fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
+    const broken = await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+
+    await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+
+    const still = await store.getIncident(broken.incident!.id);
+    expect(still?.resolvedAt).toBeNull();
+    expect(still?.quarantined).toBe(true);
+  });
+
   it('detects drift, quarantines it, and never publishes the corrupt value', async () => {
     fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
     const result = await observeOnce(collector, INCIDENT_URL, {
