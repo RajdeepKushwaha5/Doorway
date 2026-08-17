@@ -298,8 +298,24 @@ Documented because it shaped the architecture, not as criticism.
 
 Reproduced end to end on 2026-08-16 with full evidence. The collector returned `price: 0` on a page reading `Price: $249`. `refactor_template` (job `ia_msvikpe02i5a3id7b2`) reached `step: user_approval` with `success: true`, and its `preview_result` showed the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval via `resume_automation_job` returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again.
 
+Reproduced a second time on 2026-08-17, and this run was sharper because the
+output schemas disagree. Job `ia_mswmuyq11k2h1grrzj` was approved the same way
+and reported `status: done`, `success: true`. Its `preview_result` was
+`{"title": "", "price": {"value": 0, "currency": "USD"}, "availability": "", "upc": "", "rating": null}`.
+A fresh trigger afterwards (`j_mswmxomk4xzvd1h84`) returned
+`{"price": {"value": 0, "currency": "USD", "symbol": "$"}}`.
+
+Those are different shapes. The approved candidate carries `title`,
+`availability`, `upc` and `rating` and no `symbol`; production carries `symbol`
+and none of those four. Production therefore appears to be running a different
+template from the one that was approved, which is a more specific claim than
+the first occurrence supported.
+
 Done often doesn't mean successful. A green preview, a completed job and
-`success: true` together are not evidence that production changed. The cause is still undetermined: either approval does not promote the template, or the promoted template does not fix the page. No public endpoint distinguishes them, so this remains an observation rather than a diagnosis.
+`success: true` together are not evidence that production changed. The cause
+remains undetermined and no public endpoint distinguishes the possibilities, so
+this is written up as an observation and has been sent to Bright Data as a
+question rather than a conclusion. The cause is still undetermined: either approval does not promote the template, or the promoted template does not fix the page. No public endpoint distinguishes them, so this remains an observation rather than a diagnosis.
 
 This is why post-promotion verification exists, and it is the single strongest argument for the gate. A pipeline that trusts `success: true` would have marked this collector repaired and resumed publishing zero.
 
