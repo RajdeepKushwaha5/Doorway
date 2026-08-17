@@ -70,6 +70,63 @@ notice. This automates that person.
 
 ---
 
+## How Bright Data Scraper Studio is used
+
+Scraper Studio is the sensor this entire project is built around. Everything
+else exists to decide whether to trust what it returns.
+
+### The scrapers were built from a sentence, through the CLI
+
+Both collectors were created from a coding agent's terminal, not by hand:
+
+```bash
+npx -p @brightdata/cli bdata scraper create   "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"   "Extract the book title, the price excluding tax as a number, and the availability text"
+```
+
+Bright Data's AI pipeline runs eight stages and returns a collector id. Elapsed
+time was about three minutes.
+
+| Collector | Target | Fields |
+|---|---|---|
+| `c_msvllpds1n1dcoz8qx` | DriftMart, the controlled fixture | `product_name`, `price`, `availability` |
+| `c_msvk2zahnc2mizts6` | `books.toscrape.com`, a site we do not control | `book_title`, `price_excl_tax`, `availability` |
+
+Neither is from the Scrapers Library. Real output from both is in
+[examples/](examples/).
+
+### The plain-language field description is the contract
+
+Scraper Studio repairs extraction against the sentence describing a field, not
+against a selector. That makes the sentence the durable artefact, so NOTICE
+stores the same description twice over:
+
+- as the collector's field description in Scraper Studio
+- as the witness's `meaning`, which is what the second sensor matches on
+
+One sentence therefore drives detection **and** repair. When a repair is
+requested, that description travels with the incident URL in `custom_input`,
+which is the part the CLI drops.
+
+### Every part of the collector lifecycle is driven over the API
+
+| Scraper Studio surface | Used for |
+|---|---|
+| `POST /dca/trigger` | every observation and every candidate replay |
+| `GET /dca/dataset` | reading structured rows back |
+| `POST /dca/collectors/{id}/refactor_template` | requesting a repair, with the failing page as evidence |
+| `GET .../refactor_template/progress` | following the eight-stage repair and its approval gate |
+| `POST .../resume_automation_job` | answering that gate, `{"message": true}` |
+| `version: dev` | running the proposed template before it is production |
+
+### What the structured output powers
+
+The rows a collector returns are the input to a verdict, and that verdict is
+what everything downstream consumes: a verified feed, an MCP server that
+refuses rather than guessing, a CI step that fails a build, a webhook, and a
+GitHub issue.
+
+---
+
 ## How it works
 
 ```

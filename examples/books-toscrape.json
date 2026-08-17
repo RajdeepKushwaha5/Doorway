@@ -1,0 +1,10 @@
+[
+  {
+    "book_title": "A Light in the Attic",
+    "price_excl_tax": 51.77,
+    "availability": "In stock (22 available)",
+    "input": {
+      "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+    }
+  }
+]
