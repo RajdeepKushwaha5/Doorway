@@ -91,4 +91,41 @@ describe('seeding an empty store', () => {
     const result = await seedCollectors(store, await seedFile([{ name: 'broken' }, entry]));
     expect(result.seeded).toBe(1);
   });
+
+  /**
+   * The seed file is hand-edited JSON, parsed rather than validated, so a
+   * setting left out of it is `undefined` however confidently the record type
+   * says otherwise. That is not cosmetic: `autoPromote` decides whether a
+   * collector repairs itself unattended, and a missing value silently disabled
+   * the automation on every seeded source.
+   */
+  it('fills in settings the file leaves out, so a seeded record is complete', async () => {
+    await seedCollectors(store, await seedFile([entry]));
+    const [seeded] = await store.listCollectors();
+
+    expect(seeded?.autoPromote).toBe('never');
+    expect(seeded?.freshnessMinutes).toBeNull();
+  });
+
+  it('carries the settings through when the file does state them', async () => {
+    await seedCollectors(
+      store,
+      await seedFile([{ ...entry, autoPromote: 'on_gate_pass', freshnessMinutes: 90 }]),
+    );
+    const [seeded] = await store.listCollectors();
+
+    expect(seeded?.autoPromote).toBe('on_gate_pass');
+    expect(seeded?.freshnessMinutes).toBe(90);
+  });
+
+  it('refuses an unrecognised automation setting instead of trusting the file', async () => {
+    await seedCollectors(
+      store,
+      await seedFile([{ ...entry, autoPromote: 'always', freshnessMinutes: -5 }]),
+    );
+    const [seeded] = await store.listCollectors();
+
+    expect(seeded?.autoPromote).toBe('never');
+    expect(seeded?.freshnessMinutes).toBeNull();
+  });
 });

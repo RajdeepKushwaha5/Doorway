@@ -24,8 +24,20 @@ export interface SeedResult {
   reason: 'seeded' | 'store-not-empty' | 'no-seed-file' | 'unreadable';
 }
 
-/** Fields a seed entry must carry. The rest of a record is derived. */
-type SeedEntry = Omit<CollectorRecord, 'id' | 'status' | 'acquisitionContext' | 'createdAt'>;
+/**
+ * Fields a seed entry may carry. The rest of a record is derived.
+ *
+ * Settings with a safe default are optional here, because the seed file is
+ * hand-edited configuration rather than an API payload. Every one of them is
+ * filled in below, so a record leaving this function is always complete: the
+ * JSON is parsed rather than validated, and a field left undefined would
+ * otherwise reach the rest of the system disguised as a value of its type.
+ */
+type SeedEntry = Omit<
+  CollectorRecord,
+  'id' | 'status' | 'acquisitionContext' | 'createdAt' | 'autoPromote' | 'freshnessMinutes'
+> &
+  Partial<Pick<CollectorRecord, 'autoPromote' | 'freshnessMinutes'>>;
 
 export async function seedCollectors(
   store: Store,
@@ -57,6 +69,14 @@ export async function seedCollectors(
       id: randomUUID(),
       status: 'active',
       acquisitionContext: {},
+      // Defaults are applied here rather than trusted from the file. Automation
+      // in particular must never be inherited by accident: a collector earns
+      // `on_gate_pass` by being set to it, never by being seeded.
+      autoPromote: entry.autoPromote === 'on_gate_pass' ? 'on_gate_pass' : 'never',
+      freshnessMinutes:
+        typeof entry.freshnessMinutes === 'number' && entry.freshnessMinutes > 0
+          ? entry.freshnessMinutes
+          : null,
       createdAt: now().toISOString(),
     };
     await store.saveCollector(collector);
