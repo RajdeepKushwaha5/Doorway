@@ -45,6 +45,8 @@ export const registerCollectorSchema = z.object({
   schedule: z.string().nullable().default(null),
   /** Default is never: a new collector asks before changing production. */
   autoPromote: z.enum(['never', 'on_gate_pass']).default('never'),
+  /** Minutes a verified value stays verified. Null takes the 24h default. */
+  freshnessMinutes: z.number().int().positive().nullable().default(null),
 });
 
 export interface ApiDeps {
@@ -405,7 +407,17 @@ export function buildRouter(deps: ApiDeps): Router {
     const collector = await requireCollector(store, params['collectorId']);
     const url = query.get('url') ?? collector.watchUrls[0];
     if (url === undefined) throw new HttpError(400, 'no URL specified');
-    return { collectorId: collector.id, url, ...(await buildFeed(store, collector.id, url)) };
+    // Freshness is a property of the source, so the collector's own policy
+    // decides when a verified value has aged out.
+    return {
+      collectorId: collector.id,
+      url,
+      ...(await buildFeed(store, collector.id, url, {
+        ...(collector.freshnessMinutes === null
+          ? {}
+          : { maxAgeMs: collector.freshnessMinutes * 60_000 }),
+      })),
+    };
   });
 
   return router;

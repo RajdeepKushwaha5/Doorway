@@ -45,6 +45,15 @@ export interface CollectorRecord {
    * `success: true` missed.
    */
   autoPromote: 'never' | 'on_gate_pass';
+  /**
+   * How many minutes a verified value stays verified for this source.
+   *
+   * Decay is a property of the subject, not of the system. Bright Data's own
+   * analysis puts a retail or finance page at roughly thirty days of useful
+   * life and a social page at under one, so a price watcher and a follower
+   * count cannot share a threshold. Null takes the default of 24 hours.
+   */
+  freshnessMinutes: number | null;
   createdAt: string;
 }
 

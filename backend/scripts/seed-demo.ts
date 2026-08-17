@@ -95,6 +95,7 @@ async function main(): Promise<void> {
     id: 'demo-driftmart',
     brightDataCollectorId: 'c_demoseed01',
     autoPromote: 'never',
+    freshnessMinutes: null,
     name: 'DriftMart headphones',
     targetDomain: 'driftmart.example',
     status: 'active',

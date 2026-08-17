@@ -17,7 +17,10 @@ export async function buildFeed(
   store: Store,
   collectorId: string,
   url: string,
+  options: { maxAgeMs?: number; now?: number } = {},
 ): Promise<HealthEnvelope> {
+  const maxAgeMs = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
+  const now = options.now ?? Date.now();
   const snapshot = await store.getVerifiedSnapshot(collectorId, url);
   const incidents = await store.listIncidents(collectorId);
   const open = incidents.find(
@@ -25,7 +28,7 @@ export async function buildFeed(
   );
 
   if (open === undefined) {
-    return snapshot === null ? unavailable() : verified(snapshot);
+    return snapshot === null ? unavailable() : verified(snapshot, maxAgeMs, now);
   }
 
   if (snapshot === null) {
@@ -78,17 +81,46 @@ function reasonFor(incident: IncidentRecord): string {
   }
 }
 
-function verified(snapshot: VerifiedSnapshot): HealthEnvelope {
+/**
+ * How long a verified value stays verified.
+ *
+ * Nothing about a value being correct on Tuesday makes it correct today, and
+ * until now a snapshot with no incident against it reported `verified` forever.
+ * A collector that last ran three weeks ago looked identical to one that ran
+ * five minutes ago.
+ *
+ * Bright Data's own analysis of data decay puts the useful life of a retail or
+ * finance page at roughly thirty days and a social page at under one, so the
+ * right number is a property of the source rather than of this code. Twenty-four
+ * hours is the default because it is short enough to be honest about most
+ * commercial pages and long enough not to mark a daily collector stale between
+ * its own runs. A collector declares its own when its subject decays faster.
+ *
+ * Passing the age threshold does not withhold the value. It publishes it and
+ * says how old it is, which is the difference between caution and refusing to
+ * answer.
+ */
+const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function verified(snapshot: VerifiedSnapshot, maxAgeMs: number, now: number): HealthEnvelope {
+  const ageMs = now - new Date(snapshot.verifiedAt).getTime();
+  const expired = Number.isFinite(ageMs) && ageMs > maxAgeMs;
+  const ageHours = Math.floor(ageMs / (60 * 60 * 1000));
+
   return {
     data: snapshot.data,
     health: {
-      status: 'verified',
-      confidence: 0.95,
+      status: expired ? 'stale' : 'verified',
+      // Age is not a fault, so confidence decays rather than collapsing. The
+      // value was confirmed by two sensors; the only question is when.
+      confidence: expired ? 0.5 : 0.95,
       lastVerified: snapshot.verifiedAt,
-      stale: false,
+      stale: expired,
       fieldsDegraded: [],
       incidentId: null,
-      reason: null,
+      reason: expired
+        ? `last confirmed ${String(ageHours)}h ago, beyond the ${String(Math.round(maxAgeMs / 3_600_000))}h freshness window`
+        : null,
     },
   };
 }

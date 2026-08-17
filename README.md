@@ -64,6 +64,11 @@ proposed repair before it reaches production.
 
 NOTICE is the part that decides.
 
+Bright Data's marketing describes Scraper Studio's self-healing as a scraper
+that "fixes itself and keeps on going". Their product manager, asked directly,
+says repair is triggered by you. Both are accurate: the repair is automatic,
+the noticing is not. That distinction is the whole project.
+
 Put another way: getting a collector working is an afternoon. Keeping it right
 for a year is the actual job, and today that needs a person who happens to
 notice. This automates that person.
@@ -361,7 +366,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 215 tests, no network required
+npm test                      # 220 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -410,7 +415,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 215 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 220 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

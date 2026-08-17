@@ -367,3 +367,71 @@ describe('NOTICE end-to-end', () => {
     expect(recovered?.history.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * Verified is a claim about a moment, not a permanent state.
+ *
+ * Bright Data's own analysis of data decay puts the useful life of a retail or
+ * finance page at roughly thirty days and a social page at under one. Until
+ * this existed, a snapshot with no incident against it reported `verified`
+ * forever, so a collector that last ran three weeks ago looked identical to one
+ * that ran five minutes ago.
+ */
+describe('a verified value ages out', () => {
+  let directory: string;
+  let store: FileStore;
+
+  const SNAPSHOT_URL = 'https://example.com/product';
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'notice-fresh-'));
+    store = new FileStore(join(directory, 'store.json'));
+  });
+
+  const snapshotAgedHours = async (hours: number): Promise<void> => {
+    await store.saveVerifiedSnapshot({
+      collectorId: 'col-fresh',
+      url: SNAPSHOT_URL,
+      data: { price: 249 },
+      contractVersion: 1,
+      verifiedAt: new Date(Date.now() - hours * 3_600_000).toISOString(),
+      contentHash: 'hash',
+    });
+  };
+
+  it('stays verified inside the window', async () => {
+    await snapshotAgedHours(2);
+    const feed = await buildFeed(store, 'col-fresh', SNAPSHOT_URL);
+    expect(feed.health.status).toBe('verified');
+    expect(feed.health.stale).toBe(false);
+  });
+
+  it('becomes stale once it is older than the window', async () => {
+    await snapshotAgedHours(30);
+    const feed = await buildFeed(store, 'col-fresh', SNAPSHOT_URL);
+    expect(feed.health.status).toBe('stale');
+    expect(feed.health.stale).toBe(true);
+    expect(feed.health.reason).toContain('freshness window');
+  });
+
+  it('still serves the value, because age is not a fault', async () => {
+    // Withholding a slightly old price helps nobody. Saying how old it is does.
+    await snapshotAgedHours(30);
+    const feed = await buildFeed(store, 'col-fresh', SNAPSHOT_URL);
+    expect(feed.data).toEqual({ price: 249 });
+    expect(feed.health.lastVerified).not.toBeNull();
+  });
+
+  it('honours a source that decays faster than the default', async () => {
+    // A follower count is stale in an hour; a retail price is not.
+    await snapshotAgedHours(2);
+    const feed = await buildFeed(store, 'col-fresh', SNAPSHOT_URL, { maxAgeMs: 60 * 60 * 1000 });
+    expect(feed.health.status).toBe('stale');
+  });
+
+  it('reports how old the value actually is', async () => {
+    await snapshotAgedHours(50);
+    const feed = await buildFeed(store, 'col-fresh', SNAPSHOT_URL);
+    expect(feed.health.reason).toContain('50h ago');
+  });
+});
