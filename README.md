@@ -43,10 +43,15 @@ Bright Data's own documentation is explicit that detection is not their job:
 
 > "Is Self-Healing automatic, or do I trigger it? **You trigger Self-Healing; it does not fire automatically when a target site's DOM changes.**"
 
-> "The CLI never decides on its own that a scraper is broken, you inspect the run output and decide."
+The CLI documentation describes the same shape, as a sequence a person walks
+through:
 
-Asked directly in a June 2025 Scraper Studio webinar whether healing can fire
-by itself, Bright Data's technical product manager for Scraper Studio answered:
+> "The flow is run, inspect, heal, approve, re-run."
+
+Asked directly in a Scraper Studio webinar whether healing can fire by itself,
+Bright Data's technical product manager for Scraper Studio answered. These are
+spoken quotes, transcribed from the recording with repeated words removed and
+nothing else changed:
 
 > "How is the self-healing triggered? Do you have to ask it to fix it or can it be triggered automatically? **For now, it is you going to trigger it.**"
 
@@ -64,10 +69,13 @@ proposed repair before it reaches production.
 
 NOTICE is the part that decides.
 
-Bright Data's marketing describes Scraper Studio's self-healing as a scraper
-that "fixes itself and keeps on going". Their product manager, asked directly,
-says repair is triggered by you. Both are accurate: the repair is automatic,
-the noticing is not. That distinction is the whole project.
+Worth being precise about what that means, because Bright Data is consistent on
+it. The repair is automated: Self-Healing rewrites extraction from a
+plain-language description, and it works. What is not automated is the step
+before it, deciding that a repair is needed at all. Their documentation, their
+CLI flow and their product manager all say the same thing, and none of them
+claim otherwise. The gap is acknowledged rather than hidden, and this is the
+part that fills it.
 
 Put another way: getting a collector working is an afternoon. Keeping it right
 for a year is the actual job, and today that needs a person who happens to
