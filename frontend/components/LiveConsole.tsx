@@ -24,6 +24,15 @@ interface Mode {
   effect: string;
   /** Whether a correct system should treat this as the collector's fault. */
   fault: boolean;
+  /**
+   * The verdict this mode should produce, named before the run.
+   *
+   * Carried per mode rather than derived from `fault`, because that binary
+   * collapsed three outcomes into two: an unchanged page is `healthy`, not a
+   * `genuine_source_change`. Announcing the wrong expectation and then being
+   * proved right by the system is worse than announcing nothing.
+   */
+  verdict: string;
 }
 
 const MODES: Mode[] = [
@@ -32,24 +41,28 @@ const MODES: Mode[] = [
     label: 'Baseline',
     effect: 'Price 249, stable layout. Nothing wrong.',
     fault: false,
+    verdict: 'healthy',
   },
   {
     id: 'selector_drift',
     label: 'Redesign the page',
     effect: 'Price still 249, but the old selector now wraps the 25 deposit.',
     fault: true,
+    verdict: 'extractor_drift',
   },
   {
     id: 'genuine_price_change',
     label: 'Genuinely drop the price',
     effect: 'Price really is 229 now. The collector is fine.',
     fault: false,
+    verdict: 'genuine_source_change (do not heal)',
   },
   {
     id: 'silent_zero',
     label: 'Corrupt the metadata',
     effect: 'Structured data says 0 USD while the visible price is right.',
     fault: true,
+    verdict: 'extractor_drift',
   },
 ];
 
@@ -190,7 +203,7 @@ export function LiveConsole({
           <div className="mt-5 border-t border-surface-border pt-3 text-[12px] leading-normal text-muted">
             Expected verdict:{' '}
             <span className={`font-semibold ${current?.fault === true ? 'text-blocked' : 'text-verified'}`}>
-              {current?.fault === true ? 'extractor_drift detected' : 'genuine_source_change (do not heal)'}
+              {current?.verdict ?? 'healthy'}
             </span>
           </div>
         </div>
@@ -231,80 +244,29 @@ export function LiveConsole({
                   </svg>
                   <span className="truncate">driftmart-3ut8.onrender.com/product/headphones</span>
                 </div>
-                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded shrink-0">
-                  HTTP 200
-                </span>
               </div>
 
-              {/* Scrollable Document Content */}
-              <div className="p-5 overflow-y-auto max-h-[300px] custom-scrollbar space-y-4 font-mono text-[12px] bg-white">
-                <div>
-                  <div className="font-mondwest text-[24px] text-gray-900 leading-tight">
-                    DriftMart
-                  </div>
-                  <div className="text-gray-400 text-[11px]">
-                    Serving mode: <span className="text-gray-700 font-semibold">{mode}</span>
-                  </div>
-                </div>
+              {/*
+                The real page, embedded.
 
-                <div className="border-t border-gray-100 pt-3">
-                  <div className="font-mondwest text-[22px] text-gray-900 font-bold mb-3">
-                    Nova Headphones
-                  </div>
+                This was a hand-drawn reconstruction of DriftMart inside browser
+                chrome, which cannot carry the argument it was placed here to
+                make. The claim is that after a redesign the page still looks
+                correct to a person; a redrawing of the page proves only that
+                the drawing looks correct. It also invented a SKU, a category
+                and a shipping time that appear nowhere on the real page, and
+                asserted an HTTP status nothing had measured.
 
-                  <div className="space-y-2.5">
-                    {/* Price Row */}
-                    <div className="flex items-center justify-between p-2.5 rounded-lg border bg-gray-50/80 border-gray-200">
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600">Product Price:</span>
-                        <span className="font-bold text-gray-900 text-[14px]">
-                          {mode === 'genuine_price_change' ? '$229.00' : '$249.00'}
-                        </span>
-                      </div>
-                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white border border-gray-200 text-gray-500">
-                        {mode === 'genuine_price_change' ? 'Discounted' : 'Regular'}
-                      </span>
-                    </div>
-
-                    {/* Deposit Row (Present when layout shifted or baseline) */}
-                    <div className={`p-2.5 rounded-lg border transition-colors ${
-                      mode === 'selector_drift'
-                        ? 'border-red-300 bg-red-50/70 text-red-900'
-                        : 'border-gray-200 bg-white text-gray-700'
-                    }`}>
-                      <div className="flex items-center justify-between text-[11.5px]">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold">Refundable deposit:</span>
-                          <span className="font-bold text-gray-900">$25.00</span>
-                        </div>
-                        {mode === 'selector_drift' ? (
-                          <span className="text-[9px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded">
-                            Selector Hits This!
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-gray-400">Optional</span>
-                        )}
-                      </div>
-                      {mode === 'selector_drift' ? (
-                        <div className="text-[10px] text-red-600 mt-1 font-semibold">
-                          ⚠ Scraper Studio selector captured $25 deposit instead of $249 price
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {/* Stock status */}
-                    <div className="flex items-center justify-between text-[11.5px] px-2 py-1 text-gray-500">
-                      <span>Availability:</span>
-                      <span className="text-emerald-700 font-semibold">In stock (Ships in 24h)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>SKU: NOVA-HP-001</span>
-                  <span>Category: Audio / Studio</span>
-                </div>
-              </div>
+                Keyed on `frame` so switching modes refetches instead of
+                serving the previous layout from cache.
+              */}
+              <iframe
+                key={frame}
+                src={`${fixtureUrl}/product/headphones`}
+                title="DriftMart product page, live"
+                className="h-[300px] w-full bg-white"
+                sandbox="allow-same-origin"
+              />
             </div>
           </div>
 
