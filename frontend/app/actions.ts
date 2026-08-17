@@ -60,6 +60,56 @@ async function mutate<T>(path: string, body?: unknown): Promise<ActionResult<T>>
   }
 }
 
+/**
+ * Break the fixture on purpose, from the dashboard.
+ *
+ * DriftMart's mode switch is guarded by its own token, not the NOTICE one,
+ * because it is a different service with a different threat model: its admin
+ * route has to be publicly reachable so Bright Data can fetch the pages, and
+ * without a guard a passer-by could flip the layout mid-run.
+ *
+ * This exists so a demonstration never needs a terminal. Causing the fault and
+ * catching it in the same interface is the difference between describing the
+ * system and operating it.
+ */
+export async function setFixtureModeAction(mode: string): Promise<ActionResult> {
+  const token = process.env['DRIFTMART_ADMIN_TOKEN'];
+  const fixture = (process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com').replace(
+    /\/+$/,
+    '',
+  );
+
+  if (token === undefined || token.trim() === '') {
+    return {
+      ok: false,
+      error: 'DRIFTMART_ADMIN_TOKEN is not set on the dashboard server, so the fixture is locked.',
+    };
+  }
+
+  try {
+    const response = await fetch(`${fixture}/api/admin/mode`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token.trim()}`,
+      },
+      body: JSON.stringify({ mode }),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: `the fixture refused the switch (${String(response.status)})` };
+    }
+    revalidatePath('/');
+    return { ok: true, data: { mode } };
+  } catch (caught) {
+    return {
+      ok: false,
+      error: caught instanceof Error ? caught.message : 'the fixture could not be reached',
+    };
+  }
+}
+
 /** Observe a collector once, right now. */
 export async function runCollectorAction(collectorId: string, url?: string): Promise<ActionResult> {
   const result = await mutate(`/api/collectors/${encodeURIComponent(collectorId)}/run`, url === undefined ? {} : { url });

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Globe } from '@/components/Globe';
 import { RegisterCollector } from '@/components/RegisterCollector';
 import { OperationsPanel } from '@/components/OperationsPanel';
+import { LiveConsole } from '@/components/LiveConsole';
 import { api } from '@/lib/api';
 import type { CollectorSummary, Incident } from '@/lib/types';
 
@@ -115,6 +116,12 @@ export default async function HomePage() {
   }
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
+
+  // Only the controlled fixture can be broken on demand. A console pointed at
+  // a site we do not own would be offering a button that cannot work.
+  const fixtureCollector = collectors.find((collector) =>
+    collector.targetDomain.includes('driftmart'),
+  );
 
   return (
     <>
@@ -509,6 +516,15 @@ this page directly to work around this.`}
             />
             <Metric label="Verdicts" value="6" detail="Including inconclusive" />
           </div>
+
+          {offline || fixtureCollector === undefined ? null : (
+            <div className="mt-5">
+              <LiveConsole
+                collectorId={fixtureCollector.brightDataCollectorId}
+                fixtureUrl={`https://${fixtureCollector.targetDomain}`}
+              />
+            </div>
+          )}
 
           {offline || collectors.length === 0 ? null : (
             <div className="mt-5" data-reveal>
