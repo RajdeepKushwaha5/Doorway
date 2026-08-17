@@ -28,23 +28,26 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-surface-border bg-surface-raised/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-surface-border bg-surface/90 backdrop-blur-xl">
       <nav
-        className="mx-auto flex h-16 w-full max-w-[1400px] items-center gap-8 px-6 lg:px-10"
+        className="mx-auto flex h-[4.5rem] w-full max-w-[1400px] items-center gap-10 px-6 lg:px-10"
         aria-label="Primary navigation"
       >
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+        {/* The wordmark carries the display serif, so the bar is the first
+            place the page's voice appears. Everything beside it is mono at a
+            whisper, which keeps the hierarchy in one direction. */}
+        <Link href="/" className="flex shrink-0 items-center gap-2.5">
           <Mark />
-          <span className="font-display text-xl leading-none">NOTICE</span>
+          <span className="font-display text-[1.6rem] leading-none tracking-[-0.01em]">NOTICE</span>
         </Link>
 
-        <div className="ml-2 hidden items-center gap-6 md:flex">
+        <div className="hidden items-center gap-7 md:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               aria-current={pathname === link.href ? 'page' : undefined}
-              className={`text-[12px] uppercase tracking-eyebrow transition-colors duration-200 hover:text-ivory ${
+              className={`text-[11px] uppercase tracking-eyebrow transition-colors duration-200 hover:text-ivory ${
                 pathname === link.href ? 'text-ivory' : 'text-muted'
               }`}
             >
@@ -53,22 +56,25 @@ export function SiteNav() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-4">
           <a
             href="https://github.com/prabhatkumar67/notice"
-            className="hidden text-[12px] uppercase tracking-eyebrow text-muted transition-colors hover:text-ivory sm:inline"
+            className="hidden text-[11px] uppercase tracking-eyebrow text-muted transition-colors hover:text-ivory sm:inline"
           >
             Source
           </a>
-          <Link href="/#control-room" className="primary-button">
-            Control room <span aria-hidden>→</span>
+          <Link
+            href="/#control-room"
+            className="hidden min-h-[2.5rem] items-center bg-ivory px-5 text-[11px] uppercase tracking-eyebrow text-surface-raised transition-colors duration-200 hover:bg-ivory/85 sm:inline-flex"
+          >
+            Control room
           </Link>
           <button
             type="button"
             onClick={() => setOpen((current) => !current)}
             aria-expanded={open}
             aria-label="Toggle navigation"
-            className="md:hidden rounded-card border border-surface-border px-3 py-2 text-[12px]"
+            className="border border-surface-border px-3 py-2 text-[11px] uppercase tracking-eyebrow md:hidden"
           >
             {open ? 'Close' : 'Menu'}
           </button>

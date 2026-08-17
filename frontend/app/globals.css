@@ -66,11 +66,25 @@
   }
 
   .display-heading {
-    @apply font-display text-5xl leading-[1.02] tracking-[-0.005em] text-ivory sm:text-6xl lg:text-7xl;
+    @apply font-display text-[3.25rem] leading-[0.95] tracking-[-0.015em] text-ivory sm:text-[4.5rem] lg:text-[5.75rem];
   }
 
   .section-heading {
-    @apply font-display text-4xl leading-[1.05] text-ivory sm:text-5xl;
+    @apply font-display text-4xl leading-[1.02] tracking-[-0.01em] text-ivory sm:text-5xl;
+  }
+
+  /**
+   * The line under a display heading, set in the same serif rather than in the
+   * interface mono.
+   *
+   * Keeping it serif is what makes the hero read as a title page instead of a
+   * dashboard header: the eye takes the headline and this line as one voice
+   * saying one thing, and only then meets the monospace, which from that point
+   * on reliably means data. Mixing mono in here spends that distinction before
+   * the page has made a single claim.
+   */
+  .display-lede {
+    @apply font-display text-[1.5rem] leading-[1.32] text-muted sm:text-[1.75rem];
   }
 
   /** Hairline card. Borders carry the structure so colour need not. */
@@ -82,16 +96,25 @@
     @apply transition-all duration-300 hover:border-ivory/25 hover:shadow-[0_1px_0_rgba(12,12,10,0.04),0_12px_28px_-18px_rgba(12,12,10,0.35)];
   }
 
+  /**
+   * Buttons are square and set in small letterspaced capitals.
+   *
+   * A rounded, sentence-case button reads as a web app. Sharp corners and
+   * capitals read as a printed control, which is the register the rest of this
+   * page is in. The label is small on purpose: at this size the letterspacing
+   * does the work of drawing the eye, so the button can be quiet and still be
+   * the first thing found.
+   */
   .primary-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-ivory px-5 text-[13px] text-surface-raised transition-all duration-300 hover:-translate-y-px hover:bg-ivory/90;
+    @apply inline-flex min-h-[3rem] items-center justify-center gap-2 bg-ivory px-7 text-[11px] uppercase tracking-eyebrow text-surface-raised transition-colors duration-200 hover:bg-ivory/85;
   }
 
   .secondary-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-surface-border bg-surface-raised px-5 text-[13px] text-ivory transition-all duration-300 hover:-translate-y-px hover:border-ivory/30;
+    @apply inline-flex min-h-[3rem] items-center justify-center gap-2 border border-ivory/25 bg-surface-raised px-7 text-[11px] uppercase tracking-eyebrow text-ivory transition-colors duration-200 hover:border-ivory;
   }
 
   .accent-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-verified px-5 text-[13px] text-white transition-all duration-300 hover:-translate-y-px;
+    @apply inline-flex min-h-[3rem] items-center justify-center gap-2 bg-ivory px-7 text-[11px] uppercase tracking-eyebrow text-surface-raised transition-colors duration-200 hover:bg-verified;
   }
 
   .status-chip {

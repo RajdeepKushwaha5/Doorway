@@ -135,15 +135,14 @@ export default async function HomePage() {
               not the green check.
             </h1>
 
-            <p className="mt-8 max-w-[52ch] text-[15px] leading-7 text-muted">
-              A scraper can break without breaking. NOTICE catches the run that returns
-              <span className="text-ivory"> valid JSON and the wrong fact</span>, works out whether
-              the website changed or the extractor drifted, and proves any repair before it reaches
-              production.
+            <p className="display-lede mt-8 max-w-[26ch]">
+              A scraper can break without breaking.{' '}
+              <span className="text-ivory">Valid JSON, the wrong fact</span>, and every check you
+              own says it is fine.
             </p>
 
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link href="#control-room" className="accent-button">
+              <Link href="#control-room" className="primary-button">
                 Open the control room <span aria-hidden>→</span>
               </Link>
               <Link href="#problem" className="secondary-button">
@@ -151,7 +150,7 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-3 text-[11px] uppercase tracking-eyebrow text-muted">
+            <div className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-3 text-[11px] uppercase tracking-eyebrow text-muted">
               <span className="inline-flex items-center gap-2">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${offline ? 'bg-suspect' : 'bg-verified'}`}
@@ -729,16 +728,26 @@ function FleetMarquee({
  * is an illustration of what is being watched, not a map, and inventing
  * plausible-looking latitudes would imply a precision that does not exist.
  */
-function globeMarkers(collectors: CollectorSummary[]): { lat: number; lon: number; label: string }[] {
+function globeMarkers(
+  collectors: CollectorSummary[],
+): { lat: number; lon: number; label: string; ok: boolean }[] {
   const sources =
     collectors.length > 0
-      ? collectors.map((collector) => collector.targetDomain)
-      : ['books.toscrape.com', 'driftmart', 'scraper studio'];
+      ? collectors.map((collector) => ({
+          label: collector.targetDomain,
+          ok: collector.openIncidents === 0,
+        }))
+      : [
+          { label: 'books.toscrape.com', ok: true },
+          { label: 'driftmart', ok: true },
+          { label: 'scraper studio', ok: true },
+        ];
 
-  return sources.slice(0, 4).map((label, index) => ({
-    lat: 32 - index * 26,
+  return sources.slice(0, 4).map((source, index) => ({
+    lat: 34 - index * 27,
     lon: index * 95,
-    label: `${label} → verified`,
+    label: source.ok ? `${source.label} verified` : `${source.label} withheld`,
+    ok: source.ok,
   }));
 }
 

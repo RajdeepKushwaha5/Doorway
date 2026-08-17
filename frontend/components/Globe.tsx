@@ -3,18 +3,22 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * A slowly turning wireframe globe with stippled shading.
+ * A slowly turning globe, shaded with an ordered dither.
  *
- * Drawn on a canvas with a real orthographic projection, because the shortcut
- * does not work. An earlier version animated the widths of SVG ellipses to
- * suggest rotation, which produces a tangle of overlapping arcs rather than a
- * sphere: on a real globe a meridian is a curve whose every point moves in
- * depth, and only the near half of it should be drawn at all.
+ * Two earlier versions were wrong in instructive ways. The first animated the
+ * widths of SVG ellipses to suggest rotation, which produces a tangle rather
+ * than a sphere: on a real globe every point of a meridian moves in depth, and
+ * only the near half should be drawn at all. The second fixed the geometry but
+ * shaded with random jitter, which reads as noise. Print halftones are not
+ * random; they are a regular grid whose cells cross a threshold at different
+ * points, and that regularity is the entire reason the texture looks drawn
+ * rather than dirty.
  *
- * So each line is sampled in three dimensions, rotated, tilted, projected, and
- * clipped to the visible hemisphere. Shading is stippled rather than a
- * gradient, which suits an interface built out of hairlines and keeps the
- * whole thing one colour.
+ * So shading here is a Bayer 8x8 ordered dither. Each cell of a fixed grid
+ * carries a threshold, the sphere's brightness at that point is compared
+ * against it, and a dot is either placed or not. The pattern is stable across
+ * frames in screen space, so rotating the globe moves the geometry through a
+ * fixed screen texture, exactly as a printed halftone would behave.
  *
  * Decorative, so it is hidden from assistive technology and stops entirely
  * when a reader has asked for reduced motion.
@@ -26,11 +30,35 @@ interface Marker {
   /** Degrees, positive east. */
   lon: number;
   label: string;
+  /** Draws a tick before the label, in the verified green. */
+  ok?: boolean;
 }
 
-const TILT = (18 * Math.PI) / 180;
+const TILT = (16 * Math.PI) / 180;
 const MERIDIANS = 12;
 const PARALLELS = 7;
+
+const INK = '#0C0C0A';
+const PAPER = '#FCFCFA';
+const VERIFIED = '#16794A';
+
+/**
+ * Bayer 8x8 threshold matrix, the classic ordered-dither kernel.
+ *
+ * Values spread evenly across 0..63 so that as brightness falls, dots appear in
+ * a dispersed pattern rather than clumping. Divided by 64 at use to give a
+ * threshold in 0..1.
+ */
+const BAYER = [
+  [0, 32, 8, 40, 2, 34, 10, 42],
+  [48, 16, 56, 24, 50, 18, 58, 26],
+  [12, 44, 4, 36, 14, 46, 6, 38],
+  [60, 28, 52, 20, 62, 30, 54, 22],
+  [3, 35, 11, 43, 1, 33, 9, 41],
+  [51, 19, 59, 27, 49, 17, 57, 25],
+  [15, 47, 7, 39, 13, 45, 5, 37],
+  [63, 31, 55, 23, 61, 29, 53, 21],
+];
 
 export function Globe({ markers = [] }: { markers?: Marker[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -70,9 +98,9 @@ export function Globe({ markers = [] }: { markers?: Marker[] }) {
     /**
      * Draw a line of constant latitude or longitude.
      *
-     * Sampled and broken wherever it crosses the horizon, so the far half is
-     * never drawn over the near half. Continuing through would produce exactly
-     * the tangle this replaced.
+     * Broken wherever it crosses the horizon, so the far half is never drawn
+     * over the near half. Continuing through would produce exactly the tangle
+     * this replaced.
      */
     const strokeArc = (
       points: { latDeg: number; lonDeg: number }[],
@@ -84,7 +112,7 @@ export function Globe({ markers = [] }: { markers?: Marker[] }) {
       context.beginPath();
       for (const point of points) {
         const projected = project(point.latDeg, point.lonDeg, radius, cx, cy);
-        if (projected.z <= 0.02) {
+        if (projected.z <= 0.015) {
           drawing = false;
           continue;
         }
@@ -100,9 +128,10 @@ export function Globe({ markers = [] }: { markers?: Marker[] }) {
     const render = (): void => {
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const size = canvas.clientWidth;
-      if (canvas.width !== size * ratio) {
-        canvas.width = size * ratio;
-        canvas.height = size * ratio;
+      if (size === 0) return;
+      if (canvas.width !== Math.round(size * ratio)) {
+        canvas.width = Math.round(size * ratio);
+        canvas.height = Math.round(size * ratio);
       }
 
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -110,93 +139,124 @@ export function Globe({ markers = [] }: { markers?: Marker[] }) {
 
       const cx = size / 2;
       const cy = size / 2;
-      const radius = size * 0.42;
+      const radius = size * 0.4;
 
-      context.strokeStyle = '#0C0C0A';
-      context.fillStyle = '#0C0C0A';
-      context.lineWidth = 0.7;
+      // ---------------------------------------------------------- dither
+      // A fixed screen-space grid. `cell` is the halftone pitch: smaller
+      // reads as a finer paper stock, larger as a coarser print.
+      const cell = 3;
+      const dot = 1.6;
+      context.fillStyle = INK;
 
-      // Stipple. Density rises toward the lower right, which reads as a light
-      // source without introducing a second colour or a gradient.
-      const step = 5;
-      for (let py = cy - radius; py <= cy + radius; py += step) {
-        for (let px = cx - radius; px <= cx + radius; px += step) {
+      const columns = Math.ceil((radius * 2) / cell) + 2;
+      for (let row = 0; row <= columns; row++) {
+        for (let column = 0; column <= columns; column++) {
+          const px = cx - radius + column * cell;
+          const py = cy - radius + row * cell;
+
           const dx = (px - cx) / radius;
           const dy = (py - cy) / radius;
           const rr = dx * dx + dy * dy;
-          if (rr > 0.995) continue;
+          if (rr > 1) continue;
 
-          // Depth of the sphere surface at this pixel, used as shading.
+          // Surface normal at this pixel, for a directional light.
           const depth = Math.sqrt(1 - rr);
-          const shade = 0.55 * (dx * 0.6 + dy * 0.6) + (1 - depth) * 0.5;
-          if (shade < 0.12) continue;
 
-          const jitter = (Math.sin(px * 12.9898 + py * 78.233) * 43758.5453) % 1;
-          if (Math.abs(jitter) > shade) continue;
+          // Light from the upper left, plus limb darkening so the silhouette
+          // stays dense and the sphere reads as round rather than as a disc.
+          //
+          // Capped below 1 on purpose. Letting the darkest region reach full
+          // coverage fills every cell of the dither and the texture collapses
+          // into a solid blob, which is the one thing a halftone must not do:
+          // the dots have to stay legible as dots even where they are densest.
+          const lambert = Math.max(0, -dx * 0.52 - dy * 0.52 + depth * 0.72);
+          const limb = Math.pow(1 - depth, 1.7);
+          const darkness = Math.min(
+            0.93,
+            0.22 + limb * 0.72 + (1 - lambert) * 0.45,
+          );
+          if (darkness <= 0) continue;
 
-          context.fillRect(px, py, 1, 1);
+          const threshold =
+            (BAYER[row % 8]?.[column % 8] ?? 0) / 64 + 1 / 128;
+          if (darkness < threshold) continue;
+
+          context.fillRect(px - dot / 2, py - dot / 2, dot, dot);
         }
       }
 
-      // Outline.
-      context.lineWidth = 1.2;
+      // ----------------------------------------------------------- wires
+      context.strokeStyle = INK;
+      context.lineJoin = 'round';
+
+      context.lineWidth = 1.6;
       context.beginPath();
       context.arc(cx, cy, radius, 0, Math.PI * 2);
       context.stroke();
 
-      context.lineWidth = 0.7;
+      context.lineWidth = 1.35;
 
-      // Meridians: constant longitude, sampled pole to pole.
       for (let m = 0; m < MERIDIANS; m++) {
         const lonDeg = (360 / MERIDIANS) * m;
         const points = [];
-        for (let latDeg = -90; latDeg <= 90; latDeg += 3) points.push({ latDeg, lonDeg });
+        for (let latDeg = -90; latDeg <= 90; latDeg += 2) points.push({ latDeg, lonDeg });
         strokeArc(points, radius, cx, cy);
       }
 
-      // Parallels: constant latitude, sampled all the way round.
       for (let p = 1; p < PARALLELS; p++) {
         const latDeg = -90 + (180 / PARALLELS) * p;
         const points = [];
-        for (let lonDeg = 0; lonDeg <= 360; lonDeg += 3) points.push({ latDeg, lonDeg });
+        for (let lonDeg = 0; lonDeg <= 360; lonDeg += 2) points.push({ latDeg, lonDeg });
         strokeArc(points, radius, cx, cy);
       }
 
-      // Markers, drawn only while on the near side and labelled outward.
-      context.font = '11px ui-monospace, monospace';
+      // --------------------------------------------------------- markers
+      context.font =
+        '11px ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, monospace';
+      context.textBaseline = 'middle';
+
       for (const marker of markers) {
         const point = project(marker.lat, marker.lon, radius, cx, cy);
-        if (point.z <= 0.12) continue;
+        if (point.z <= 0.14) continue;
 
+        // Anchor: a small open ring, so the dither reads through it.
         context.beginPath();
-        context.arc(point.x, point.y, 3, 0, Math.PI * 2);
-        context.fillStyle = '#FCFCFA';
+        context.arc(point.x, point.y, 3.4, 0, Math.PI * 2);
+        context.fillStyle = PAPER;
         context.fill();
-        context.strokeStyle = '#0C0C0A';
-        context.lineWidth = 1.2;
+        context.strokeStyle = INK;
+        context.lineWidth = 1.4;
         context.stroke();
 
-        const toRight = point.x >= cx;
-        const endX = toRight ? point.x + 26 : point.x - 26;
+        const toRight = point.x >= cx - radius * 0.25;
+        const legX = toRight ? point.x + 30 : point.x - 30;
+        const legY = point.y - 18;
 
         context.beginPath();
         context.moveTo(point.x, point.y);
-        context.lineTo(endX, point.y - 14);
-        context.lineWidth = 0.7;
+        context.lineTo(legX, legY);
+        context.lineWidth = 1;
         context.stroke();
 
-        const width = context.measureText(marker.label).width + 14;
-        const boxX = toRight ? endX : endX - width;
-        context.fillStyle = '#FCFCFA';
-        context.fillRect(boxX, point.y - 25, width, 20);
-        context.strokeRect(boxX, point.y - 25, width, 20);
-        context.fillStyle = '#0C0C0A';
-        context.fillText(marker.label, boxX + 7, point.y - 11);
+        const tick = marker.ok === true ? '✓ ' : '';
+        const text = `${tick}${marker.label}`;
+        const width = context.measureText(text).width + 16;
+        const height = 21;
+        const boxX = toRight ? legX : legX - width;
+        const boxY = legY - height / 2;
+
+        context.fillStyle = PAPER;
+        context.fillRect(boxX, boxY, width, height);
+        context.lineWidth = 1.2;
+        context.strokeRect(boxX, boxY, width, height);
+
+        context.fillStyle = marker.ok === true ? VERIFIED : INK;
+        context.fillText(text, boxX + 8, legY + 0.5);
       }
     };
 
     const tick = (): void => {
-      spin += 0.0022;
+      spin += 0.0018;
       render();
       frame = window.requestAnimationFrame(tick);
     };
@@ -216,11 +276,10 @@ export function Globe({ markers = [] }: { markers?: Marker[] }) {
   return (
     <canvas
       ref={canvasRef}
-      className="globe"
       aria-hidden
-      // Sized by CSS; the backing store is set from devicePixelRatio so the
-      // hairlines stay crisp on a retina display.
-      style={{ width: '100%', maxWidth: 460, aspectRatio: '1' }}
+      // Sized by CSS; the backing store follows devicePixelRatio so both the
+      // hairlines and the halftone stay crisp on a retina display.
+      style={{ width: '100%', maxWidth: 520, aspectRatio: '1' }}
     />
   );
 }
