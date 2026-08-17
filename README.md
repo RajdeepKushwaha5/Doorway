@@ -61,6 +61,20 @@ And on how to close that gap in the meantime:
 
 > "When a scraper breaks, you can trigger a self-healing. In our documentation we also have an API for the Scraper Studio. You can basically run self-healing when something is broken so that you can continuously fix that, **so that you don't have to intervene manually**."
 
+Asked directly, on 2026-08-17, whether the platform surfaces a value that is
+wrong rather than missing, and whether a repaired template is checked against
+previous output before promotion, Bright Data support answered both in one
+sentence:
+
+> "The docs do not describe automatic detection of a semantically wrong but
+> non-empty value after a layout change, and they do not describe validation
+> against previous known-good output before promotion."
+
+Those are the two things NOTICE does. The answer came from Bright Data's AI
+support agent citing their own documentation, so it is a statement about what
+the platform documents rather than a roadmap, which is exactly the claim being
+made here and is independently checkable against the pages it cites.
+
 That is the seam this project sits in. Bright Data builds and repairs the
 collector and exposes the API to drive the repair. What nobody supplies is the
 judgement in between: noticing that a run is wrong when it looks right,
@@ -354,10 +368,27 @@ template from the one that was approved, which is a more specific claim than
 the first occurrence supported.
 
 Done often doesn't mean successful. A green preview, a completed job and
-`success: true` together are not evidence that production changed. The cause
-remains undetermined and no public endpoint distinguishes the possibilities, so
-this is written up as an observation and has been sent to Bright Data as a
-question rather than a conclusion. The cause is still undetermined: either approval does not promote the template, or the promoted template does not fix the page. No public endpoint distinguishes them, so this remains an observation rather than a diagnosis.
+`success: true` together are not evidence that production changed.
+
+**Raised with Bright Data support on 2026-08-17.** Their reply offered one
+explanation, that an approved candidate is a draft until a separate production
+save: *"In the IDE Self-Healing flow, accepted changes go to a draft first. You
+must then click Save to Production to make them live."* That is a real step,
+and it is documented, but it belongs to the IDE. The same reply describes the
+path actually used here differently: *"For the CLI/API heal flow, approve
+commits the heal and the status advances to done, and rerunning the scraper
+should reflect the fix."* The CLI documentation agrees, stating the fix
+*"commits to the existing scraper"* on approval with no further step, and
+neither the Self-Healing nor the CLI reference documents any production-save
+endpoint distinct from `resume_automation_job`.
+
+So the offered explanation does not cover this case. Everything here went
+through `refactor_template` and `resume_automation_job`, where approval is
+documented as sufficient, and rerunning did not reflect the fix. A human
+confirmation has been requested and this section will be updated when it
+arrives. The cause remains undetermined: either approval does not promote the
+template, or the promoted template does not fix the page. No public endpoint
+distinguishes them, so this stays an observation rather than a diagnosis.
 
 This is why post-promotion verification exists, and it is the single strongest argument for the gate. A pipeline that trusts `success: true` would have marked this collector repaired and resumed publishing zero.
 

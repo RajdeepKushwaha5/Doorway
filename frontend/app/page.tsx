@@ -261,6 +261,20 @@ export default async function HomePage() {
 
           {/* The reproduction. The strongest evidence the project owns, so it
               sits directly under the claim rather than in a README. */}
+          {/* Asked rather than assumed. Their answer names both gaps in one
+              sentence, which is worth more than any claim made here. */}
+          <div className="panel mt-5 p-8" data-reveal>
+            <p className="eyebrow">Bright Data support, asked directly, 17 August 2026</p>
+            <p className="mt-5 max-w-[70ch] font-display text-2xl leading-snug">
+              &quot;The docs do not describe automatic detection of a semantically wrong but
+              non-empty value after a layout change, and they do not describe validation against
+              previous known-good output before promotion.&quot;
+            </p>
+            <p className="mt-5 text-[13px] leading-6 text-muted">
+              Those are the two things NOTICE does. Detection, and a gate on the repair.
+            </p>
+          </div>
+
           <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
             <div className="panel p-7" data-reveal="left">
               <p className="eyebrow">Reproduced on a real collector, twice</p>
