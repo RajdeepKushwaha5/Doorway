@@ -349,6 +349,16 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
+
+          <div className="mt-5 panel p-8" data-reveal>
+            <p className="max-w-[52ch] font-display text-3xl leading-snug">
+              A scraper that fixes itself will also fix a scraper that was never broken.
+            </p>
+            <p className="mt-4 max-w-[70ch] text-[13px] leading-6 text-muted">
+              It will do it confidently, and it will report success. Deciding that a repair is
+              warranted is a separate problem from performing one, and it is the harder half.
+            </p>
+          </div>
         </div>
       </section>
 
