@@ -212,7 +212,10 @@ export default async function HomePage() {
         </section>
 
         {/* Section: "✦ Reliability / Sequential Green Steps" ------------ */}
-        <section className="mt-14 scroll-mt-16">
+        {/* Anchored because the nav links here. The redesign dropped the
+            standalone deploy-gate and agents sections, so this one carries the
+            automation story and the gate that guards it. */}
+        <section id="automation" className="mt-14 scroll-mt-16">
           <SequentialGreenCards />
         </section>
 

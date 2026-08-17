@@ -5,13 +5,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NoticeLogo } from '@/components/NoticeLogo';
 
+/**
+ * Every href here must match an `id` that exists on the page.
+ *
+ * Three of these pointed at sections the redesign removed, so a third of the
+ * navigation silently did nothing when clicked. A dead nav link is worse than a
+ * missing one: the reader assumes the page is broken rather than that the item
+ * was never there.
+ */
 const links = [
   { href: '/#problem', label: 'DISCOVER', active: true },
-  { href: '/#gap', label: 'PROBLEM' },
+  { href: '/#gap', label: 'THE GAP' },
   { href: '/#system', label: 'HOW IT WORKS' },
   { href: '/#automation', label: 'AUTOMATION' },
-  { href: '/#gate', label: 'DEPLOY GATE' },
-  { href: '/#agents', label: 'FOR AGENTS' },
+  { href: '/#control-room', label: 'CONTROL ROOM' },
+  { href: '/#faq', label: 'FAQ' },
   { href: '/verified', label: 'VERIFIED FEED' },
 ];
 
