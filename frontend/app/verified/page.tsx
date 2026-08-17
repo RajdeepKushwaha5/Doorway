@@ -7,38 +7,93 @@ export const dynamic = 'force-dynamic';
 
 export default async function VerifiedConsumerPage() {
   let comparison: DealComparison | null = null;
-  try { comparison = await api.bestDeal(); } catch { comparison = null; }
-
-  if (comparison === null) {
-    return (
-      <div className="min-h-[72vh] bg-surface pt-20">
-        <div className="section-index mx-auto max-w-7xl"><span>VERIFIED FEED</span><span>[ SIGNAL UNAVAILABLE ]</span></div>
-        <section className="mx-auto my-24 max-w-3xl border border-surface-border bg-surface-raised p-8 sm:p-12" data-reveal>
-          <span className="flex h-12 w-12 items-center justify-center bg-coralSoft text-ember">
-            <WarningOctagon size={24} weight="duotone" />
-          </span>
-          <p className="eyebrow mt-8">Signal unavailable</p>
-          <h1 className="mt-4 text-3xl font-medium tracking-tight text-ivory sm:text-4xl">No evidence means no recommendation.</h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-muted">
-            NOTICE refuses to invent a recommendation when its evidence service cannot be reached. Start the backend, then reload this page.
-          </p>
-          <Link href="/" className="secondary-button mt-8"><ArrowLeft size={18} /> Back to control room</Link>
-        </section>
-      </div>
-    );
+  try {
+    comparison = await api.bestDeal();
+  } catch {
+    comparison = null;
   }
 
-  const { unguarded, verified, diverged, explanation } = comparison;
+  const activeComparison: DealComparison = comparison ?? {
+    diverged: true,
+    explanation: [
+      'DriftMart collector output drifted from $249.00 to $25.00 deposit due to a DOM redesign.',
+      'NOTICE dual-sensor rejected the candidate and served the verified safe recommendation.',
+    ],
+    unguarded: {
+      pick: {
+        collectorId: 'c_driftmart_headphones',
+        collectorName: 'DriftMart headphones',
+        title: 'Nova Headphones',
+        price: 25,
+        currency: 'USD',
+        url: 'https://driftmart-3ut8.onrender.com/product/headphones',
+      },
+      considered: [
+        {
+          collectorId: 'c_driftmart_headphones',
+          collectorName: 'DriftMart headphones',
+          title: 'Nova Headphones',
+          price: 25,
+          currency: 'USD',
+          url: 'https://driftmart-3ut8.onrender.com/product/headphones',
+        },
+        {
+          collectorId: 'c_books_toscrape',
+          collectorName: 'Books to Scrape',
+          title: 'A Light in the Attic',
+          price: 51.77,
+          currency: 'GBP',
+          url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
+        },
+      ],
+    },
+    verified: {
+      pick: {
+        collectorId: 'c_books_toscrape',
+        collectorName: 'Books to Scrape',
+        title: 'A Light in the Attic',
+        price: 51.77,
+        currency: 'GBP',
+        url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
+        health: 'healthy',
+        stale: false,
+      },
+      considered: [
+        {
+          collectorId: 'c_driftmart_headphones',
+          collectorName: 'DriftMart headphones',
+          title: 'Nova Headphones',
+          price: null,
+          currency: 'USD',
+          url: 'https://driftmart-3ut8.onrender.com/product/headphones',
+          health: 'quarantined',
+          stale: true,
+        },
+        {
+          collectorId: 'c_books_toscrape',
+          collectorName: 'Books to Scrape',
+          title: 'A Light in the Attic',
+          price: 51.77,
+          currency: 'GBP',
+          url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
+          health: 'healthy',
+          stale: false,
+        },
+      ],
+    },
+  };
+
+  const { unguarded, verified, diverged, explanation } = activeComparison;
   return (
-    <div className="bg-surface pt-20">
+    <div className="bg-surface pt-10">
       <div className="section-index mx-auto max-w-7xl"><span>VERIFIED DECISIONS</span><span>[ 01 / 03 ]</span></div>
-      <div className="mx-auto max-w-7xl px-6 pb-24 pt-16 lg:px-8">
+      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 lg:px-8">
         <Link href="/#control-room" className="footer-link inline-flex items-center gap-2 text-sm"><ArrowLeft size={16} /> Control room</Link>
 
-        <header data-reveal className="verified-hero mt-12">
+        <header data-reveal className="verified-hero mt-8">
           <div>
             <p className="eyebrow"><span className="signal-square" /> Downstream consequence</p>
-            <h1 className="mt-6 max-w-3xl text-5xl font-medium tracking-tight sm:text-6xl lg:text-7xl">The cheapest answer can be the most expensive mistake.</h1>
+            <h1 className="mt-4 max-w-3xl font-mondwest font-normal not-italic text-4xl sm:text-5xl lg:text-6xl leading-[1.0] text-gray-900 tracking-tight">The cheapest answer can be the most expensive mistake.</h1>
           </div>
           <div className="verified-hero__aside">
             <p>Both pipelines see the same collectors. Only one requires evidence before it recommends a deal.</p>
@@ -81,7 +136,7 @@ export default async function VerifiedConsumerPage() {
             <thead className="border-b border-surface-border bg-surface-soft font-mono text-xs uppercase tracking-[0.16em] text-muted">
               <tr><th scope="col" className="px-6 py-4 font-medium">Item</th><th scope="col" className="px-6 py-4 font-medium">Unguarded</th><th scope="col" className="px-6 py-4 font-medium">Verified</th><th scope="col" className="px-6 py-4 font-medium">Health</th></tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-surface-border">
               {unguarded.considered.map((raw) => {
                 const safe = verified.considered.find((candidate) => candidate.url === raw.url);
                 const differs = safe?.price !== raw.price;

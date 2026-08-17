@@ -3,24 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-/**
- * Sticky navigation.
- *
- * Small monospace labels rather than a heavier sans, so the bar reads as
- * instrumentation and gives the serif headline the only strong voice on the
- * page. The active item is marked by ink weight rather than colour, because
- * colour here means a verdict.
- */
+import { NoticeLogo } from '@/components/NoticeLogo';
 
 const links = [
-  { href: '/#problem', label: 'Problem' },
-  { href: '/#gap', label: 'The gap' },
-  { href: '/#system', label: 'How it works' },
-  { href: '/#automation', label: 'Automation' },
-  { href: '/#gate', label: 'Deploy gate' },
-  { href: '/#agents', label: 'For agents' },
-  { href: '/verified', label: 'Verified feed' },
+  { href: '/#problem', label: 'DISCOVER', active: true },
+  { href: '/#gap', label: 'PROBLEM' },
+  { href: '/#system', label: 'HOW IT WORKS' },
+  { href: '/#automation', label: 'AUTOMATION' },
+  { href: '/#gate', label: 'DEPLOY GATE' },
+  { href: '/#agents', label: 'FOR AGENTS' },
+  { href: '/verified', label: 'VERIFIED FEED' },
 ];
 
 export function SiteNav() {
@@ -28,68 +20,82 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-surface-border bg-surface/90 backdrop-blur-xl">
-      <nav
-        className="mx-auto flex h-[4.5rem] w-full max-w-[1400px] items-center gap-10 px-6 lg:px-10"
-        aria-label="Primary navigation"
-      >
-        {/* The wordmark carries the display serif, so the bar is the first
-            place the page's voice appears. Everything beside it is mono at a
-            whisper, which keeps the hierarchy in one direction. */}
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <Mark />
-          <span className="font-display text-[1.6rem] leading-none tracking-[-0.01em]">NOTICE</span>
+    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 sm:px-8 h-[52px] border-b border-gray-200 bg-white/95 backdrop-blur-sm transition-colors">
+      <div className="flex items-center gap-6">
+        <Link href="/" className="flex items-center gap-2 select-none shrink-0 group">
+          <NoticeLogo className="w-5 h-5 text-black transition-transform group-hover:scale-105" />
+          <span className="font-mondwest font-normal not-italic text-[24px] leading-none tracking-tight text-gray-900">
+            Notice
+          </span>
         </Link>
 
-        <div className="hidden items-center gap-7 md:flex">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={pathname === link.href ? 'page' : undefined}
-              className={`text-[11px] uppercase tracking-eyebrow transition-colors duration-200 hover:text-ivory ${
-                pathname === link.href ? 'text-ivory' : 'text-muted'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
+        <nav className="hidden lg:flex items-center gap-1">
+          {links.map((link) => {
+            const isActive = pathname === link.href || (link.active && pathname === '/');
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`font-mono text-[11.5px] uppercase tracking-[0.1em] font-semibold px-3 py-1.5 rounded-[6px] transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'text-gray-900 bg-[#F0F2F5]'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-        <div className="ml-auto flex items-center gap-4">
-          <a
-            href="https://github.com/prabhatkumar67/notice"
-            className="hidden text-[11px] uppercase tracking-eyebrow text-muted transition-colors hover:text-ivory sm:inline"
-          >
-            Source
-          </a>
-          <Link
-            href="/#control-room"
-            className="hidden min-h-[2.5rem] items-center bg-ivory px-5 text-[11px] uppercase tracking-eyebrow text-surface-raised transition-colors duration-200 hover:bg-ivory/85 sm:inline-flex"
-          >
-            Control room
-          </Link>
-          <button
-            type="button"
-            onClick={() => setOpen((current) => !current)}
-            aria-expanded={open}
-            aria-label="Toggle navigation"
-            className="border border-surface-border px-3 py-2 text-[11px] uppercase tracking-eyebrow md:hidden"
-          >
-            {open ? 'Close' : 'Menu'}
-          </button>
-        </div>
-      </nav>
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <a
+          href="https://brightdata.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700 bg-emerald-50/80 border border-emerald-600/30 px-3 py-1.5 rounded-[6px] hover:bg-emerald-100/80 transition-colors whitespace-nowrap"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          Bright Data Live
+        </a>
+
+        <a
+          href="https://github.com/prabhatkumar67/notice"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-600 hover:text-gray-900 px-3 py-1.5 transition-colors whitespace-nowrap"
+        >
+          Source
+        </a>
+
+        <Link
+          href="/#control-room"
+          className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] px-4 py-1.5 bg-black text-white rounded-[6px] hover:bg-neutral-800 transition-colors whitespace-nowrap"
+        >
+          Control Room
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          aria-label="Toggle navigation"
+          className="inline-flex lg:hidden items-center gap-1 rounded-md px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-[0.08em] text-gray-600 hover:bg-gray-100"
+        >
+          {open ? 'Close ▴' : 'Menu ▾'}
+        </button>
+      </div>
 
       {open ? (
-        <div className="border-t border-surface-border bg-surface-raised px-6 py-4 md:hidden">
-          <div className="flex flex-col gap-4">
+        <div className="absolute top-full left-0 right-0 border-b border-gray-200 bg-white px-6 py-4 lg:hidden shadow-xl">
+          <div className="flex flex-col gap-1.5">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="text-[12px] uppercase tracking-eyebrow text-muted"
+                className="font-mono text-[12px] uppercase tracking-[0.1em] font-semibold px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
               >
                 {link.label}
               </Link>
@@ -98,16 +104,5 @@ export function SiteNav() {
         </div>
       ) : null}
     </header>
-  );
-}
-
-/** The mark: a circle with a checked centre, drawn rather than imported. */
-function Mark() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden focusable="false">
-      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
   );
 }

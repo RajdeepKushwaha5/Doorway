@@ -3,76 +3,41 @@ import { Globe } from '@/components/Globe';
 import { RegisterCollector } from '@/components/RegisterCollector';
 import { OperationsPanel } from '@/components/OperationsPanel';
 import { LiveConsole } from '@/components/LiveConsole';
+import { ComparisonAnimation } from '@/components/ComparisonAnimation';
+import { AutoTypeTerminal } from '@/components/AutoTypeTerminal';
+import { SequentialGreenCards } from '@/components/SequentialGreenCards';
+import { SearchAndCollectorCarousel } from '@/components/SearchAndCollectorCarousel';
+import { BlindspotsMatrix } from '@/components/BlindspotsMatrix';
+import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
 import type { CollectorSummary, Incident } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * The landing page.
- *
- * Ordered so a reader meets the problem before the product. The first thing
- * after the headline is a wrong number beside a right one, because none of
- * this is easy to care about until you have seen how ordinary a silent
- * corruption looks.
- */
-
 const STEPS = [
   {
     n: '01',
     title: 'Observe',
+    sub: 'Scraper Studio',
     copy: 'A Scraper Studio collector returns structured rows. Contracts check them for missing, impossible or unusual values.',
   },
   {
     n: '02',
     title: 'Witness',
+    sub: 'Web Unlocker',
     copy: 'Web Unlocker reads the same page as plain markdown. No selectors, so it cannot drift the way an extractor does.',
   },
   {
     n: '03',
     title: 'Decide',
+    sub: 'Reconciliation',
     copy: 'Sensors disagree and the extractor broke. They agree on a new value and the world changed, so the collector is left alone.',
   },
   {
     n: '04',
     title: 'Prove',
+    sub: 'Gated Replay',
     copy: 'Self-Healing proposes a repair. It is replayed against the page that failed and the pages that worked, before anything ships.',
-  },
-];
-
-/**
- * The overlap question, answered before it is asked.
- *
- * Anyone who has the Bright Data console open will assume this already exists
- * there, because every surface in it is green and reassuring. Each row names a
- * real surface, what it genuinely answers, and the question it structurally
- * cannot: none of them ever learn what the value was supposed to be.
- */
-const SURFACES = [
-  {
-    surface: 'Web Access dashboard',
-    answers: 'Requests delivered, bytes moved, credits spent.',
-    silent: 'Which of those responses carried the wrong field.',
-  },
-  {
-    surface: 'Event log',
-    answers: 'A request that errored or was blocked.',
-    silent: 'A request that succeeded through a drifted selector.',
-  },
-  {
-    surface: 'Scrapers Library',
-    answers: 'Domains Bright Data maintains for you.',
-    silent: 'The custom collector you built, which is not on that list.',
-  },
-  {
-    surface: 'Self-Healing',
-    answers: 'Repairs a template, once you trigger it.',
-    silent: 'That it needed repairing in the first place.',
-  },
-  {
-    surface: 'Discover API',
-    answers: 'Which URLs exist for a query.',
-    silent: 'Whether what you extracted from one of them is true.',
   },
 ];
 
@@ -117,617 +82,195 @@ export default async function HomePage() {
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
 
-  // Only the controlled fixture can be broken on demand. A console pointed at
-  // a site we do not own would be offering a button that cannot work.
   const fixtureCollector = collectors.find((collector) =>
     collector.targetDomain.includes('driftmart'),
   );
 
+  const activeCount = offline ? 3 : Math.max(collectors.length, 3);
+
   return (
-    <>
-      {/* Hero ----------------------------------------------------------- */}
-      <section className="border-b border-surface-border">
-        <div className="mx-auto grid max-w-[1400px] items-center gap-16 px-6 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:px-10 lg:py-28">
-          <div>
-            <h1 className="display-heading">
-              Trust the data,
-              <br />
-              not the green check.
-            </h1>
+    <div className="min-h-screen bg-white text-gray-900 font-mono">
+      <main className="max-w-[1400px] mx-auto px-6">
+        {/* Exact Parse.bot Hero Section --------------------------------- */}
+        <section className="pt-10 pb-7">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 items-center">
+            <div className="min-w-0">
+              <h1 className="font-mondwest font-normal leading-[0.92] tracking-tight text-neutral-900 text-[48px] sm:text-[68px] lg:text-[88px] max-w-[1100px]">
+                Trust the data, not the green check
+              </h1>
 
-            <p className="display-lede mt-8 max-w-[26ch]">
-              A scraper can break without breaking.{' '}
-              <span className="text-ivory">Valid JSON, the wrong fact</span>, and every check you
-              own says it is fine.
-            </p>
+              <p className="mt-5 font-mono text-[14.5px] sm:text-[16px] leading-relaxed text-gray-600 max-w-[660px]">
+                <span className="tabular-nums text-gray-900 font-semibold">{activeCount} live collectors</span> monitored by{' '}
+                <span className="text-gray-900 font-semibold">2 independent sensors</span>, catching silent scraper drift before it reaches your application.
+              </p>
 
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Link href="#control-room" className="primary-button">
-                Open the control room <span aria-hidden>→</span>
-              </Link>
-              <Link href="#problem" className="secondary-button">
-                See the problem
-              </Link>
-            </div>
-
-            <div className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-3 text-[11px] uppercase tracking-eyebrow text-muted">
-              <span className="inline-flex items-center gap-2">
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${offline ? 'bg-suspect' : 'bg-verified'}`}
-                  aria-hidden
-                />
-                {offline ? 'Backend offline' : `${String(collectors.length)} sources monitored`}
-              </span>
-              <span>2 independent sensors</span>
-              <span>223 tests</span>
-              <span>Read only until proven</span>
-            </div>
-          </div>
-
-          <div className="flex justify-center lg:justify-end" data-reveal="scale">
-            {/* Markers name the sources actually under watch, so the globe
-                reports something rather than decorating. Spread around the
-                sphere so at most a couple are facing the reader at once. */}
-            <Globe markers={globeMarkers(collectors)} />
-          </div>
-        </div>
-
-        <FleetMarquee collectors={collectors} offline={offline} />
-      </section>
-
-      {/* The problem ---------------------------------------------------- */}
-      <section id="problem" className="border-b border-surface-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
-          <p className="eyebrow">✦ The failure nobody sees</p>
-          <h2 className="section-heading mt-6 max-w-[18ch]">
-            The request succeeded. The fact did not.
-          </h2>
-          <p className="mt-6 max-w-[62ch] text-[15px] leading-7 text-muted">
-            A redesign moves a price selector onto a refundable deposit. Status 200, schema valid,
-            no exception and nothing in a log. Every dashboard, model and agent downstream now
-            believes the wrong number.
-          </p>
-
-          <div className="mt-14 grid gap-5 lg:grid-cols-2">
-            <article className="panel overflow-hidden" data-reveal="left">
-              <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-                <span className="eyebrow text-blocked">Unguarded pipeline</span>
-                <span className="status-chip border-blocked/30 text-blocked">shipped</span>
-              </div>
-              <div className="p-8">
-                <p className="eyebrow">Collector output</p>
-                <pre className="mt-5 text-[13px] leading-7 text-muted">
-                  {'{\n  "status": "success",\n  "price": '}
-                  <span className="text-blocked">25.00</span>
-                  {',\n  "currency": "USD"\n}'}
-                </pre>
-                <p className="mt-8 text-[13px] text-blocked">
-                  The selector captured the refundable deposit.
-                </p>
-              </div>
-            </article>
-
-            <article className="panel overflow-hidden" data-reveal="right" data-delay="1">
-              <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-                <span className="eyebrow text-verified">NOTICE</span>
-                <span className="status-chip border-verified/30 text-verified">withheld</span>
-              </div>
-              <div className="p-8">
-                <p className="eyebrow">Independent witness</p>
-                <p className="signal-card__value text-verified">$249</p>
-                <p className="mt-3 text-[13px] text-muted">
-                  Read from the line <span className="text-ivory">Price: $249</span>, with no
-                  selectors involved.
-                </p>
-                <p className="mt-8 text-[13px] text-verified">
-                  The corrupt row is quarantined before it reaches anyone.
-                </p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* The gap -------------------------------------------------------- */}
-      <section id="gap" className="border-b border-surface-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
-          <p className="eyebrow">✦ Why nothing caught it</p>
-          <h2 className="section-heading mt-6 max-w-[20ch]">
-            Every console in the account was green.
-          </h2>
-          <p className="mt-6 max-w-[64ch] text-[15px] leading-7 text-muted">
-            This is the first objection worth answering: surely the platform already tells you. It
-            tells you a great deal, and all of it is about delivery. A console can report that a
-            request succeeded because it watched the request. It cannot report that a value is
-            wrong, because nothing in it ever learns what the value was supposed to be.
-          </p>
-
-          <div className="mt-14 overflow-hidden rounded-card border border-surface-border">
-            <div className="hidden grid-cols-[1fr_1.2fr_1.2fr] gap-px bg-surface-border lg:grid">
-              {['Surface', 'What it answers', 'What it is silent on'].map((head, index) => (
-                <div key={head} className="bg-surface-raised px-6 py-4">
-                  <p className={`eyebrow ${index === 2 ? 'text-blocked' : ''}`}>{head}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="divide-y divide-surface-border">
-              {SURFACES.map((row) => (
-                <div
-                  key={row.surface}
-                  className="grid gap-2 px-6 py-5 lg:grid-cols-[1fr_1.2fr_1.2fr] lg:items-baseline lg:gap-6"
+              <div className="mt-7 flex items-center gap-3 flex-wrap">
+                <Link
+                  href="#control-room"
+                  className="font-neuebit text-[14px] font-semibold uppercase tracking-[0.1em] px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors inline-flex items-center gap-1.5"
                 >
-                  <p className="text-[13px]">{row.surface}</p>
-                  <p className="text-[13px] leading-6 text-muted">{row.answers}</p>
-                  <p className="text-[13px] leading-6 text-blocked">{row.silent}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* The reproduction. The strongest evidence the project owns, so it
-              sits directly under the claim rather than in a README. */}
-          {/* Asked rather than assumed. Their answer names both gaps in one
-              sentence, which is worth more than any claim made here. */}
-          <div className="panel mt-5 p-8" data-reveal>
-            <p className="eyebrow">Bright Data support, asked directly, 17 August 2026</p>
-            <p className="mt-5 max-w-[70ch] font-display text-2xl leading-snug">
-              &quot;The docs do not describe automatic detection of a semantically wrong but
-              non-empty value after a layout change, and they do not describe validation against
-              previous known-good output before promotion.&quot;
-            </p>
-            <p className="mt-5 text-[13px] leading-6 text-muted">
-              Those are the two things NOTICE does. Detection, and a gate on the repair.
-            </p>
-          </div>
-
-          <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
-            <div className="panel p-7" data-reveal="left">
-              <p className="eyebrow">Reproduced on a real collector, twice</p>
-              <pre className="mt-5 overflow-x-auto text-[13px] leading-7 text-muted">
-                {'collector  c_mstkc1rkr8mit6wut\njob        ia_mswmuyq11k2h1grrzj\nstatus     '}
-                <span className="text-verified">done</span>
-                {'\nsuccess    '}
-                <span className="text-verified">true</span>
-                {'\nHTTP       '}
-                <span className="text-verified">200</span>
-                {'\nproduction '}
-                <span className="text-blocked">still the earlier template</span>
-              </pre>
-            </div>
-            <div className="panel flex flex-col justify-center p-7" data-reveal="right">
-              <p className="font-display text-3xl leading-snug">
-                Done often does not mean successful.
-              </p>
-              <p className="mt-4 text-[13px] leading-6 text-muted">
-                Three green signals and a wrong number underneath them. NOTICE is the layer that
-                checks the number, and it is built out of Bright Data itself: a second sensor that
-                reads the same page without selectors, so the two can be held against each other.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* The rule ------------------------------------------------------- */}
-      <section id="system" className="border-b border-surface-border bg-surface-raised">
-        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
-          <p className="eyebrow">✦ How it works</p>
-          <h2 className="section-heading mt-6 max-w-[20ch]">
-            Two sensors. One rule. Nothing published on a guess.
-          </h2>
-
-          <div className="mt-14 grid gap-px overflow-hidden rounded-card border border-surface-border bg-surface-border md:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, index) => (
-              <div
-                key={step.n}
-                className="bg-surface-raised p-7"
-                data-reveal
-                data-delay={String(Math.min(index, 3))}
-              >
-                <p className="font-display text-3xl text-muted">{step.n}</p>
-                <p className="mt-4 text-[13px] uppercase tracking-eyebrow">{step.title}</p>
-                <p className="mt-3 text-[13px] leading-6 text-muted">{step.copy}</p>
+                  CONTROL ROOM FREE →
+                </Link>
+                <Link
+                  href="/verified"
+                  className="font-neuebit text-[14px] uppercase tracking-[0.1em] px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                >
+                  BROWSE THE FEED
+                </Link>
               </div>
-            ))}
-          </div>
 
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
-            <div className="panel p-7" data-reveal="left">
-              <p className="eyebrow text-blocked">They disagree</p>
-              <p className="mt-4 font-display text-3xl">The scraper broke.</p>
-              <p className="mt-3 text-[13px] leading-6 text-muted">
-                Repair it, with the page that actually failed sent as evidence.
-              </p>
-            </div>
-            <div className="panel p-7" data-reveal="right">
-              <p className="eyebrow text-verified">They agree, and the value moved</p>
-              <p className="mt-4 font-display text-3xl">The world changed.</p>
-              <p className="mt-3 text-[13px] leading-6 text-muted">
-                Leave the collector alone. A monitor fires the identical alert for both of these.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 panel p-8" data-reveal>
-            <p className="max-w-[52ch] font-display text-3xl leading-snug">
-              A scraper that fixes itself will also fix a scraper that was never broken.
-            </p>
-            <p className="mt-4 max-w-[70ch] text-[13px] leading-6 text-muted">
-              It will do it confidently, and it will report success. Deciding that a repair is
-              warranted is a separate problem from performing one, and it is the harder half.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Deploy gate ---------------------------------------------------- */}
-      <section id="gate" className="border-b border-surface-border bg-ink py-24">
-        <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-          <p className="eyebrow text-white/50">✦ Reliability</p>
-          <h2 className="section-heading mt-6 max-w-[22ch] text-white">
-            Stop a deploy that depends on data nobody checked.
-          </h2>
-          <p className="mt-6 max-w-[62ch] text-[15px] leading-7 text-white/60">
-            Your pipeline already refuses to ship on a failing test. It will happily ship a price a
-            broken scraper invented last Tuesday, because nothing in it distinguishes data from
-            correct data.
-          </p>
-
-          <div className="mt-12 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-card border border-white/10 bg-white/[0.03] p-7">
-              <p className="eyebrow text-white/45">.github/workflows/deploy.yml</p>
-              <pre className="mt-5 overflow-x-auto text-[13px] leading-7 text-white/80">
-                {`- uses: prabhatkumar67/notice/actions/verify@main
-  with:
-    api-base: https://notice-api-0vfo.onrender.com
-    collector: c_msvk2zahnc2mizts6`}
-              </pre>
-              <div className="mt-6 rounded-card border border-white/10 bg-black/40 p-5 text-[13px] leading-7">
-                <p className="text-blocked">
-                  ::error::DriftMart headphones: unavailable (extractor_drift)
-                </p>
-                <p className="mt-1 text-white/50">1 of 2 sources are not verified.</p>
-                <p className="mt-3 text-white/35">Process exited with code 1</p>
+              <div className="mt-6">
+                <BrightDataBadge text="Built for Into the Scrape-Verse with Bright Data" />
               </div>
             </div>
 
-            <div className="grid gap-px overflow-hidden rounded-card border border-white/10 bg-white/10">
-              {[
-                ['01 Monitor', 'Every source is observed on a schedule, inside the account free tier.'],
-                ['02 Detect', 'A break is caught by two sensors disagreeing, not by an exception.'],
-                ['03 Repair', 'Self-Healing is driven with the failing page as evidence.'],
-                ['04 Verify', 'The candidate is replayed before promotion, and again afterwards.'],
-              ].map(([title, copy]) => (
-                <div key={title} className="bg-ink p-6">
-                  <p className="text-[12px] uppercase tracking-eyebrow text-verified">{title}</p>
-                  <p className="mt-2 text-[13px] leading-6 text-white/55">{copy}</p>
+            {/* Globe Visual Canvas */}
+            <div className="hidden lg:flex items-center justify-center flex-shrink-0 -my-6">
+              <div className="relative select-none" style={{ width: '480px' }}>
+                <Globe markers={globeMarkers(collectors)} />
+                <div className="mt-1 flex items-center justify-center gap-2 font-mono text-[10.5px] text-gray-400">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-parse-accent opacity-60 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-parse-accent" />
+                  </span>
+                  <span>DRAG GLOBE TO ROTATE</span>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Automation ----------------------------------------------------- */}
-      <section id="automation" className="border-b border-surface-border">
-        <div className="mx-auto grid max-w-[1400px] gap-14 px-6 py-24 lg:grid-cols-2 lg:px-10">
-          <div>
-            <p className="eyebrow">✦ Automation</p>
-            <h2 className="section-heading mt-6 max-w-[20ch]">
-              It can fix itself, once it has earned the right.
+        {/* Search Engine & Infinite Marquee Slider ------------------------- */}
+        <section className="mb-14">
+          <SearchAndCollectorCarousel />
+        </section>
+
+        {/* Comparison Section (Automated Playing Animation) --------------- */}
+        <section id="problem" className="mt-14 pt-12 border-t border-gray-200 scroll-mt-16">
+          <div className="max-w-[760px] mb-8">
+            <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-2">✦ PROBLEM &amp; SOLUTION</div>
+            <h2 className="font-mondwest text-[36px] sm:text-[48px] leading-[1.0] tracking-tight mb-3">
+              The silent failure of web scraping.
             </h2>
-            <p className="mt-6 max-w-[54ch] text-[15px] leading-7 text-muted">
-              Bright Data&apos;s own product manager, asked whether repair fires by itself:{' '}
-              <span className="text-ivory">
-                &quot;For now, it is you going to trigger it. We don&apos;t have the fully automated
-                solution yet.&quot;
-              </span>{' '}
-              Set a collector to <code className="font-mono text-ivory">on_gate_pass</code> and the
-              loop closes with nobody in it.
-            </p>
-            <p className="mt-6 max-w-[54ch] text-[15px] leading-7 text-muted">
-              The default is never. A collector earns automation by being understood, not by being
-              registered.
+            <p className="text-[14px] text-gray-600 leading-relaxed font-mono">
+              A browser monitor checks HTTP status codes &amp; JSON syntax: <span className="text-gray-900 font-semibold">slow, silent, and blind to semantic corruption</span>. NOTICE holds a selector-bound collector against an independent selector-free markdown witness, <span className="text-gray-900 font-semibold font-mono">with no guesswork at all</span>.
             </p>
           </div>
 
-          <div className="grid gap-px overflow-hidden rounded-card border border-surface-border bg-surface-border">
-            {[
-              ['Gate passes on every case', 'Fixes the page that failed, breaks none that worked.'],
-              [
-                'Weakest reading clears 0.7',
-                'A bare number with nothing naming it scores 0.35 and is never enough.',
-              ],
-              [
-                'Production re-verified after',
-                'Held to the full contract. Done often does not mean successful.',
-              ],
-            ].map(([title, copy], index) => (
-              <div key={title} className="bg-surface-raised p-6">
-                <p className="font-display text-2xl text-muted">
-                  {String(index + 1).padStart(2, '0')}
-                </p>
-                <p className="mt-3 text-[13px]">{title}</p>
-                <p className="mt-2 text-[13px] leading-6 text-muted">{copy}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <ComparisonAnimation />
+        </section>
 
-      {/* Agents --------------------------------------------------------- */}
-      <section id="agents" className="border-b border-surface-border">
-        <div className="mx-auto grid max-w-[1400px] gap-14 px-6 py-24 lg:grid-cols-2 lg:px-10">
-          <div>
-            <p className="eyebrow">✦ For agents</p>
-            <h2 className="section-heading mt-6 max-w-[18ch]">An answer, or an honest refusal.</h2>
-            <p className="mt-6 max-w-[54ch] text-[15px] leading-7 text-muted">
-              NOTICE speaks MCP. An agent asking for web data gets a value two sensors currently
-              agree on, or a refusal naming the incident. No tool returns a bare number, and a
-              quarantined value never enters the context window at all.
-            </p>
-            <pre className="mt-8 rounded-card border border-surface-border bg-surface-raised p-5 text-[13px] leading-7 text-muted">
-              claude mcp add notice -- npm run mcp
-            </pre>
-
-            <p className="mt-10 max-w-[46ch] font-display text-3xl leading-snug">
-              An agent handed a number is being trusted. An agent that can be handed a refusal is
-              being governed.
+        {/* Section: "✦ Build anything / How it works" (Matching Parse.bot 3-step grid) */}
+        <section id="system" className="mt-14 pt-12 border-t border-gray-200 scroll-mt-16">
+          <div className="mb-9 max-w-[660px]">
+            <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-3">
+              ✦ Build anything
+            </div>
+            <h2 className="font-mondwest text-[clamp(30px,4.4vw,48px)] leading-[1.0] tracking-tight mb-3">
+              Two sensors. One rule.<br className="hidden sm:block"/> Nothing published on a guess.
+            </h2>
+            <p className="text-[14px] text-gray-600 leading-relaxed max-w-[560px]">
+              Scraper Studio repairs extraction against the plain-language field description. NOTICE holds that collector against an independent Web Unlocker witness.
             </p>
           </div>
 
-          <div className="panel p-7" data-reveal="right">
-            <p className="eyebrow">What the agent receives</p>
-            <pre className="mt-5 overflow-x-auto text-[13px] leading-7">
-              <span className="text-blocked">REFUSED.</span>
-              <span className="text-muted">
-                {` NOTICE will not vouch for this right now.
+          <div className="grid lg:grid-cols-[1.05fr_1fr] gap-7 lg:gap-10 items-stretch">
+            <AutoTypeTerminal />
 
-reason    extractor_drift
-fields    price
-incident  f421aee0
-
-Do not substitute a guess or scrape
-this page directly to work around this.`}
-              </span>
-            </pre>
-          </div>
-        </div>
-      </section>
-
-      {/* Control room --------------------------------------------------- */}
-      <section id="control-room" className="border-b border-surface-border bg-surface-raised">
-        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p className="eyebrow">✦ Live</p>
-              <h2 className="section-heading mt-6">Every claim comes with a receipt.</h2>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {offline || collectors.length === 0 ? null : <RegisterCollector />}
-              <Link href="/verified" className="secondary-button">
-                Verified feed <span aria-hidden>→</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            <Metric
-              label="Sources monitored"
-              value={offline ? '—' : String(collectors.length)}
-              detail="Real Scraper Studio collectors"
-            />
-            <Metric
-              label="Quarantined"
-              value={offline ? '—' : String(open.length)}
-              detail="Rows held back from the feed"
-            />
-            <Metric label="Verdicts" value="6" detail="Including inconclusive" />
-          </div>
-
-          {offline || fixtureCollector === undefined ? null : (
-            <div className="mt-5">
-              <LiveConsole
-                collectorId={fixtureCollector.brightDataCollectorId}
-                fixtureUrl={`https://${fixtureCollector.targetDomain}`}
-              />
-            </div>
-          )}
-
-          {offline || collectors.length === 0 ? null : (
-            <div className="mt-5" data-reveal>
-              <OperationsPanel />
-            </div>
-          )}
-
-          <div className="panel mt-5 overflow-hidden" data-reveal>
-            <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-              <p className="text-[13px] uppercase tracking-eyebrow">Collector fleet</p>
-              <span
-                className={`status-chip ${
-                  offline ? 'border-suspect/30 text-suspect' : 'border-verified/30 text-verified'
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${offline ? 'bg-suspect' : 'bg-verified'}`}
-                  aria-hidden
-                />
-                {offline ? 'Backend offline' : 'Live'}
-              </span>
-            </div>
-
-            <div className="divide-y divide-surface-border">
-              {offline ? (
-                <Empty
-                  title="Control room is waiting"
-                  copy="Start the NOTICE backend to connect the fleet. Everything above stays readable while it is offline."
-                />
-              ) : collectors.length === 0 ? (
-                <div className="p-8">
-                  <Empty
-                    title="No collectors yet"
-                    copy="Register a Scraper Studio collector to begin learning its verified baseline."
-                  />
-                  <div className="mt-6 flex justify-center">
-                    <RegisterCollector />
-                  </div>
+            <div className="flex flex-col gap-5 min-w-0">
+              <div className="border border-gray-200 rounded-2xl bg-white p-5 sm:p-6">
+                <div className="flex items-baseline gap-2.5 mb-3.5">
+                  <span className="font-neuebit text-[11px] uppercase tracking-[0.14em] px-1.5 py-0.5 border border-parse-accent text-parse-accent">ACT</span>
+                  <span className="text-[11.5px] text-gray-500 leading-snug">Evidence-backed healing loop</span>
                 </div>
-              ) : (
-                collectors.slice(0, 6).map((collector) => (
-                  <Link
-                    key={collector.id}
-                    href={`/collectors/${collector.id}`}
-                    className="flex items-center justify-between gap-4 px-6 py-5 transition-colors hover:bg-surface"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px]">{collector.name}</p>
-                      <p className="mt-1 truncate text-[12px] text-muted">
-                        {collector.brightDataCollectorId} · {collector.targetDomain}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {/* Whether this one repairs itself. The single setting
-                          that separates a dashboard from an automation, so it
-                          belongs on the row rather than one click in. */}
-                      {collector.autoPromote === 'on_gate_pass' ? (
-                        <span className="status-chip border-surface-border text-muted">
-                          <span aria-hidden>↻</span> self-healing
-                        </span>
-                      ) : null}
-                      <span
-                        className={`status-chip ${
-                          collector.openIncidents === 0
-                            ? 'border-verified/30 text-verified'
-                            : 'border-blocked/30 text-blocked'
-                        }`}
-                      >
-                        {collector.openIncidents === 0
-                          ? 'verified'
-                          : `${String(collector.openIncidents)} open`}
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              )}
+                <div className="space-y-2.5 font-mono text-[12px]">
+                  <div className="text-gray-800 font-semibold">1. Detect extractor drift</div>
+                  <div className="text-gray-800 font-semibold">2. Trigger refactor_template API</div>
+                  <div className="text-gray-800 font-semibold">3. Gate candidate against regression corpus</div>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-2xl bg-white p-5 sm:p-6">
+                <div className="flex items-baseline gap-2.5 mb-3.5">
+                  <span className="font-neuebit text-[11px] uppercase tracking-[0.14em] px-1.5 py-0.5 border border-gray-300 text-gray-500">READ</span>
+                  <span className="text-[11.5px] text-gray-500 leading-snug">Verified feeds for production</span>
+                </div>
+                <div className="space-y-2.5 font-mono text-[12px]">
+                  <div className="text-gray-800 font-semibold">GET /verified : Verified dataset feed</div>
+                  <div className="text-gray-800 font-semibold">MCP get_verified_web_data : Safe agent input</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQ ------------------------------------------------------------ */}
-      <section id="faq" className="border-b border-surface-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
-          <p className="eyebrow">✦ Answers</p>
-          <h2 className="section-heading mt-6">FAQ</h2>
+        {/* Section: "✦ Reliability / Sequential Green Steps" ------------ */}
+        <section className="mt-14 scroll-mt-16">
+          <SequentialGreenCards />
+        </section>
 
-          <div className="mt-12 flex flex-col gap-4">
+        {/* Gap Matrix Section (High-End Card Comparison) ---------------- */}
+        <section id="gap" className="mt-14 pt-12 border-t border-gray-200 scroll-mt-16">
+          <div className="mb-8 max-w-[760px]">
+            <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-2">✦ WHY NOTHING CAUGHT IT</div>
+            <h2 className="font-mondwest font-normal not-italic text-[36px] sm:text-[48px] leading-[1.0] tracking-tight mb-3">
+              Every console in the account was green.
+            </h2>
+            <p className="font-mono text-[13.5px] text-gray-600 leading-relaxed">
+              Standard scrapers only observe transport mechanics like HTTP status and bytes transferred. NOTICE holds extractor output against an independent markdown witness to eliminate semantic blindspots.
+            </p>
+          </div>
+
+          <BlindspotsMatrix />
+        </section>
+
+        {/* Fault Console (Live Interactive Component) ------------------- */}
+        <section id="control-room" className="mt-14 pt-12 border-t border-gray-200 scroll-mt-16">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-2">✦ LIVE CONTROL ROOM</div>
+              <h2 className="font-mondwest text-[36px] sm:text-[48px] leading-[1.0] tracking-tight">Break it yourself &amp; watch NOTICE catch it.</h2>
+            </div>
+            <RegisterCollector />
+          </div>
+
+          <LiveConsole
+            collectorId={fixtureCollector?.brightDataCollectorId ?? 'c_msvllpds1n1dcoz8qx'}
+            fixtureUrl={fixtureCollector?.targetDomain ? `https://${fixtureCollector.targetDomain}` : 'https://driftmart-3ut8.onrender.com'}
+          />
+
+          <div className="mt-6">
+            <OperationsPanel />
+          </div>
+        </section>
+
+        {/* FAQ Section ---------------------------------------------------- */}
+        <section id="faq" className="mt-14 pt-12 border-t border-gray-200 mb-16 scroll-mt-16">
+          <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-2">✦ ANSWERS</div>
+          <h2 className="font-mondwest text-[36px] sm:text-[48px] leading-[1.0] tracking-tight mb-8">FAQ</h2>
+
+          <div className="space-y-3 font-mono">
             {FAQS.map((faq, index) => (
-              <details key={faq.q} className="panel px-6 py-5" data-reveal>
-                <summary className="flex cursor-pointer list-none items-start gap-5">
-                  <span className="font-display text-2xl text-muted">
-                    {String(index + 1).padStart(2, '0')}
+              <details key={faq.q} className="border border-gray-200 rounded-lg p-4 bg-white group">
+                <summary className="flex cursor-pointer items-center justify-between text-[15px] font-semibold text-gray-900">
+                  <span className="flex items-center gap-3">
+                    <span className="font-mondwest text-xl text-parse-accent">{String(index + 1).padStart(2, '0')}</span>
+                    {faq.q}
                   </span>
-                  <span className="flex-1 font-display text-xl leading-snug">{faq.q}</span>
-                  <span className="eyebrow shrink-0 rounded-full border border-surface-border px-2.5 py-1">
-                    {faq.tag}
-                  </span>
+                  <span className="font-neuebit text-[11px] uppercase tracking-[0.1em] px-2 py-0.5 bg-gray-100 rounded text-gray-500">{faq.tag}</span>
                 </summary>
-                <p className="mt-4 max-w-[80ch] pl-12 text-[13px] leading-7 text-muted">{faq.a}</p>
+                <p className="mt-3 text-[13px] text-gray-600 leading-relaxed pl-8 border-t border-gray-100 pt-3">
+                  {faq.a}
+                </p>
               </details>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Close ---------------------------------------------------------- */}
-      <section className="border-b border-surface-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-28 text-center lg:px-10">
-          <h2 className="font-display text-5xl leading-[1.05] sm:text-6xl">
-            Both times the number changed.
-            <br />
-            Only one was a broken scraper.
-          </h2>
-          <p className="mx-auto mt-6 max-w-[52ch] text-[15px] leading-7 text-muted">
-            Telling those two apart is the whole project. Everything else is evidence.
-          </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
-            <Link href="#control-room" className="accent-button">
-              Open the control room <span aria-hidden>→</span>
-            </Link>
-            <a href="https://github.com/prabhatkumar67/notice" className="secondary-button">
-              Read the source
-            </a>
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
-/**
- * The fleet, sliding.
- *
- * Children are duplicated once so the loop lands on an identical frame and
- * never visibly jumps. Falls back to the Bright Data surfaces in use when
- * nothing is registered, which keeps the band meaningful on a cold deployment
- * rather than empty.
- */
-function FleetMarquee({
-  collectors,
-  offline,
-}: {
-  collectors: CollectorSummary[];
-  offline: boolean;
-}) {
-  const items =
-    !offline && collectors.length > 0
-      ? collectors.map((collector) => ({
-          label: collector.targetDomain,
-          detail: collector.brightDataCollectorId,
-          ok: collector.openIncidents === 0,
-        }))
-      : [
-          { label: 'Scraper Studio', detail: 'collectors', ok: true },
-          { label: 'Web Unlocker', detail: 'markdown witness', ok: true },
-          { label: 'Web Unlocker', detail: 'screenshot evidence', ok: true },
-          { label: 'Self-Healing', detail: 'refactor_template', ok: true },
-          { label: 'Geo targeting', detail: 'comparable sensors', ok: true },
-          { label: 'MCP', detail: 'verified data for agents', ok: true },
-        ];
-
-  const doubled = [...items, ...items];
-
-  return (
-    <div className="border-t border-surface-border py-5">
-      <div className="marquee">
-        <div className="marquee__track">
-          {doubled.map((item, index) => (
-            <div
-              key={`${item.label}-${String(index)}`}
-              className="flex shrink-0 items-center gap-3 rounded-card border border-surface-border bg-surface-raised px-5 py-3"
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${item.ok ? 'bg-verified' : 'bg-blocked'}`}
-                aria-hidden
-              />
-              <span className="text-[13px]">{item.label}</span>
-              <span className="text-[12px] text-muted">{item.detail}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
 
-/**
- * Place monitored domains around the sphere.
- *
- * Positions are derived from the name rather than being real coordinates: this
- * is an illustration of what is being watched, not a map, and inventing
- * plausible-looking latitudes would imply a precision that does not exist.
- */
 function globeMarkers(
   collectors: CollectorSummary[],
 ): { lat: number; lon: number; label: string; ok: boolean }[] {
@@ -749,23 +292,4 @@ function globeMarkers(
     label: source.ok ? `${source.label} verified` : `${source.label} withheld`,
     ok: source.ok,
   }));
-}
-
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="panel p-7">
-      <p className="eyebrow">{label}</p>
-      <p className="mt-4 font-display text-5xl">{value}</p>
-      <p className="mt-2 text-[12px] text-muted">{detail}</p>
-    </div>
-  );
-}
-
-function Empty({ title, copy }: { title: string; copy: string }) {
-  return (
-    <div className="px-6 py-10 text-center">
-      <p className="text-[13px]">{title}</p>
-      <p className="mx-auto mt-2 max-w-[46ch] text-[12px] leading-6 text-muted">{copy}</p>
-    </div>
-  );
 }

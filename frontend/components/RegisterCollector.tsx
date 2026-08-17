@@ -135,23 +135,45 @@ export function RegisterCollector() {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="primary-button">
-        Register a collector <Plus size={18} weight="bold" />
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="font-neuebit text-[12px] uppercase tracking-[0.1em] px-4 py-2.5 bg-black text-white rounded-md hover:bg-neutral-800 transition-colors inline-flex items-center gap-1.5 font-semibold shrink-0"
+      >
+        <span>+</span> Register a collector
       </button>
     );
   }
 
   return (
-    <div className="panel w-full max-w-3xl p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="eyebrow">Register</p>
-          <h3 className="mt-2 text-xl font-medium">A collector you already built in Scraper Studio</h3>
-        </div>
-        <button type="button" onClick={fillExample} className="secondary-button whitespace-nowrap">
-          Use the DriftMart example <Sparkle size={16} />
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6 flex items-start justify-center">
+      <div className="bg-white border border-gray-300 rounded-2xl w-full max-w-2xl p-6 sm:p-8 shadow-2xl relative my-6 max-h-[88vh] overflow-y-auto custom-scrollbar font-mono text-[12px] animate-fade-up">
+        {/* Modal Close Button */}
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="absolute top-5 right-5 text-gray-400 hover:text-gray-900 font-mono text-[14px] p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          ✕
         </button>
-      </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pr-8">
+          <div>
+            <div className="font-neuebit text-[10px] uppercase tracking-[0.18em] text-gray-400">
+              REGISTER
+            </div>
+            <h3 className="font-mondwest font-normal not-italic text-[26px] sm:text-[30px] leading-tight text-gray-900 mt-1">
+              A collector built in Scraper Studio
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={fillExample}
+            className="text-[11px] font-mono px-3 py-1.5 border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-md transition-colors whitespace-nowrap self-start"
+          >
+            Use DriftMart example ✦
+          </button>
+        </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <Field
@@ -246,13 +268,23 @@ export function RegisterCollector() {
         </p>
       ) : null}
 
-      <div className="mt-8 flex flex-wrap gap-3">
-        <button type="button" onClick={submit} disabled={pending} className="primary-button">
-          {pending ? 'Registering...' : 'Register collector'}
+      <div className="mt-8 flex flex-wrap items-center gap-3 pt-4 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={pending}
+          className="font-mono text-[12px] font-bold uppercase tracking-wider px-6 py-2.5 bg-black text-white rounded-md hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+        >
+          {pending ? 'Registering...' : 'Register Collector'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="secondary-button">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="font-mono text-[12px] uppercase tracking-wider px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+        >
           Cancel
         </button>
+      </div>
       </div>
     </div>
   );

@@ -53,21 +53,34 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${base()}${path}`, {
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
-    // Monitoring data is only useful when current. A cached incident list is
-    // worse than a slow one.
-    cache: 'no-store',
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${base()}${path}`, {
+      ...init,
+      headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
+      cache: 'no-store',
+    });
+  } catch (err) {
+    throw new ApiError(503, err instanceof Error ? err.message : 'network error');
+  }
+
+  const text = await response.text();
+  let payload: { error?: string } | null = null;
+  if (text && text.trim()) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = null;
+    }
+  }
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({ error: response.statusText }))) as {
-      error?: string;
-    };
-    throw new ApiError(response.status, body.error ?? 'request failed');
+    throw new ApiError(response.status, payload?.error ?? response.statusText ?? 'request failed');
   }
-  return (await response.json()) as T;
+  if (payload === null) {
+    throw new ApiError(500, 'empty or invalid JSON response from backend');
+  }
+  return payload as T;
 }
 
 export const api = {

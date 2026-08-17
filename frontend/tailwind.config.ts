@@ -23,10 +23,24 @@ const config: Config = {
           raised: '#FFFFFF',
           soft: '#F5F5F2',
           border: '#E4E4DE',
+          dark: '#0A0A09',
+          darkRaised: '#121210',
+          darkBorder: '#242422',
         },
         /** Ink. Named `ivory` for continuity with existing markup. */
         ivory: '#0C0C0A',
         muted: '#6E6E68',
+
+        /** Parse.bot inspired tokens */
+        parse: {
+          accent: '#16794A',
+          accentHover: '#13633C',
+          accentBg: '#E8F2EC',
+          accentBgSoft: '#F2F8F4',
+          warn: '#D97706',
+          info: '#2563EB',
+          danger: '#DC2626',
+        },
 
         /** Two sensors agree right now. */
         verified: '#16794A',
@@ -40,15 +54,32 @@ const config: Config = {
         ink: '#0C0C0A',
       },
       fontFamily: {
-        display: ['var(--font-display, ui-serif)', 'Georgia', 'serif'],
-        sans: ['var(--font-mono, ui-monospace)', 'ui-monospace', 'monospace'],
-        mono: ['var(--font-mono, ui-monospace)', 'ui-monospace', 'monospace'],
+        mondwest: ['var(--font-mondwest)', 'serif'],
+        neuebit: ['var(--font-neuebit)', 'monospace'],
+        display: ['var(--font-mondwest)', 'serif'],
+        sans: ['var(--font-mono)', 'monospace'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       letterSpacing: {
         eyebrow: '0.18em',
+        pixel: '0.12em',
       },
       borderRadius: {
         card: '10px',
+      },
+      keyframes: {
+        blink: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0' },
+        },
+        fadeUp: {
+          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        blink: 'blink 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-up': 'fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
       },
     },
   },

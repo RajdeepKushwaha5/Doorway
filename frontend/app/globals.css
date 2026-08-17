@@ -12,6 +12,13 @@
     max-width: 100%;
     overflow-x: hidden;
     scroll-behavior: smooth;
+    /**
+     * The header is fixed and 52px tall, so it covers whatever an in-page link
+     * scrolls to. Without this every nav item lands with its own heading hidden
+     * behind the bar, which reads as a broken link rather than as a near miss.
+     * A little more than the bar's height, so the target clears it.
+     */
+    scroll-padding-top: 68px;
   }
 
   body {
@@ -303,15 +310,59 @@
 }
 
 .deal-panel {
-  @apply rounded-card border border-surface-border bg-surface-raised p-7;
+  @apply relative overflow-hidden rounded-card border border-surface-border bg-surface-raised p-7 pt-0;
 }
 
 .deal-panel.is-risk {
   @apply border-blocked/30;
 }
 
+.deal-panel.is-safe {
+  @apply border-verified/30;
+}
+
+/**
+ * The strip across the top of a deal panel, naming which pipeline produced it.
+ *
+ * Pulled out to the panel's edges with negative margins rather than by removing
+ * the panel's padding, so the two panels keep identical inner alignment whether
+ * or not a bar is present.
+ */
+.deal-panel__bar {
+  @apply -mx-7 mb-7 flex items-center justify-between border-b border-surface-border px-7 py-3 font-mono text-[11px] uppercase tracking-eyebrow text-muted;
+}
+
+.deal-panel.is-risk .deal-panel__bar {
+  @apply border-blocked/25 text-blocked;
+}
+
+.deal-panel.is-safe .deal-panel__bar {
+  @apply border-verified/25 text-verified;
+}
+
+/* Colour is the verdict, so the icon takes it from the panel's tone. */
+.deal-panel__icon {
+  @apply inline-flex text-blocked;
+}
+
+.deal-panel.is-safe .deal-panel__icon {
+  @apply text-verified;
+}
+
 .decision-banner {
   @apply flex flex-wrap items-center gap-4 rounded-card border border-surface-border bg-surface-raised p-6;
+}
+
+.decision-banner.is-diverged {
+  @apply border-blocked/30 bg-blocked/[0.03];
+}
+
+.decision-banner__icon {
+  @apply inline-flex shrink-0 text-verified;
+}
+
+.decision-banner.is-diverged .decision-banner__icon {
+  @apply text-blocked;
 }
 
 .policy-page {
@@ -330,3 +381,155 @@
 .signal-square {
   @apply inline-block h-2 w-2 bg-verified;
 }
+
+/* ------------------------------------------------------------------ */
+/* Parse.bot Inspired Utilities & 3D Perspective Visuals               */
+/* ------------------------------------------------------------------ */
+
+.bg-dither {
+  background-image: radial-gradient(#000 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+.bg-grid-pattern {
+  background-image: linear-gradient(to right, rgba(12, 12, 10, 0.04) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(12, 12, 10, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.perspective-container {
+  perspective: 1500px;
+}
+
+.card-perspective-left {
+  transform: rotateX(5deg) rotateY(-7deg);
+  transform-origin: center;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-perspective-left:hover {
+  transform: rotateX(1deg) rotateY(-2deg) scale(1.02);
+}
+
+.card-perspective-right {
+  transform: rotateX(5deg) rotateY(7deg);
+  transform-origin: center;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-perspective-right:hover {
+  transform: rotateX(1deg) rotateY(2deg) scale(1.02);
+}
+
+.pixel-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background-color: #16794A;
+  vertical-align: -2px;
+  animation: blink 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.terminal-window {
+  @apply rounded-card border border-surface-border bg-white shadow-xl shadow-black/5 overflow-hidden;
+}
+
+.terminal-header {
+  @apply flex items-center justify-between border-b border-surface-border bg-surface-soft px-4 py-2.5 font-mono text-[11px];
+}
+
+@font-face {
+  font-family: 'PP Mondwest';
+  src: url('/fonts/ppmondwest-regular.otf') format('opentype'),
+       url('/fonts/PP-Mondwest.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Bit';
+  src: url('/fonts/ppneuebit-bold.otf') format('opentype'),
+       url('/fonts/PP-NeueBit.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-mondwest {
+  font-family: 'PP Mondwest', var(--font-mondwest), monospace !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  -webkit-font-smoothing: none !important;
+  -moz-osx-font-smoothing: none !important;
+  font-smooth: never !important;
+  text-rendering: optimizeSpeed !important;
+  image-rendering: pixelated;
+}
+
+.font-neuebit {
+  font-family: 'PP Neue Bit', var(--font-neuebit), monospace !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  -webkit-font-smoothing: none !important;
+  -moz-osx-font-smoothing: none !important;
+  font-smooth: never !important;
+}
+
+h1, h2, h3, h4, h5, h6, .display-heading, .section-heading, .font-display {
+  font-style: normal !important;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 40s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Custom sleek scrollbar matching Parse.bot */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+
+
+
+
+
+
+
