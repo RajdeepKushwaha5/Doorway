@@ -16,7 +16,8 @@
     "seed": "node --env-file-if-exists=../.env dist/scripts/seed-demo.js",
     "prove": "node --env-file-if-exists=../.env dist/scripts/prove.js",
     "live": "node --env-file-if-exists=../.env dist/scripts/live.js",
-    "mcp": "node --env-file-if-exists=../.env dist/scripts/mcp.js"
+    "mcp": "node --env-file-if-exists=../.env dist/scripts/mcp.js",
+    "blindspot": "node --env-file-if-exists=../.env dist/scripts/blindspot.js"
   },
   "dependencies": {
     "zod": "^3.24.1"

@@ -294,6 +294,34 @@ Reasonable first objection, since the platform surfaces a lot. All of it is abou
 
 During the run recorded in [`examples/`](examples/), the account dashboard showed every request delivered and nothing spent, while the collector returned a refundable deposit in the price field. No figure on that screen could have moved.
 
+You do not have to take that on trust. One command reproduces it end to end:
+
+```bash
+npm run blindspot -- c_msvllpds1n1dcoz8qx
+```
+
+It switches the fixture to a drifted layout, triggers the real Scraper Studio collector, reads the row back, and runs every check a careful team would already have written against it:
+
+```text
+  [PASS]  Request succeeded           HTTP 200 from /dca/trigger
+  [PASS]  Response is valid JSON      parsed into an object without error
+  [PASS]  Row is not empty            4 fields returned
+  [PASS]  Required field present      'price' exists on the row
+  [PASS]  Field is not null           price = 25
+  [PASS]  Type check                  typeof price resolves to a number (25)
+  [PASS]  Range check                 price > 0
+  [PASS]  Schema validation (Zod)     every field matched its declared type
+  [PASS]  Retry logic                 never fired, because nothing failed
+
+All 9 checks passed. Nothing downstream has any reason to hesitate.
+
+witness value      249
+confidence         0.85  (labelled-line)
+read from line 15   "Purchase price: **$249**"
+```
+
+The checks are deliberately not strawmen: the schema is a real Zod schema, the range check has a lower bound, and the row must be non-empty. Every one of them passes a row whose price is wrong by an order of magnitude. Run it with `--mode genuine_price_change` and the same nine checks pass a row that is correct, which is the point: passing tells you nothing either way.
+
 ---
 
 ## What we found building against the platform
@@ -413,6 +441,14 @@ npm run dev    --workspace driftmart   # controlled target on :3002
 ```
 
 The test suite runs the entire loop offline against a scripted Bright Data, including the case where a green preview hides a broken candidate.
+
+Three commands prove the claims against live Bright Data rather than a mock:
+
+```bash
+npm run blindspot -- <collector-id>   # every conventional check passes a wrong row
+npm run prove                          # the two-sensor rule across four scenarios
+npm run live -- run <collector-id>     # one real observation, end to end
+```
 
 ---
 

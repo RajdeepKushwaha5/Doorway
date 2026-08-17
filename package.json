@@ -24,7 +24,8 @@
     "prove": "npm run prove --workspace backend",
     "mcp": "npm run mcp --workspace backend",
     "notice": "npm run notice --workspace backend --",
-    "seed": "npm run seed --workspace backend"
+    "seed": "npm run seed --workspace backend",
+    "blindspot": "npm run blindspot --workspace backend --"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
