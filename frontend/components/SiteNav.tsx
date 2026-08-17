@@ -15,6 +15,7 @@ import { usePathname } from 'next/navigation';
 
 const links = [
   { href: '/#problem', label: 'Problem' },
+  { href: '/#gap', label: 'The gap' },
   { href: '/#system', label: 'How it works' },
   { href: '/#automation', label: 'Automation' },
   { href: '/#gate', label: 'Deploy gate' },

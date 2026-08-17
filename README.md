@@ -280,6 +280,20 @@ A monitor checks whether output arrived. NOTICE checks whether output is still *
 
 Sending a genuine source change to Self-Healing rewrites a collector that was working. That is the failure mode NOTICE exists to avoid as much as the corruption itself.
 
+### Why the Bright Data console does not already show this
+
+Reasonable first objection, since the platform surfaces a lot. All of it is about delivery. A console can report that a request succeeded because it watched the request; it cannot report that a value is wrong, because nothing in it ever learns what the value was supposed to be.
+
+| Surface | What it answers | What it is silent on |
+|---|---|---|
+| Web Access dashboard | Requests delivered, bytes moved, credits spent | Which response carried the wrong field |
+| Event log | A request that errored or was blocked | A request that succeeded through a drifted selector |
+| Scrapers Library | Domains Bright Data maintains for you | The custom collector you built, which is not on that list |
+| Self-Healing | Repairs a template, once you trigger it | That it needed repairing in the first place |
+| Discover API | Which URLs exist for a query | Whether what you extracted from one is true |
+
+During the run recorded in [`examples/`](examples/), the account dashboard showed every request delivered and nothing spent, while the collector returned a refundable deposit in the price field. No figure on that screen could have moved.
+
 ---
 
 ## What we found building against the platform

@@ -39,6 +39,42 @@ const STEPS = [
   },
 ];
 
+/**
+ * The overlap question, answered before it is asked.
+ *
+ * Anyone who has the Bright Data console open will assume this already exists
+ * there, because every surface in it is green and reassuring. Each row names a
+ * real surface, what it genuinely answers, and the question it structurally
+ * cannot: none of them ever learn what the value was supposed to be.
+ */
+const SURFACES = [
+  {
+    surface: 'Web Access dashboard',
+    answers: 'Requests delivered, bytes moved, credits spent.',
+    silent: 'Which of those responses carried the wrong field.',
+  },
+  {
+    surface: 'Event log',
+    answers: 'A request that errored or was blocked.',
+    silent: 'A request that succeeded through a drifted selector.',
+  },
+  {
+    surface: 'Scrapers Library',
+    answers: 'Domains Bright Data maintains for you.',
+    silent: 'The custom collector you built, which is not on that list.',
+  },
+  {
+    surface: 'Self-Healing',
+    answers: 'Repairs a template, once you trigger it.',
+    silent: 'That it needed repairing in the first place.',
+  },
+  {
+    surface: 'Discover API',
+    answers: 'Which URLs exist for a query.',
+    silent: 'Whether what you extracted from one of them is true.',
+  },
+];
+
 const FAQS = [
   {
     q: 'Why is valid JSON not enough?',
@@ -182,6 +218,73 @@ export default async function HomePage() {
                 </p>
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      {/* The gap -------------------------------------------------------- */}
+      <section id="gap" className="border-b border-surface-border">
+        <div className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10">
+          <p className="eyebrow">✦ Why nothing caught it</p>
+          <h2 className="section-heading mt-6 max-w-[20ch]">
+            Every console in the account was green.
+          </h2>
+          <p className="mt-6 max-w-[64ch] text-[15px] leading-7 text-muted">
+            This is the first objection worth answering: surely the platform already tells you. It
+            tells you a great deal, and all of it is about delivery. A console can report that a
+            request succeeded because it watched the request. It cannot report that a value is
+            wrong, because nothing in it ever learns what the value was supposed to be.
+          </p>
+
+          <div className="mt-14 overflow-hidden rounded-card border border-surface-border">
+            <div className="hidden grid-cols-[1fr_1.2fr_1.2fr] gap-px bg-surface-border lg:grid">
+              {['Surface', 'What it answers', 'What it is silent on'].map((head, index) => (
+                <div key={head} className="bg-surface-raised px-6 py-4">
+                  <p className={`eyebrow ${index === 2 ? 'text-blocked' : ''}`}>{head}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="divide-y divide-surface-border">
+              {SURFACES.map((row) => (
+                <div
+                  key={row.surface}
+                  className="grid gap-2 px-6 py-5 lg:grid-cols-[1fr_1.2fr_1.2fr] lg:items-baseline lg:gap-6"
+                >
+                  <p className="text-[13px]">{row.surface}</p>
+                  <p className="text-[13px] leading-6 text-muted">{row.answers}</p>
+                  <p className="text-[13px] leading-6 text-blocked">{row.silent}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* The reproduction. The strongest evidence the project owns, so it
+              sits directly under the claim rather than in a README. */}
+          <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
+            <div className="panel p-7" data-reveal="left">
+              <p className="eyebrow">Reproduced on a real collector, twice</p>
+              <pre className="mt-5 overflow-x-auto text-[13px] leading-7 text-muted">
+                {'collector  c_mstkc1rkr8mit6wut\njob        ia_mswmuyq11k2h1grrzj\nstatus     '}
+                <span className="text-verified">done</span>
+                {'\nsuccess    '}
+                <span className="text-verified">true</span>
+                {'\nHTTP       '}
+                <span className="text-verified">200</span>
+                {'\nproduction '}
+                <span className="text-blocked">still the earlier template</span>
+              </pre>
+            </div>
+            <div className="panel flex flex-col justify-center p-7" data-reveal="right">
+              <p className="font-display text-3xl leading-snug">
+                Done often does not mean successful.
+              </p>
+              <p className="mt-4 text-[13px] leading-6 text-muted">
+                Three green signals and a wrong number underneath them. NOTICE is the layer that
+                checks the number, and it is built out of Bright Data itself: a second sensor that
+                reads the same page without selectors, so the two can be held against each other.
+              </p>
+            </div>
           </div>
         </div>
       </section>
