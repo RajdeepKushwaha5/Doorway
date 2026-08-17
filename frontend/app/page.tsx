@@ -440,6 +440,11 @@ export default async function HomePage() {
             <pre className="mt-8 rounded-card border border-surface-border bg-surface-raised p-5 text-[13px] leading-7 text-muted">
               claude mcp add notice -- npm run mcp
             </pre>
+
+            <p className="mt-10 max-w-[46ch] font-display text-3xl leading-snug">
+              An agent handed a number is being trusted. An agent that can be handed a refusal is
+              being governed.
+            </p>
           </div>
 
           <div className="panel p-7" data-reveal="right">
