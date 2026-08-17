@@ -2,24 +2,35 @@
 
 import { useEffect, useState } from 'react';
 
+/**
+ * Three real runs, not three plausible ones.
+ *
+ * Every prompt is the sentence a collector was actually created from, every
+ * command exists in package.json or the README, every witness line is what the
+ * extractor read off the page, and every response is the shape the API really
+ * returns. Confidence in particular is 0.95 and not 1.0, because
+ * `pipeline/feed.ts` never issues 1.0 for anything: a page that agreed a moment
+ * ago is the strongest claim this system makes, and rounding that to certainty
+ * on the landing page contradicts the argument the page is making.
+ */
 const SCENARIOS = [
   {
-    prompt: 'Extract product title, price, and stock status from driftmart.com',
-    command: 'curl -s https://notice.brightdata.com/api/feed/driftmart',
-    witness: 'Purchase price: **$249.00** · Stock: **In Stock**',
-    json: `{\n  "collectorId": "driftmart-headphones",\n  "status": "VERIFIED",\n  "sensors": { "scraperStudio": 249, "webUnlocker": 249 },\n  "quarantined": false\n}`,
+    prompt: 'Extract the product name, the purchase price as a number, and the availability text',
+    command: 'curl -s "$NOTICE_API/api/feed/$COLLECTOR"',
+    witness: 'Price: **$249** · Availability: **In stock**',
+    json: `{\n  "data": { "product_name": "Nova Headphones", "price": 249 },\n  "health": {\n    "status": "verified",\n    "confidence": 0.95,\n    "stale": false\n  }\n}`,
   },
   {
-    prompt: 'Watch books.toscrape.com for price drops with selector-free markdown witness',
+    prompt: 'Extract the book title, the price excluding tax as a number, and the availability text',
     command: 'claude mcp add notice -- npm run mcp',
     witness: 'Price excl tax: **£51.77** · Availability: **In stock (22 available)**',
-    json: `{\n  "collectorId": "books-toscrape",\n  "mcpTool": "get_verified_web_data",\n  "verified": true,\n  "confidenceScore": 1.0\n}`,
+    json: `VERIFIED. Two independent Bright Data sensors agree on this right now.\nconfidence    0.95\n\n{\n  "book_title": "A Light in the Attic",\n  "price_excl_tax": 51.77\n}`,
   },
   {
-    prompt: 'Detect silent extractor drift when website changes HTML layout',
-    command: 'notice prove --collector c_msvllpds1n1dcoz8qx --url /product/headphones',
-    witness: 'Deposit label detected: **$25.00** vs Product price: **$249.00**',
-    json: `{\n  "incident": "EXTRACTOR_DRIFT",\n  "action": "QUARANTINE_AND_GATE",\n  "proposedFix": "refactor_template",\n  "gateResult": "PASSED (3/3 regression cases)"\n}`,
+    prompt: 'Catch a layout change that returns a valid number from the wrong field',
+    command: 'npm run blindspot -- c_msvllpds1n1dcoz8qx',
+    witness: 'Purchase price: **$249** read from line 15 · collector said **$25**',
+    json: `{\n  "verdict": "extractor_drift",\n  "collector": 25,\n  "witness": 249,\n  "confidence": 0.85,\n  "action": "quarantined"\n}`,
   },
 ];
 
@@ -127,7 +138,7 @@ export function AutoTypeTerminal() {
               <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
             </div>
             <span className="font-neuebit text-[10px] uppercase tracking-[0.14em] text-gray-400">
-              NOTICE · LIVE
+              NOTICE · REPLAY
             </span>
           </div>
 

@@ -168,7 +168,7 @@ export default async function HomePage() {
         <section id="system" className="mt-14 pt-12 border-t border-gray-200 scroll-mt-16">
           <div className="mb-9 max-w-[660px]">
             <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-3">
-              ✦ Build anything
+              ✦ How it works
             </div>
             <h2 className="font-mondwest text-[clamp(30px,4.4vw,48px)] leading-[1.0] tracking-tight mb-3">
               Two sensors. One rule.<br className="hidden sm:block"/> Nothing published on a guess.
@@ -200,8 +200,11 @@ export default async function HomePage() {
                   <span className="text-[11.5px] text-gray-500 leading-snug">Verified feeds for production</span>
                 </div>
                 <div className="space-y-2.5 font-mono text-[12px]">
-                  <div className="text-gray-800 font-semibold">GET /verified : Verified dataset feed</div>
-                  <div className="text-gray-800 font-semibold">MCP get_verified_web_data : Safe agent input</div>
+                  {/* Both are real surfaces. The REST route is the one the
+                      backend actually registers, not the dashboard page that
+                      happens to live at /verified. */}
+                  <div className="text-gray-800 font-semibold">GET /api/feed/:id : Value, health, staleness</div>
+                  <div className="text-gray-800 font-semibold">MCP get_verified_web_data : Answer or refusal</div>
                 </div>
               </div>
             </div>

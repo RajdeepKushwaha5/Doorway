@@ -13,99 +13,119 @@ interface CollectorCardData {
   tags: string[];
 }
 
+/**
+ * What this system actually watches and actually exposes.
+ *
+ * This list previously advertised nine sources including Zillow, FRED, CME and
+ * OpenTable, with endpoint names like `get_fedwatch_probabilities` that exist
+ * nowhere in this repository. NOTICE monitors two collectors. Publishing a
+ * catalogue of sources it has never touched is the precise failure the whole
+ * project argues against, and it is checkable in one click.
+ *
+ * So the cards now carry the two real collectors with their real fields, and
+ * the real surfaces this system drives and offers. Every endpoint named below
+ * appears in the codebase or in Bright Data's API.
+ */
 const COLLECTORS_DATA: CollectorCardData[] = [
   {
-    domain: 'driftmart.com',
-    subDomain: 'driftmart-3ut8.onrender.com',
+    domain: 'driftmart-3ut8.onrender.com',
+    subDomain: 'c_msvllpds1n1dcoz8qx',
     icon: 'store',
     endpointCount: '03',
-    description: 'E-commerce testbed with live price drift, shifted layouts, and deposit mutation fixtures.',
-    endpoints: ['get_product_price', 'get_stock_status', 'verify_layout_hash'],
-    tags: ['driftmart', 'genuine_price_change', 'shifted_layout', 'deposit'],
+    description:
+      'The controlled fixture. Serves the same product at seven layouts on demand, so drift can be caused rather than waited for.',
+    endpoints: ['product_name', 'price', 'availability'],
+    tags: ['fixture', 'selector_drift', 'genuine_price_change', 'silent_zero'],
   },
   {
     domain: 'books.toscrape.com',
-    subDomain: 'books.toscrape.com',
+    subDomain: 'c_msvk2zahnc2mizts6',
     icon: 'book',
-    endpointCount: '04',
-    description: 'Bookstore catalog monitoring pricing excl/incl tax, stock counts, and rating changes.',
-    endpoints: ['get_book_details', 'get_price_excl_tax', 'get_availability', 'list_categories'],
-    tags: ['books.toscrape.com', 'books', 'price', 'stock'],
-  },
-  {
-    domain: 'zillow.com',
-    subDomain: 'zillow.com',
-    icon: 'home',
-    endpointCount: '08',
-    description: 'Search for homes for sale, rent, or recently sold listings on Zillow with verified data truth.',
-    endpoints: ['search_listings', 'get_property_detail', 'get_price_history'],
-    tags: ['zillow', 'real_estate', 'homes', 'pricing'],
-  },
-  {
-    domain: 'fred.stlouisfed.org',
-    subDomain: 'fred.stlouisfed.org',
-    icon: 'chart',
-    endpointCount: '09',
-    description: 'Access economic time-series data, interest rates, inflation metrics, and Fed balance sheets.',
-    endpoints: ['get_cpi_inflation', 'get_fed_funds_rate', 'get_gdp_growth'],
-    tags: ['fred', 'finance', 'rates', 'inflation'],
-  },
-  {
-    domain: 'cmegroup.com',
-    subDomain: 'cmegroup.com',
-    icon: 'globe',
-    endpointCount: '07',
-    description: 'Get CME Group market data including FedWatch interest-rate probabilities and futures volume.',
-    endpoints: ['get_fedwatch_probabilities', 'get_futures_quotes', 'get_settlement_prices'],
-    tags: ['cmegroup', 'derivatives', 'futures', 'markets'],
-  },
-  {
-    domain: 'opentable.com',
-    subDomain: 'opentable.com',
-    icon: 'dining',
-    endpointCount: '05',
-    description: 'Search for restaurants across the US with ratings, reviews, seating times, and menu prices.',
-    endpoints: ['search_restaurants', 'get_reservation_slots', 'get_menu_pricing'],
-    tags: ['opentable', 'resy', 'restaurants', 'reservations'],
-  },
-  {
-    domain: 'maersk.com',
-    subDomain: 'maersk.com',
-    icon: 'ship',
-    endpointCount: '06',
-    description: 'Track global ocean cargo containers, vessel routes, estimated port arrival, and customs.',
-    endpoints: ['track_container', 'get_vessel_schedule', 'get_port_delays'],
-    tags: ['maersk', 'logistics', 'shipping', 'containers'],
-  },
-  {
-    domain: 'dnb.com',
-    subDomain: 'dnb.com',
-    icon: 'building',
     endpointCount: '03',
-    description: "Search millions of companies in Dun & Bradstreet's global business directory.",
-    endpoints: ['search_companies', 'get_company_profile', 'lookup_duns_number'],
-    tags: ['dnb', 'companies', 'business', 'credit'],
+    description:
+      'A third-party site we do not control, monitored live. Last verified reading was £51.77, in stock, 22 available.',
+    endpoints: ['book_title', 'price_excl_tax', 'availability'],
+    tags: ['live', 'third-party', 'price', 'stock'],
   },
   {
-    domain: '5e.tools',
-    subDomain: '5e.tools',
+    domain: 'Scraper Studio',
+    subDomain: 'api.brightdata.com/dca',
     icon: 'cube',
+    endpointCount: '05',
+    description:
+      'Both collectors were built from one sentence through the CLI, and every observation and repair is driven over this API.',
+    endpoints: [
+      'trigger',
+      'dataset',
+      'refactor_template',
+      'refactor_template/progress',
+      'resume_automation_job',
+    ],
+    tags: ['collector', 'self-healing', 'version:dev', 'cli'],
+  },
+  {
+    domain: 'Web Unlocker',
+    subDomain: 'the independent witness',
+    icon: 'globe',
     endpointCount: '04',
-    description: 'Search and retrieve D&D 5e game data like races, classes, and spells to power character builders.',
-    endpoints: ['get_races', 'get_classes', 'get_spells'],
-    tags: ['5e.tools', 'gaming', 'rpg', 'spells'],
+    description:
+      'Reads the same page as markdown, with no selectors to bind to, which is what makes it fail differently from the collector.',
+    endpoints: ['data_format:markdown', 'data_format:screenshot', 'country', 'ua:mobile'],
+    tags: ['witness', 'evidence', 'geo', 'device'],
+  },
+  {
+    domain: 'MCP server',
+    subDomain: 'claude mcp add notice',
+    icon: 'chart',
+    endpointCount: '04',
+    description:
+      'An agent asking for web data gets a value two sensors agree on, or a refusal naming the incident. Never a bare number.',
+    endpoints: [
+      'list_monitored_sources',
+      'get_verified_web_data',
+      'list_open_incidents',
+      'explain_verification',
+    ],
+    tags: ['mcp', 'agents', 'refusal', 'stdio'],
+  },
+  {
+    domain: 'Verified feed',
+    subDomain: 'notice-api-0vfo.onrender.com',
+    icon: 'building',
+    endpointCount: '05',
+    description:
+      'Every value arrives with its health: verified, stale with its age attached, or withheld with a reason.',
+    endpoints: [
+      '/api/feed/:id',
+      '/api/collectors',
+      '/api/incidents',
+      '/api/incidents/:id/screenshot',
+      '/api/budget',
+    ],
+    tags: ['rest', 'health', 'staleness', 'quarantine'],
+  },
+  {
+    domain: 'Deploy gate',
+    subDomain: 'actions/verify',
+    icon: 'ship',
+    endpointCount: '02',
+    description:
+      'A GitHub Action that fails a build depending on data nobody checked, and files an incident as an issue with its owner.',
+    endpoints: ['fail-on-unverified', 'github issues'],
+    tags: ['ci', 'github', 'gate', 'webhook'],
   },
 ];
 
+/** Every one of these matches at least one card, so no suggestion dead-ends. */
 const POPULAR_TAGS = [
   'driftmart',
   'books.toscrape.com',
+  'selector_drift',
   'genuine_price_change',
-  'shifted_layout',
-  'zillow',
-  'resy',
-  'amazon reviews',
-  'flight prices',
+  'witness',
+  'self-healing',
+  'mcp',
+  'quarantine',
 ];
 
 export function SearchAndCollectorCarousel() {
@@ -139,7 +159,7 @@ export function SearchAndCollectorCarousel() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search collectors: domain, endpoint, description, use case..."
+            placeholder="Search sources and surfaces: domain, endpoint, tag..."
             className="flex-1 min-w-0 bg-transparent text-[15px] md:text-[16px] outline-none placeholder:text-gray-400 font-mono py-0.5 text-gray-900"
           />
 
@@ -192,7 +212,7 @@ export function SearchAndCollectorCarousel() {
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between font-mono text-[11px]">
             <span className="font-neuebit uppercase tracking-[0.16em] text-gray-400 font-bold">
-              RELEVANT COLLECTORS FOR &quot;{query}&quot; ({filteredCollectors.length})
+              RELEVANT SURFACES FOR &quot;{query}&quot; ({filteredCollectors.length})
             </span>
             <button
               type="button"
