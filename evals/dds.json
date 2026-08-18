@@ -1,0 +1,167 @@
+{
+  "ranAt": "2026-08-18T07:06:33.089Z",
+  "fixture": "https://driftmart-3ut8.onrender.com/product/headphones",
+  "cases": [
+    {
+      "mode": "baseline",
+      "field": "price",
+      "fault": false,
+      "collector": "$249",
+      "witness": {
+        "value": 249,
+        "currency": null
+      },
+      "results": {
+        "conventional": {
+          "flagged": false,
+          "label": "all checks pass"
+        },
+        "monitor": {
+          "flagged": false,
+          "label": "unchanged"
+        },
+        "notice": {
+          "flagged": false,
+          "label": "sensors agree, leave alone"
+        }
+      }
+    },
+    {
+      "mode": "genuine_price_change",
+      "field": "price",
+      "fault": false,
+      "collector": "$229",
+      "witness": {
+        "value": 229,
+        "currency": null
+      },
+      "results": {
+        "conventional": {
+          "flagged": false,
+          "label": "all checks pass"
+        },
+        "monitor": {
+          "flagged": true,
+          "label": "changed from 249"
+        },
+        "notice": {
+          "flagged": false,
+          "label": "sensors agree, leave alone"
+        }
+      }
+    },
+    {
+      "mode": "selector_drift",
+      "field": "price",
+      "fault": true,
+      "collector": "$25",
+      "witness": {
+        "value": 249,
+        "currency": null
+      },
+      "results": {
+        "conventional": {
+          "flagged": false,
+          "label": "all checks pass"
+        },
+        "monitor": {
+          "flagged": true,
+          "label": "changed from 249"
+        },
+        "notice": {
+          "flagged": true,
+          "label": "extractor_drift"
+        }
+      }
+    },
+    {
+      "mode": "silent_zero",
+      "field": "price",
+      "fault": true,
+      "collector": "0",
+      "witness": {
+        "value": 249,
+        "currency": null
+      },
+      "results": {
+        "conventional": {
+          "flagged": true,
+          "label": "range check, price > 0"
+        },
+        "monitor": {
+          "flagged": true,
+          "label": "changed from 249"
+        },
+        "notice": {
+          "flagged": true,
+          "label": "extractor_drift"
+        }
+      }
+    },
+    {
+      "mode": "sponsored_insertion",
+      "field": "price",
+      "fault": true,
+      "collector": "$99",
+      "witness": {
+        "value": 249,
+        "currency": null
+      },
+      "results": {
+        "conventional": {
+          "flagged": false,
+          "label": "all checks pass"
+        },
+        "monitor": {
+          "flagged": true,
+          "label": "changed from 249"
+        },
+        "notice": {
+          "flagged": true,
+          "label": "extractor_drift"
+        }
+      }
+    },
+    {
+      "mode": "missing_field",
+      "field": "availability",
+      "fault": true,
+      "collector": null,
+      "witness": null,
+      "results": {
+        "conventional": {
+          "flagged": true,
+          "label": "required field missing"
+        },
+        "monitor": {
+          "flagged": true,
+          "label": "value disappeared"
+        },
+        "notice": {
+          "flagged": true,
+          "label": "inconclusive, withheld"
+        }
+      }
+    }
+  ],
+  "scores": {
+    "conventional": {
+      "label": "Status, schema, null, type, range",
+      "detected": 2,
+      "restrained": 2,
+      "dds": 67
+    },
+    "monitor": {
+      "label": "Change monitor, alert on any diff",
+      "detected": 4,
+      "restrained": 1,
+      "dds": 83
+    },
+    "notice": {
+      "label": "NOTICE, two independent sensors",
+      "detected": 4,
+      "restrained": 2,
+      "dds": 100
+    }
+  }
+}

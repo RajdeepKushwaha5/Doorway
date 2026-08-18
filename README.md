@@ -6,6 +6,23 @@ NOTICE is the incident-to-verified-repair layer for Bright Data Scraper Studio. 
 
 ---
 
+## Proved three ways
+
+Every claim here is demonstrable in under a minute, and each one has a command.
+
+| | Claim | How it is shown |
+|---|---|---|
+| **1** | **It broke, and nothing noticed** | Nine real checks — status, schema, null, type, range — all pass a price that is wrong by a factor of ten. `npm run blindspot` |
+| **2** | **We caught it, and we can say why** | Two Bright Data sensors read the same page; the disagreement names the field, the line it was read from, and carries a screenshot of the page at that moment. `npm run live -- run` |
+| **3** | **The fix is proved, not trusted** | A repair is replayed against the page that failed *and* every pinned regression case before promotion, then production is re-verified afterwards. `npm run live -- heal` |
+
+And the fourth thing, which is the one most systems get wrong: when the source
+recovers on its own, the incident closes itself and the value returns to the
+feed. Detecting that something is fixed is the same problem as detecting that
+it broke, and it takes the same evidence.
+
+---
+
 ## Live
 
 | | |
@@ -335,6 +352,58 @@ read from line 15   "Purchase price: **$249**"
 ```
 
 The checks are deliberately not strawmen: the schema is a real Zod schema, the range check has a lower bound, and the row must be non-empty. Every one of them passes a row whose price is wrong by an order of magnitude. Run it with `--mode genuine_price_change` and the same nine checks pass a row that is correct, which is the point: passing tells you nothing either way.
+
+---
+
+## Evaluation: the Drift Discrimination Score
+
+Detection is the axis everyone measures, and measuring it alone is what makes a
+change monitor look finished. It is not. A monitor that alerts on any
+difference catches every corruption **and** fires on every legitimate price
+change, and treating the second like the first rewrites a collector that was
+working. So this scores two axes over the same six cases:
+
+- **Detection** — of the cases that *are* faults, how many did the method catch?
+- **Restraint** — of the cases that are *not* faults, how many did it leave alone?
+
+**DDS** is how often the method reached the correct decision. Full marks on
+either axis alone caps a method at 67%.
+
+| Method | Detection /4 | Restraint /2 | DDS |
+|---|---|---|---|
+| Status, schema, null, type, range | 2 | 2 | **67%** |
+| Change monitor, alert on any diff | 4 | 1 | **83%** |
+| NOTICE, two independent sensors | 4 | 2 | **100%** |
+
+*Reproduce with `npm run benchmark`. Runs live against the deployed fixture and
+writes [`evals/dds.json`](evals/dds.json) with every reading and verdict.*
+
+Nothing in that table is asserted. Each method is executed against the fixture
+and its verdict computed, so a row you doubt can be re-run. The conventional
+checks are deliberately generous — a real range check catches `silent_zero`,
+a real required-field check catches `missing_field` — because a strawman here
+would make the result worthless. They still miss the two cases that matter
+most: a price reading the refundable deposit, and a price reading a sponsored
+card, both of which are positive numbers that pass every check.
+
+The row that decides it is `genuine_price_change`. The price really did move to
+229. The change monitor raises an alarm and, wired to a repair tool, would
+rewrite an extractor that was working perfectly.
+
+| Case | Collector saw | Witness saw | NOTICE concluded |
+|---|---|---|---|
+| `baseline` | $249 | 249 | sensors agree, leave alone |
+| `genuine_price_change` | $229 | 229 | sensors agree, leave alone |
+| `selector_drift` | $25 | 249 | `extractor_drift` |
+| `silent_zero` | 0 | 249 | `extractor_drift` |
+| `sponsored_insertion` | $99 | 249 | `extractor_drift` |
+| `missing_field` | absent | absent | `inconclusive`, withheld |
+
+The last row is worth reading twice. Availability vanished from the page, so
+**both** sensors are blind. NOTICE does not guess in either direction — it
+withholds and says why. `pagination_collapse` is deliberately excluded: its
+fault is a repeated row rather than a wrong field value, and scoring it here
+would measure something this benchmark does not test.
 
 ---
 

@@ -17,7 +17,8 @@
     "prove": "node --env-file-if-exists=../.env dist/scripts/prove.js",
     "live": "node --env-file-if-exists=../.env dist/scripts/live.js",
     "mcp": "node --env-file-if-exists=../.env dist/scripts/mcp.js",
-    "blindspot": "node --env-file-if-exists=../.env dist/scripts/blindspot.js"
+    "blindspot": "node --env-file-if-exists=../.env dist/scripts/blindspot.js",
+    "benchmark": "node --env-file-if-exists=../.env dist/scripts/benchmark.js"
   },
   "dependencies": {
     "zod": "^3.24.1"

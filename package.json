@@ -25,7 +25,8 @@
     "mcp": "npm run mcp --workspace backend",
     "notice": "npm run notice --workspace backend --",
     "seed": "npm run seed --workspace backend",
-    "blindspot": "npm run blindspot --workspace backend --"
+    "blindspot": "npm run blindspot --workspace backend --",
+    "benchmark": "npm run benchmark --workspace backend"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
