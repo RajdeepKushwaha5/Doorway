@@ -13,6 +13,7 @@
  *
  *   status                     the fleet, its contracts and open incidents
  *   run <collector>            observe once and classify
+ *   observe-all                observe every collector, sequentially
  *   incidents                  every incident, newest first
  *   show <incident>            full evidence for one incident
  *   heal <incident>            queue a repair and follow the job
@@ -115,6 +116,49 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     out(`Observing ${collector.name}. A real collector run takes a while.`);
     const result = (await authed(`/api/collectors/${collector.id}/run`)) as Record<string, unknown>;
     out(JSON.stringify(result, null, 2));
+  },
+
+  /**
+   * Observe every registered collector, one after another.
+   *
+   * Sequential on purpose. Each observation spends two page loads from the same
+   * monthly allowance, and firing them together makes a burst that the budget
+   * guard can only notice after the fact.
+   *
+   * One collector failing must not stop the rest: a fleet check that abandons
+   * everything after the first sleeping target is worse than no check, because
+   * the sources after it are silently never looked at.
+   */
+  async 'observe-all'() {
+    const collectors = (await call('/api/collectors')) as Record<string, unknown>[];
+    if (collectors.length === 0) {
+      out('No collectors registered yet.');
+      return;
+    }
+
+    let failed = 0;
+    for (const collector of collectors) {
+      const name = String(collector['name']);
+      const id = String(collector['id']);
+      rule();
+      out(`Observing ${name} ...`);
+      try {
+        const result = (await authed(`/api/collectors/${id}/run`)) as Record<string, unknown>;
+        const incident = result['incident'] as Record<string, unknown> | null;
+        const verdict = incident === null ? 'healthy' : String(incident['classification']);
+        out(`  verdict      ${verdict}`);
+        out(`  publishable  ${String(result['publishable'])}`);
+      } catch (error) {
+        failed += 1;
+        out(`  FAILED       ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    rule();
+    out(`${String(collectors.length - failed)} of ${String(collectors.length)} observed.`);
+
+    // A non-zero exit when every single one failed, so a scheduled job can tell
+    // "the fleet is fine" apart from "nothing was reachable".
+    if (failed === collectors.length) process.exitCode = 1;
   },
 
   async incidents() {

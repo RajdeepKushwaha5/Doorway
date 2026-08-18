@@ -6,6 +6,40 @@ NOTICE is the incident-to-verified-repair layer for Bright Data Scraper Studio. 
 
 ---
 
+## For judges
+
+Everything below is live and takes about two minutes.
+
+1. **Wake the services first.** Both Render services are on the free plan and
+   sleep after fifteen minutes idle, so the first request takes around
+   30 seconds. Open [the fixture](https://driftmart-3ut8.onrender.com) and
+   [the API](https://notice-api-0vfo.onrender.com/api/health) and wait for each.
+2. **Open the dashboard**: https://notice-frontend-bay.vercel.app
+3. **Scroll to the control room and break the page yourself.** Press *Redesign
+   the page*. The embedded fixture changes; the price still reads correctly to a
+   human. Press *Run the collector* and watch the verdict.
+4. **Put it back.** Press *Baseline* and run again. The incident closes on its
+   own and the value returns to the verified feed.
+
+No signup, no account, no key. Writes are open because there is nothing here
+worth protecting: the fixture is ours and it resets.
+
+From a clone, with no Bright Data account and no credentials:
+
+```bash
+npm install && npm test          # 231 tests, no network
+```
+
+With an API key, to reproduce the claims in this README:
+
+```bash
+npm run blindspot -- c_msvllpds1n1dcoz8qx   # every conventional check passes a wrong row
+npm run benchmark                            # the Drift Discrimination Score table
+npm run demo:reset                           # put the fixture and the fleet back
+```
+
+---
+
 ## Proved three ways
 
 Every claim here is demonstrable in under a minute, and each one has a command.
@@ -466,6 +500,15 @@ This is why post-promotion verification exists, and it is the single strongest a
 **7. The trigger response names a field differently from every reader.** `POST /dca/trigger` returns `collection_id`; every other endpoint reads the same value as `snapshot_id`. Normalized at the client boundary.
 
 **8. An empty result is a completed run, not a pending one.** Bright Data's own Python boilerplate treats a non-empty array as the completion signal, so a legitimate zero-row result reads as "still building" and times out.
+
+---
+
+## Contributing
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) covers how to run it, the conventions this
+codebase holds itself to, and what is deliberately out of scope.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the map: the data flow, what
+each module owns, and four decisions that are not obvious from the code.
 
 ---
 
