@@ -149,6 +149,11 @@ export class Router {
         body,
         request,
       });
+      if (isStreamResponse(result)) {
+        result.run(response, request);
+        return;
+      }
+
       if (isBinaryResponse(result)) {
         response.writeHead(200, {
           'content-type': result.contentType,
@@ -185,6 +190,30 @@ export interface BinaryResponse {
   readonly contentType: string;
   readonly body: Uint8Array;
   readonly cacheControl?: string;
+}
+
+/**
+ * A handler that takes the response over and writes to it itself.
+ *
+ * Needed for server-sent events, where the point is that the response never
+ * ends until the work does. Everything else in this router answers in one
+ * write, which is why this is an explicit escape hatch rather than the norm.
+ */
+export interface StreamResponse {
+  kind: 'stream';
+  run: (response: ServerResponse, request: IncomingMessage) => void;
+}
+
+export function stream(run: StreamResponse['run']): StreamResponse {
+  return { kind: 'stream', run };
+}
+
+function isStreamResponse(value: unknown): value is StreamResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { kind?: unknown }).kind === 'stream'
+  );
 }
 
 export function binary(

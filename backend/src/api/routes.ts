@@ -4,6 +4,7 @@ import type { BrightDataClient } from '../brightdata/index.js';
 import { learnContract, type BaselineRun } from '../contracts/index.js';
 import { invariantSchema } from '../contracts/index.js';
 import { buildCertificate } from '../incident/certificate.js';
+import { ObservationBroker, type ObserveEvent } from '../pipeline/events.js';
 import {
   attemptRepair,
   buildFeed,
@@ -20,7 +21,7 @@ import type {
 } from '../store/index.js';
 import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
-import { assertAdmin, binary, HttpError, Router } from './http.js';
+import { assertAdmin, binary, HttpError, Router, stream } from './http.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
 
 /**
@@ -64,6 +65,8 @@ export const registerCollectorSchema = z.object({
 export interface ApiDeps {
   store: Store;
   client: BrightDataClient;
+  /** Injected so a test can watch a stream without a socket. */
+  broker?: ObservationBroker;
   /** Reads rendered page captures. Absent means the feature is simply off. */
   screenshots?: ScreenshotStore;
   /** Captures a page and returns its id. Absent means no capture is attempted. */
@@ -77,6 +80,9 @@ export interface ApiDeps {
 /** Build the HTTP surface. */
 export function buildRouter(deps: ApiDeps): Router {
   const router = new Router();
+  // One per server. Holds only recent observations, and only in memory: the
+  // durable record of any of this is the run and the incident in the store.
+  const broker = deps.broker ?? new ObservationBroker();
   const { store, client } = deps;
   const witnessDeps = {
     ...(deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown }),
@@ -193,6 +199,93 @@ export function buildRouter(deps: ApiDeps): Router {
     if (url === undefined) throw new HttpError(400, 'no URL to run against');
 
     return observeOnce(collector, url, { client, store, ...witnessDeps });
+  });
+
+  /**
+   * Start an observation and return immediately with somewhere to watch it.
+   *
+   * The existing `/run` route stays exactly as it was, because the CLI, the
+   * worker and the MCP server all want the finished result and nothing else.
+   * This one is for a person: it hands back an id and gets out of the way, so
+   * the thirty seconds a real Scraper Studio run takes can be watched instead
+   * of waited out.
+   *
+   * Failures are delivered on the stream rather than thrown. By the time
+   * anything can go wrong the HTTP response is long gone, and a viewer who
+   * sees the log stop dead learns nothing about why.
+   */
+  router.post('/api/collectors/:id/observe', async ({ params, body, request }) => {
+    assertAdmin(request);
+    const collector = await requireCollector(store, params['id']);
+    const url =
+      typeof (body as { url?: unknown } | null)?.url === 'string'
+        ? (body as { url: string }).url
+        : collector.watchUrls[0];
+    if (url === undefined) throw new HttpError(400, 'no URL to run against');
+
+    const observationId = broker.start(collector.id, url);
+
+    void observeOnce(collector, url, {
+      client,
+      store,
+      ...witnessDeps,
+      onEvent: broker.emitterFor(observationId),
+    })
+      .catch((error: unknown) => {
+        broker.emitterFor(observationId)({
+          step: 'error',
+          line: `failed          ${error instanceof Error ? error.message : String(error)}`,
+          detail: { message: error instanceof Error ? error.message : String(error) },
+        });
+      })
+      .finally(() => {
+        broker.finish(observationId);
+      });
+
+    return { observationId, collectorId: collector.id, url };
+  });
+
+  /**
+   * Watch an observation as it reasons.
+   *
+   * Unauthenticated, and that is deliberate rather than an oversight. An
+   * `EventSource` cannot send headers, so a token here would have to travel in
+   * the query string and end up in logs and screen recordings. Everything on
+   * this stream is already public on the incident page a moment later, and
+   * starting an observation, which is the part that spends money, still
+   * requires the admin token on the route above.
+   */
+  router.get('/api/observations/:id/events', async ({ params }) => {
+    const id = params['id'] ?? '';
+    if (!broker.has(id)) throw new HttpError(404, 'no such observation');
+
+    return stream((response, request) => {
+      response.writeHead(200, {
+        'content-type': 'text/event-stream',
+        'cache-control': 'no-cache, no-transform',
+        connection: 'keep-alive',
+        // Render and most proxies buffer responses by default, which would
+        // hold every line back until the run finished and defeat the point.
+        'x-accel-buffering': 'no',
+        'access-control-allow-origin': process.env['NOTICE_CORS_ORIGIN'] ?? '*',
+      });
+
+      const send = (event: ObserveEvent | null): void => {
+        if (event === null) {
+          response.write('event: done\ndata: {}\n\n');
+          response.end();
+          return;
+        }
+        response.write(`data: ${JSON.stringify(event)}\n\n`);
+      };
+
+      // A comment line immediately, so a proxy that waits for first output
+      // flushes its headers and the browser reports the stream as open.
+      response.write(': open\n\n');
+
+      const unsubscribe = broker.subscribe(id, send);
+      request.on('close', unsubscribe);
+    });
   });
 
   /**

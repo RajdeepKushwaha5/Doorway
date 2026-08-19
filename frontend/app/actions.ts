@@ -110,6 +110,24 @@ export async function setFixtureModeAction(mode: string): Promise<ActionResult> 
   }
 }
 
+/**
+ * Start an observation and hand back somewhere to watch it.
+ *
+ * `runCollectorAction` waits for the verdict, which is right for a script and
+ * wrong for a person: a real Scraper Studio run takes about thirty seconds and
+ * the interesting part is what happens during them. This returns as soon as the
+ * work is queued so the browser can open the stream.
+ */
+export async function startObservationAction(
+  collectorId: string,
+  url?: string,
+): Promise<ActionResult<{ observationId: string }>> {
+  return mutate<{ observationId: string }>(
+    `/api/collectors/${encodeURIComponent(collectorId)}/observe`,
+    url === undefined ? {} : { url },
+  );
+}
+
 /** Observe a collector once, right now. */
 export async function runCollectorAction(collectorId: string, url?: string): Promise<ActionResult> {
   const result = await mutate(`/api/collectors/${encodeURIComponent(collectorId)}/run`, url === undefined ? {} : { url });

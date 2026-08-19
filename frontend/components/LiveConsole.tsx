@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { setFixtureModeAction, runCollectorAction } from '@/app/actions';
+import { setFixtureModeAction } from '@/app/actions';
+import { DecisionStream } from '@/components/DecisionStream';
 
 /**
  * Cause the fault and catch it, without leaving the page.
@@ -66,11 +67,17 @@ const MODES: Mode[] = [
   },
 ];
 
+/**
+ * Only the fixture switch has phases now.
+ *
+ * Running the collector used to live here too, as a disabled button and a
+ * one-line result. It moved into `DecisionStream`, which owns its own state
+ * because it has far more to say than done-or-failed.
+ */
 type Phase =
   | { kind: 'idle' }
   | { kind: 'switching'; mode: string }
-  | { kind: 'running' }
-  | { kind: 'done'; message: string; ok: boolean };
+  | { kind: 'failed'; message: string };
 
 export function LiveConsole({
   collectorId,
@@ -98,28 +105,13 @@ export function LiveConsole({
           setFrame((count) => count + 1);
           setPhase({ kind: 'idle' });
         } else {
-          setPhase({ kind: 'done', message: result.error, ok: false });
+          setPhase({ kind: 'failed', message: result.error });
         }
       });
     });
   }
 
-  function observe(): void {
-    setPhase({ kind: 'running' });
-    startTransition(() => {
-      void runCollectorAction(collectorId).then((result) => {
-        setPhase({
-          kind: 'done',
-          ok: result.ok,
-          message: result.ok
-            ? 'Observation complete. The verdict is in the fleet below.'
-            : result.error,
-        });
-      });
-    });
-  }
-
-  const busy = pending || phase.kind === 'switching' || phase.kind === 'running';
+  const busy = pending || phase.kind === 'switching';
 
   return (
     <div className="terminal-window" data-reveal>
@@ -179,23 +171,15 @@ export function LiveConsole({
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={observe}
-            disabled={busy}
-            className="mt-5 w-full font-mono text-[13px] font-semibold uppercase tracking-pixel px-6 py-3.5 bg-ivory text-surface-raised rounded-md hover:bg-ivory/85 transition-all shadow-md justify-center disabled:opacity-40 inline-flex items-center gap-2"
-          >
-            {phase.kind === 'running' ? 'Observing via Bright Data API (30s)...' : 'Run Real Collector ▸'}
-          </button>
+          {/* The wait is thirty real seconds against Bright Data. Showing the
+              reasoning during them turns the worst part of the demo into the
+              part worth watching. */}
+          <div className="mt-5">
+            <DecisionStream collectorId={collectorId} label="Run real collector" />
+          </div>
 
-          {phase.kind === 'done' ? (
-            <p
-              className={`mt-3 text-[12px] font-mono leading-normal p-2.5 rounded border ${
-                phase.ok
-                  ? 'border-verified/30 bg-parse-accentBg/40 text-verified'
-                  : 'border-blocked/30 bg-red-50 text-blocked'
-              }`}
-            >
+          {phase.kind === 'failed' ? (
+            <p className="mt-3 rounded border border-blocked/30 bg-red-50 p-2.5 font-mono text-[12px] leading-normal text-blocked">
               {phase.message}
             </p>
           ) : null}

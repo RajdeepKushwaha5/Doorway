@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { BrightDataClient } from '../brightdata/index.js';
 import { scrapeMarkdown } from '../brightdata/index.js';
 import { learnContract, validateRun } from '../contracts/index.js';
+import { brief, type ObserveEmitter } from './events.js';
 import { classify, synthesizeRepairPrompt, transition } from '../incident/index.js';
 import type { AcquisitionContext } from '../shared/index.js';
 import { observeMarkdown, reconcile } from '../witness/index.js';
@@ -19,6 +20,14 @@ import type { CollectorRecord, IncidentRecord, RunRecord, Store } from '../store
 export interface ObserveDeps {
   client: BrightDataClient;
   store: Store;
+  /**
+   * Publish the reasoning as it happens.
+   *
+   * Optional and never load-bearing: nothing downstream reads these, and a
+   * throwing consumer must not be able to change a verdict. Absent means the
+   * observation behaves exactly as it did before streaming existed.
+   */
+  onEvent?: ObserveEmitter;
   /** Injected so tests can drive the witness without touching the network. */
   fetchMarkdown?: (
     url: string,
@@ -145,9 +154,40 @@ export async function observeOnce(
   // the Unlocker HTTP path, which does not require the CLI to be installed.
   const fetchMarkdown = deps.fetchMarkdown ?? ((target: string) => scrapeMarkdown(target));
 
+  // Swallow anything the consumer throws. A broken log must never be able to
+  // change a verdict, and a stream is the least important thing in this file.
+  const emit: ObserveEmitter = (event) => {
+    try {
+      deps.onEvent?.(event);
+    } catch {
+      /* a spectator cannot break the game */
+    }
+  };
+
   const startedAt = now().toISOString();
+
+  emit({
+    step: 'triggering',
+    line: `triggering ${collector.brightDataCollectorId} via /dca/trigger`,
+    detail: { collectorId: collector.brightDataCollectorId, url },
+  });
+
   const result = await deps.client.runCollector(collector.brightDataCollectorId, [url], {
     timeoutMs: 600_000,
+  });
+
+  emit({
+    step: 'rows',
+    line: `row returned    ${
+      result.rows.length === 0
+        ? 'no rows'
+        : Object.entries((result.rows[0] ?? {}) as Record<string, unknown>)
+            .filter(([key]) => key !== 'input')
+            .slice(0, 3)
+            .map(([key, value]) => `${key}: ${brief(value, 24)}`)
+            .join('   ')
+    }`,
+    detail: { rowCount: result.rows.length, durationMs: result.durationMs },
   });
 
   let contract = await deps.store.getContract(collector.id);
@@ -167,6 +207,23 @@ export async function observeOnce(
   }
 
   const checks = validateRun({ rows: result.rows, contract });
+
+  emit({
+    step: 'contracts',
+    line: `contracts       ${
+      checks.length === 0
+        ? 'no contract learned yet'
+        : checks
+            .slice(0, 4)
+            .map((check) => `${check.field ?? check.checkId} ${check.status.toUpperCase()}`)
+            .join(' · ')
+    }`,
+    detail: {
+      total: checks.length,
+      failed: checks.filter((check) => check.status === 'fail').length,
+      warned: checks.filter((check) => check.status === 'warn').length,
+    },
+  });
 
   const run: RunRecord = {
     id: randomUUID(),
@@ -208,7 +265,19 @@ export async function observeOnce(
         contentHash: '',
       });
     }
-    await closeRecoveredIncidents(deps, collector.id, url, run.id, startedAt);
+    const closed = await closeRecoveredIncidents(deps, collector.id, url, run.id, startedAt);
+
+    emit({
+      step: 'witness-skip',
+      line: 'second sensor    not needed, every contract passed',
+      detail: { reason: 'contracts_passed' },
+    });
+    emit({
+      step: 'verdict',
+      line: `verdict         healthy · published${closed > 0 ? ` · ${String(closed)} incident(s) closed` : ''}`,
+      detail: { verdict: 'healthy', publishable: true, incidentsClosed: closed },
+    });
+
     return { run, incident: null, publishable: true };
   }
 
@@ -227,8 +296,27 @@ export async function observeOnce(
     country?: string;
     deviceType?: 'desktop' | 'mobile';
   };
+  emit({
+    step: 'witness-wake',
+    line: 'waking the second sensor',
+    detail: {
+      reason: hasBaseline ? 'a contract tripped' : 'no accepted baseline yet',
+    },
+  });
+
   try {
     witnessFetch = await fetchMarkdown(url);
+    emit({
+      step: 'witness-fetch',
+      line: `Web Unlocker    markdown, ${(witnessFetch.markdown.length / 1024).toFixed(1)} KB${
+        witnessFetch.country === undefined ? '' : `, exit country ${witnessFetch.country}`
+      }${witnessFetch.deviceType === undefined ? '' : `, ${witnessFetch.deviceType}`}`,
+      detail: {
+        bytes: witnessFetch.markdown.length,
+        country: witnessFetch.country ?? null,
+        deviceType: witnessFetch.deviceType ?? null,
+      },
+    });
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : String(caught);
     const inconclusive: IncidentRecord = {
@@ -297,7 +385,47 @@ export async function observeOnce(
   );
 
   const firstRow = result.rows[0] ?? null;
+  for (const value of observation.values) {
+    emit({
+      step: 'witness-read',
+      line: `witness reads   ${value.path} = ${brief(value.value, 28)}   from "${value.evidence.line.trim().slice(0, 46)}"   confidence ${value.confidence.toFixed(2)}`,
+      detail: {
+        path: value.path,
+        value: value.value,
+        line: value.evidence.line,
+        strategy: value.evidence.strategy,
+        confidence: value.confidence,
+      },
+    });
+  }
+  for (const path of observation.notFound) {
+    emit({
+      step: 'witness-read',
+      line: `witness reads   ${path} = nothing, the page did not state it`,
+      detail: { path, value: null },
+    });
+  }
+
   const reconciliation = reconcile(firstRow, observation, collector.witnessSpecs);
+
+  for (const comparison of reconciliation.comparisons) {
+    const verdictWord =
+      comparison.agreement.kind === 'agree'
+        ? 'AGREE'
+        : comparison.agreement.kind === 'disagree'
+          ? 'DISAGREE'
+          : 'INCOMPARABLE';
+    emit({
+      step: 'compare',
+      line: `compare         ${comparison.path}: ${brief(comparison.collectorValue, 20)} vs ${brief(comparison.witnessValue, 20)} → ${verdictWord}`,
+      detail: {
+        path: comparison.path,
+        collector: comparison.collectorValue,
+        witness: comparison.witnessValue,
+        agreement: comparison.agreement.kind,
+      },
+    });
+  }
 
   const classification = classify({
     checks,
@@ -348,6 +476,27 @@ export async function observeOnce(
       reason: classification.evidence[0] ?? classification.verdict,
     }),
   );
+
+  emit({
+    step: 'verdict',
+    line: `verdict         ${classification.verdict} · confidence ${classification.confidence.toFixed(2)}`,
+    detail: {
+      verdict: classification.verdict,
+      confidence: classification.confidence,
+      affectedFields: classification.affectedFields,
+      evidence: classification.evidence,
+      // Named here because it is the one thing a reader wants next, and the
+      // difference between the two is the whole argument of the project.
+      action:
+        classification.verdict === 'genuine_source_change'
+          ? 'the page changed and the collector is right. Do not repair.'
+          : classification.verdict === 'access_anomaly'
+            ? 'the sensors saw different regions or devices. Do not blame the collector.'
+            : classification.verdict === 'healthy'
+              ? 'publish'
+              : 'withhold the field and repair with evidence',
+    },
+  });
 
   // A repair prompt is only synthesized for verdicts that may be repaired.
   // Generating one for a genuine source change would put a ready-to-fire
