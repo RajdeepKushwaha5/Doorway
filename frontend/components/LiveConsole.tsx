@@ -175,6 +175,7 @@ export function LiveConsole({
   // Locked is not busy. A control that cannot work should say why rather than
   // look momentarily unavailable.
   const locked = !canSwitchFixture;
+  const drifted = mode === 'search_drift';
 
   return (
     <div className="terminal-window" data-reveal>
@@ -323,24 +324,38 @@ export function LiveConsole({
 
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || locked}
                 onClick={() => {
-                  switchTo({
-                    id: 'search_drift',
-                    label: 'Rename the search field',
-                    effect: 'The search box still works. The term never reaches the server.',
-                    fault: true,
-                    verdict: 'extractor_drift',
-                  });
+                  // A toggle, not a one-way switch. Pressed while already
+                  // renamed it used to re-send the same mode and do nothing
+                  // visible, leaving the only way back a scroll up to the
+                  // Baseline button.
+                  switchTo(
+                    drifted
+                      ? {
+                          id: 'baseline',
+                          label: 'Restore the search field',
+                          effect: 'The form submits its original field again.',
+                          fault: false,
+                          verdict: 'healthy',
+                        }
+                      : {
+                          id: 'search_drift',
+                          label: 'Rename the search field',
+                          effect: 'The search box still works. The term never reaches the server.',
+                          fault: true,
+                          verdict: 'extractor_drift',
+                        },
+                  );
                 }}
                 className={`mt-3 w-full rounded-lg border p-3 text-left font-mono text-[12px] transition-all disabled:opacity-40 ${
-                  mode === 'search_drift'
+                  drifted
                     ? 'border-blocked bg-red-50 text-blocked'
                     : 'border-surface-border bg-surface-soft/30 text-ivory hover:border-ivory/30'
                 }`}
               >
-                {mode === 'search_drift'
-                  ? 'Search field renamed. The term is being dropped now.'
+                {drifted
+                  ? 'Field renamed and the term is being dropped. Press to restore.'
                   : 'Rename the search field \u25b8'}
               </button>
 
@@ -360,6 +375,25 @@ export function LiveConsole({
 
               <p className="mt-2 text-[11px] leading-normal text-muted">
                 Collector {searchCollector.brightDataId} on {searchCollector.url}
+              </p>
+
+              {/* The row the collector returns carries the proof in its own
+                  output: it is handed `?q=Nova` and ends up on `?query=Nova`.
+                  Worth naming, because it is the most convincing artifact here
+                  and it is easy to miss in the stream. */}
+              <p className="mt-2 border-t border-surface-border pt-2 text-[12px] leading-normal text-muted">
+                Expected verdict:{' '}
+                <span className={`font-semibold ${drifted ? 'text-blocked' : 'text-verified'}`}>
+                  {drifted ? 'extractor_drift' : 'healthy'}
+                </span>
+                {drifted ? (
+                  <>
+                    {' '}
+                    The collector is asked for <code>?q=Nova</code> and its own row comes back
+                    naming <code>?query=Nova</code>, carrying Vega Earbuds at 79 for a search of
+                    Nova. Every step succeeded.
+                  </>
+                ) : null}
               </p>
             </div>
           )}
