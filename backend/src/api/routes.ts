@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { BrightDataClient } from '../brightdata/index.js';
 import { learnContract, type BaselineRun } from '../contracts/index.js';
 import { invariantSchema } from '../contracts/index.js';
+import { buildCertificate } from '../incident/certificate.js';
 import {
   attemptRepair,
   buildFeed,
@@ -376,6 +377,21 @@ export function buildRouter(deps: ApiDeps): Router {
    * without proxying it. The id is a random uuid, so it cannot be guessed or
    * enumerated from an incident id.
    */
+  /**
+   * Export an incident as a certificate anyone can re-check offline.
+   *
+   * Unauthenticated on purpose. A proof only its author can fetch is not a
+   * proof, and every value in the document is already on the public incident
+   * page; the digest adds the ability to detect editing, not secrecy.
+   */
+  router.get('/api/incidents/:id/certificate', async ({ params }) => {
+    const incident = await store.getIncident(params['id'] ?? '');
+    if (incident === null) throw new HttpError(404, 'incident not found');
+    const collector = await store.getCollector(incident.collectorId);
+    if (collector === null) throw new HttpError(404, 'collector not found');
+    return buildCertificate(incident, collector);
+  });
+
   router.get('/api/incidents/:id/screenshot', async ({ params }) => {
     const incident = await store.getIncident(params['id'] ?? '');
     if (incident === null) throw new HttpError(404, 'incident not found');

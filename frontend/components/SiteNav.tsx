@@ -21,6 +21,7 @@ const links = [
   { href: '/#control-room', label: 'CONTROL ROOM' },
   { href: '/#faq', label: 'FAQ' },
   { href: '/verified', label: 'VERIFIED FEED' },
+  { href: '/verify', label: 'VERIFY' },
 ];
 
 export function SiteNav() {

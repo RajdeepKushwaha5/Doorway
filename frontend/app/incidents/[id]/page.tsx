@@ -74,6 +74,33 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         <WitnessComparison incident={incident} />
       </section>
 
+      {/* A verdict a reader cannot check is a verdict they have to take on
+          trust, which is the thing this project argues against. */}
+      <section data-reveal data-delay="2" className="evidence-section">
+        <div className="evidence-section__heading">
+          <p>02b</p>
+          <div>
+            <p className="eyebrow">Check it yourself</p>
+            <h2>Evidence certificate</h2>
+          </div>
+        </div>
+        <p className="text-sm leading-6 text-muted">
+          This verdict, both readings, and a SHA-256 of the page body the witness read, in one
+          document with a digest over all of it. Edit any value and the digest stops matching.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <a
+            href={`${apiBase()}/api/incidents/${incident.id}/certificate`}
+            className="secondary-button"
+          >
+            Download certificate
+          </a>
+          <Link href="/verify" className="secondary-button">
+            Verify one <span aria-hidden>→</span>
+          </Link>
+        </div>
+      </section>
+
       {incident.screenshotId !== null ? (
         <section data-reveal data-delay="2" className="evidence-section">
           <div className="evidence-section__heading">

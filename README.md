@@ -27,7 +27,7 @@ worth protecting: the fixture is ours and it resets.
 From a clone, with no Bright Data account and no credentials:
 
 ```bash
-npm install && npm test          # 231 tests, no network
+npm install && npm test          # 241 tests, no network
 ```
 
 With an API key, to reproduce the claims in this README:
@@ -37,6 +37,29 @@ npm run blindspot -- c_msvllpds1n1dcoz8qx   # every conventional check passes a 
 npm run benchmark                            # the Drift Discrimination Score table
 npm run demo:reset                           # put the fixture and the fleet back
 ```
+
+---
+
+## Check the verdict yourself
+
+A dashboard is the weakest possible place to prove something: it renders
+whatever it is told. So every incident exports as a **certificate** — the
+verdict, what the witness read, the line it read it from, and a SHA-256 of the
+page body it read — sealed with a digest over all of it.
+
+```bash
+curl https://notice-api-0vfo.onrender.com/api/incidents/<id>/certificate
+```
+
+Paste it into [`/verify`](https://notice-frontend-bay.vercel.app/verify). The
+digest is re-derived **in your browser with no network calls**, because a
+verifier that asked our server whether our own document is valid would prove
+nothing. Change one character in any value and it fails.
+
+Honest limit, stated on the page too: this detects editing, not forgery. It is
+a digest, not a signature, so it proves the document is unaltered rather than
+proving NOTICE issued it. The claim worth checking is the one about the
+evidence.
 
 ---
 
@@ -564,7 +587,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 231 tests, no network required
+npm test                      # 241 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -621,7 +644,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 231 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 241 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

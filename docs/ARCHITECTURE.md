@@ -77,6 +77,7 @@ second-guess another module's verdict.
 | `store/` | Persistence behind an interface. File-backed so a fresh clone runs with no database. |
 | `worker/` | The scheduler and the page-load budget that stops it overspending the free tier. |
 | `mcp/` | The agent-facing surface. Returns a verified value or an honest refusal. |
+| `incident/certificate.ts` | Exports a verdict as a hash-sealed document a reader can re-check offline, so a claim does not rest on trusting this server. |
 | `shared/` | Normalisation, comparison, redaction, and the types every layer agrees on. |
 
 ---
@@ -98,11 +99,13 @@ bare currency figure with nothing naming it scores 0.35 and is never allowed to
 condemn a collector on its own.
 See `witness/extract.ts`.
 
-**Production is re-verified after promotion, not trusted.** Bright Data reported
-a repair as `success: true` while production still returned the wrong value,
-reproduced twice. A pipeline that believed that flag would have marked the
-collector repaired and resumed publishing the wrong number.
-See `pipeline/repair.ts` and the platform findings in the README.
+**Production is re-verified after promotion, not trusted.** An approval can
+return HTTP 200, report `success: true` and advance the job to `done` while
+production still serves the old template — in our case because
+`resume_automation_job` needs `auto_save: true`, which defaults to false and
+which we were not sending. The gate caught it by re-checking production rather
+than believing the flag, which is the whole reason that step exists.
+See `pipeline/repair.ts` and finding 5 in the README.
 
 ---
 
@@ -122,8 +125,9 @@ refuse to ship on data nobody has checked.
 ## Reproducing the claims
 
 ```bash
-npm test                              # 231 tests, no network, no credentials
+npm test                              # 241 tests, no network, no credentials
 npm run benchmark                     # Drift Discrimination Score, live
 npm run blindspot -- <collector-id>   # every conventional check passes a wrong row
 npm run live -- observe-all           # one real observation per collector
+curl .../api/incidents/<id>/certificate  # a verdict you can re-check at /verify
 ```
