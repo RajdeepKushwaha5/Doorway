@@ -1,5 +1,6 @@
 import type {
   AcquisitionContext,
+  ContextAlignment,
   CheckResult,
   HealthEnvelope,
   IncidentClassification,
@@ -111,6 +112,24 @@ export interface IncidentRecord {
   history: TransitionRecord[];
   gateResults: GateCaseResult[];
   quarantined: boolean;
+  /**
+   * The conditions each sensor observed the page under.
+   *
+   * Computed on every classification since the beginning and thrown away
+   * immediately afterwards, which made `access_anomaly` the one verdict a
+   * reader had to take on faith. The classifier was saying "these two sensors
+   * were not looking at the same thing" and the interface could not show what
+   * differed, so the most restrained verdict in the system looked like the
+   * least substantiated one.
+   *
+   * Null on incidents recorded before this was persisted, and on the paths
+   * that open an incident without ever reaching a comparison.
+   */
+  acquisition: {
+    collector: AcquisitionContext;
+    witness: AcquisitionContext;
+    alignment: ContextAlignment;
+  } | null;
   createdAt: string;
   resolvedAt: string | null;
 }

@@ -85,6 +85,32 @@ export interface GateCaseResult {
   executionError: string | null;
 }
 
+/** The conditions one sensor observed a page under. */
+export interface AcquisitionContext {
+  requestedUrl: string;
+  resolvedUrl?: string;
+  /** ISO 3166-1 alpha-2 exit country, when the fetch path could pin one. */
+  country?: string;
+  locale?: string;
+  currency?: string;
+  deviceType: 'desktop' | 'mobile' | 'unknown';
+  variantMarkers: string[];
+  observedAt: string;
+}
+
+/** How closely two sensors' conditions matched. */
+export interface ContextAlignment {
+  aligned: boolean;
+  mismatches: string[];
+  observationGapSeconds: number;
+}
+
+export interface IncidentAcquisition {
+  collector: AcquisitionContext;
+  witness: AcquisitionContext;
+  alignment: ContextAlignment;
+}
+
 export interface Incident {
   id: string;
   collectorId: string;
@@ -100,6 +126,13 @@ export interface Incident {
   history: TransitionRecord[];
   gateResults: GateCaseResult[];
   quarantined: boolean;
+  /**
+   * The conditions each sensor observed the page under.
+   *
+   * Null on incidents recorded before this was persisted, and on the paths
+   * that open an incident without ever reaching a comparison.
+   */
+  acquisition: IncidentAcquisition | null;
   createdAt: string;
   resolvedAt: string | null;
 }

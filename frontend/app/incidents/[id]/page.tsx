@@ -4,6 +4,7 @@ import { ArrowLeft, ShieldCheck, Wrench } from '@phosphor-icons/react/dist/ssr';
 import { EvidenceTimeline, WitnessComparison } from '@/components/EvidenceTimeline';
 import { apiBase } from '@/lib/env';
 import { GateMatrix } from '@/components/GateMatrix';
+import { AcquisitionPanel } from '@/components/AcquisitionPanel';
 import { IncidentActions } from '@/components/IncidentActions';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
 import { api, ApiError } from '@/lib/api';
@@ -72,6 +73,20 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
       <section data-reveal data-delay="2" className="evidence-section">
         <div className="evidence-section__heading"><p>02</p><div><p className="eyebrow">Second signal</p><h2>Independent Bright Data witness</h2></div></div>
         <WitnessComparison incident={incident} />
+      </section>
+
+      {/* Before a reader can accept that two sensors disagreed about a page,
+          they have to be shown the two sensors were reading the same page.
+          This rules the boring explanation out, or names it. */}
+      <section data-reveal data-delay="2" className="evidence-section">
+        <div className="evidence-section__heading">
+          <p>02a</p>
+          <div>
+            <p className="eyebrow">Conditions</p>
+            <h2>How each sensor reached the page</h2>
+          </div>
+        </div>
+        <AcquisitionPanel incident={incident} />
       </section>
 
       {/* A verdict a reader cannot check is a verdict they have to take on

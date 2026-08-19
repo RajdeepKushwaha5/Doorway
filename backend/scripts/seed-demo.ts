@@ -14,6 +14,10 @@
 import { randomUUID } from 'node:crypto';
 import { learnContract, validateRun, type Invariant } from '../src/contracts/index.js';
 import { classify, synthesizeRepairPrompt, transition } from '../src/incident/index.js';
+import {
+  compareAcquisitionContexts,
+  type AcquisitionContext,
+} from '../src/shared/index.js';
 import { observeMarkdown, reconcile, type WitnessFieldSpec } from '../src/witness/index.js';
 import { FileStore, type CollectorRecord, type IncidentRecord, type RunRecord } from '../src/store/index.js';
 
@@ -165,7 +169,23 @@ async function main(): Promise<void> {
 
   const observation = observeMarkdown(LIVE_URL, MARKDOWN, SPECS, observedAt);
   const reconciliation = reconcile(DRIFTED, observation, SPECS);
-  const classification = classify({ checks, reconciliation });
+  // Both sensors read the same page from the same region on the same kind of
+  // device, seconds apart. Recorded so the incident page can rule the obvious
+  // alternative explanation out: this disagreement is not two sensors landing
+  // on a US and a UK storefront, it is one of them reading the wrong number.
+  const collectorContext: AcquisitionContext = {
+    requestedUrl: LIVE_URL,
+    country: 'us',
+    deviceType: 'desktop',
+    variantMarkers: [],
+    observedAt,
+  };
+  const witnessContext: AcquisitionContext = {
+    ...collectorContext,
+    observedAt: new Date(Date.parse(observedAt) + 4000).toISOString(),
+  };
+
+  const classification = classify({ checks, reconciliation, collectorContext, witnessContext });
   const prompt = synthesizeRepairPrompt({
     classification,
     reconciliation,
@@ -218,6 +238,11 @@ async function main(): Promise<void> {
     screenshotId: null,
     repairPrompt: prompt.text,
     history,
+    acquisition: {
+      collector: collectorContext,
+      witness: witnessContext,
+      alignment: compareAcquisitionContexts(collectorContext, witnessContext),
+    },
     gateResults: [
       {
         url: LIVE_URL,

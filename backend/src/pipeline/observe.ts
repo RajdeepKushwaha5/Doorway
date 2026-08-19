@@ -4,7 +4,7 @@ import { scrapeMarkdown } from '../brightdata/index.js';
 import { learnContract, validateRun } from '../contracts/index.js';
 import { brief, type ObserveEmitter } from './events.js';
 import { classify, synthesizeRepairPrompt, transition } from '../incident/index.js';
-import type { AcquisitionContext } from '../shared/index.js';
+import { compareAcquisitionContexts, type AcquisitionContext } from '../shared/index.js';
 import { observeMarkdown, reconcile } from '../witness/index.js';
 import type { CollectorRecord, IncidentRecord, RunRecord, Store } from '../store/index.js';
 
@@ -348,6 +348,11 @@ export async function observeOnce(
         }),
       ],
       gateResults: [],
+      // No witness reading exists, so there is no second context to compare
+      // against. Recorded as absent rather than half-filled: a panel showing
+      // one sensor's country beside a blank would imply a comparison nobody
+      // made.
+      acquisition: null,
       quarantined: true,
       createdAt: startedAt,
       resolvedAt: null,
@@ -427,24 +432,27 @@ export async function observeOnce(
     });
   }
 
+  // The collector's device is declared on the record, never guessed. A
+  // Scraper Studio scraper can emulate a phone with `emulate_device`, and only
+  // whoever built it knows whether it did.
+  const collectorContext = contextFrom(
+    url,
+    startedAt,
+    collector.acquisitionContext.country,
+    collector.acquisitionContext.deviceType,
+  );
+  const witnessContext = contextFrom(
+    url,
+    witnessFetch.fetchedAt,
+    witnessFetch.country,
+    witnessFetch.deviceType,
+  );
+
   const classification = classify({
     checks,
     reconciliation,
-    // The collector's device is declared on the record, never guessed. A
-    // Scraper Studio scraper can emulate a phone with `emulate_device`, and
-    // only whoever built it knows whether it did.
-    collectorContext: contextFrom(
-      url,
-      startedAt,
-      collector.acquisitionContext.country,
-      collector.acquisitionContext.deviceType,
-    ),
-    witnessContext: contextFrom(
-      url,
-      witnessFetch.fetchedAt,
-      witnessFetch.country,
-      witnessFetch.deviceType,
-    ),
+    collectorContext,
+    witnessContext,
     departsFromBaseline: checks.some((check) => check.status === 'warn' || check.status === 'fail'),
   });
 
@@ -540,6 +548,15 @@ export async function observeOnce(
     repairPrompt,
     history,
     gateResults: [],
+    // Kept rather than discarded, so `access_anomaly` can show its working.
+    // The alignment is recomputed here from the same two contexts the
+    // classifier used, so what the interface displays is what was decided on
+    // and not a second opinion assembled afterwards.
+    acquisition: {
+      collector: collectorContext,
+      witness: witnessContext,
+      alignment: compareAcquisitionContexts(collectorContext, witnessContext),
+    },
     // Quarantine anything not positively verified. Publishing a row that only
     // "probably" survived is the failure this system exists to prevent.
     quarantined: classification.verdict !== 'healthy' && classification.verdict !== 'genuine_source_change',

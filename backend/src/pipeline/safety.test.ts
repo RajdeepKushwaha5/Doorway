@@ -113,6 +113,7 @@ function incidentAt(history: TransitionRecord[], overrides: Partial<IncidentReco
     repairPrompt: 'fix the price',
     history,
     gateResults: [],
+    acquisition: null,
     quarantined: true,
     createdAt: new Date().toISOString(),
     resolvedAt: null,
@@ -486,5 +487,93 @@ describe('confidence required to promote without a human', () => {
     // No evidence is not high confidence, and treating an empty list as
     // perfect agreement is how a vacuous check passes forever.
     expect(weakest([])).toBeLessThan(FLOOR);
+  });
+});
+
+
+describe('the conditions each sensor read under are kept, not just compared', () => {
+  let directory: string;
+  let store: FileStore;
+  let fake: FakeBrightData;
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'notice-acq-'));
+    store = new FileStore(join(directory, 'store.json'));
+    fake = new FakeBrightData();
+    await store.saveContract(CONTRACT);
+  });
+
+  /**
+   * The classifier compared these from the beginning and threw them away
+   * immediately after, which left `access_anomaly` as the one verdict nobody
+   * could check. A restrained verdict that cannot show its working is worth
+   * less than a wrong one that can.
+   */
+  it('records what differed when two sensors left through different countries', async () => {
+    fake.rows = [{ ...HEALTHY, price: { value: 199, currency: 'EUR' } }];
+
+    const result = await observeOnce(
+      collectorRecord({ acquisitionContext: { country: 'us', deviceType: 'desktop' } }),
+      URL_A,
+      {
+        client: asClient(fake),
+        store,
+        fetchMarkdown: async () => ({
+          markdown: 'Nova Headphones\n\nPurchase price: $249\n',
+          fetchedAt: new Date().toISOString(),
+          country: 'de',
+          deviceType: 'desktop' as const,
+        }),
+      },
+    );
+
+    expect(result.incident?.classification).toBe('access_anomaly');
+
+    const acquisition = result.incident?.acquisition;
+    expect(acquisition?.collector.country).toBe('us');
+    expect(acquisition?.witness.country).toBe('de');
+    expect(acquisition?.alignment.aligned).toBe(false);
+    expect(acquisition?.alignment.mismatches.join(' ')).toContain('country differs');
+
+    // The point of the verdict: nothing was sent to be repaired.
+    expect(result.incident?.repairPrompt).toBeNull();
+  });
+
+  it('records the matching conditions too, so a disagreement can be trusted', async () => {
+    fake.rows = [{ ...HEALTHY, price: { value: 25, currency: 'USD' } }];
+
+    const result = await observeOnce(
+      collectorRecord({ acquisitionContext: { country: 'us', deviceType: 'desktop' } }),
+      URL_A,
+      {
+        client: asClient(fake),
+        store,
+        fetchMarkdown: async () => ({
+          markdown: 'Nova Headphones\n\nPurchase price: $249\n',
+          fetchedAt: new Date().toISOString(),
+          country: 'us',
+          deviceType: 'desktop' as const,
+        }),
+      },
+    );
+
+    expect(result.incident?.classification).toBe('extractor_drift');
+    expect(result.incident?.acquisition?.alignment.aligned).toBe(true);
+    expect(result.incident?.acquisition?.alignment.mismatches).toEqual([]);
+  });
+
+  it('leaves the record absent rather than half-filled when no witness read happened', async () => {
+    fake.rows = [{ ...HEALTHY, price: { value: 0, currency: 'USD' } }];
+
+    const result = await observeOnce(collectorRecord(), URL_A, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => {
+        throw new Error('the witness could not reach the page');
+      },
+    });
+
+    expect(result.incident?.classification).toBe('inconclusive');
+    expect(result.incident?.acquisition).toBeNull();
   });
 });
