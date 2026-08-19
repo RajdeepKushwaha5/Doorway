@@ -112,19 +112,34 @@ And on how to close that gap in the meantime:
 
 > "When a scraper breaks, you can trigger a self-healing. In our documentation we also have an API for the Scraper Studio. You can basically run self-healing when something is broken so that you can continuously fix that, **so that you don't have to intervene manually**."
 
-Asked directly, on 2026-08-17, whether the platform surfaces a value that is
-wrong rather than missing, and whether a repaired template is checked against
-previous output before promotion, Bright Data support answered both in one
-sentence:
+Asked directly whether the platform surfaces a value that is wrong rather than
+missing, and whether a repaired template is checked against previous output
+before promotion, Bright Data answered both. Their AI support agent replied
+first, on 2026-08-17, that *"the docs do not describe automatic detection of a
+semantically wrong but non-empty value after a layout change, and they do not
+describe validation against previous known-good output before promotion."*
 
-> "The docs do not describe automatic detection of a semantically wrong but
-> non-empty value after a layout change, and they do not describe validation
-> against previous known-good output before promotion."
+A human engineer answered on 2026-08-18 and put it more plainly than the
+documentation does. On detection:
 
-Those are the two things NOTICE does. The answer came from Bright Data's AI
-support agent citing their own documentation, so it is a statement about what
-the platform documents rather than a roadmap, which is exactly the claim being
-made here and is independently checkable against the pages it cites.
+> "You've identified this correctly: Self-Healing and schema validation are both
+> built around missing/null/undefined fields, not semantically wrong ones. [...]
+> **There is no built-in correctness/semantic check comparing the meaning of an
+> extracted value against what it should represent. That validation is expected
+> to be caught outside the platform.**"
+
+And on validating a repair before it ships:
+
+> "**There is no automatic diff/comparison of a candidate against prior
+> known-good results as a gating step.** The docs don't describe any such
+> regression check — so you're not missing a hidden feature here. [...]
+> validation-before-promotion is real but it's your manual preview review, not
+> an automated comparison against historical output."
+
+Those two paragraphs describe exactly what NOTICE is: the correctness check the
+platform expects to happen outside it, and the automated regression gate that
+does not exist inside it. This is a Bright Data engineer describing the gap,
+not a claim made on their behalf.
 
 That is the seam this project sits in. Bright Data builds and repairs the
 collector and exposes the API to drive the repair. What nobody supplies is the
@@ -453,47 +468,21 @@ Documented because it shaped the architecture, not as criticism.
 
 **4. Self-Healing progress signals the gate through `step`, not `status`.** The live payload is `{id, step, completed_steps, status, diff, success, preview_result}`. At the gate it reads `step: "user_approval"` with `status: "pending_answer"`. Matching on `status` alone reports a waiting job as pending and polls it to timeout.
 
-**5. An approved, completed heal left production still failing. Reproduced twice.** On collector `c_mstkc1rkr8mit6wut`, approval returned HTTP 200, the job moved to `done` with `success: true`, and the incident page still returned its original value.
+**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true` — and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
 
-Reproduced end to end on 2026-08-16 with full evidence. The collector returned `price: 0` on a page reading `Price: $249`. `refactor_template` (job `ia_msvikpe02i5a3id7b2`) reached `step: user_approval` with `success: true`, and its `preview_result` showed the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval via `resume_automation_job` returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again.
+Reproduced twice before the cause was known. On collector `c_mstkc1rkr8mit6wut`, job `ia_msvikpe02i5a3id7b2` reached `step: user_approval` with a `preview_result` showing the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again. A second run on 2026-08-17 (job `ia_mswmuyq11k2h1grrzj`) was sharper still, because the shapes disagreed: the approved candidate carried `title`, `availability`, `upc` and `rating`, while production returned a row carrying `symbol` and none of those four. Production was running a different template from the one that had just been approved.
 
-Reproduced a second time on 2026-08-17, and this run was sharper because the
-output schemas disagree. Job `ia_mswmuyq11k2h1grrzj` was approved the same way
-and reported `status: done`, `success: true`. Its `preview_result` was
-`{"title": "", "price": {"value": 0, "currency": "USD"}, "availability": "", "upc": "", "rating": null}`.
-A fresh trigger afterwards (`j_mswmxomk4xzvd1h84`) returned
-`{"price": {"value": 0, "currency": "USD", "symbol": "$"}}`.
+**This was our bug, not a platform defect, and the correction belongs here rather than in a footnote.** Raised with Bright Data support on 2026-08-17. Their AI agent first suggested the IDE's separate *Save to Production* step, which does exist but belongs to a flow this project never uses. A human engineer answered on 2026-08-18 and identified the real cause:
 
-Those are different shapes. The approved candidate carries `title`,
-`availability`, `upc` and `rating` and no `symbol`; production carries `symbol`
-and none of those four. Production therefore appears to be running a different
-template from the one that was approved, which is a more specific claim than
-the first occurrence supported.
+> "Your payload was `{"message": true}` with `auto_save` omitted (it defaults to false). Per the schema, `auto_save: true` is what 'saves the approved template automatically once the job completes successfully.' Since you didn't set it, the approved candidate may not have been saved as production — which is consistent with the collector still returning the old fields."
 
-Done often doesn't mean successful. A green preview, a completed job and
-`success: true` together are not evidence that production changed.
+Fixed in `backend/src/brightdata/client.ts`: acceptance now sends `{"message": true, "auto_save": true}`, and it is sent only on acceptance because the parameter takes effect only when the job succeeds.
 
-**Raised with Bright Data support on 2026-08-17.** Their reply offered one
-explanation, that an approved candidate is a draft until a separate production
-save: *"In the IDE Self-Healing flow, accepted changes go to a draft first. You
-must then click Save to Production to make them live."* That is a real step,
-and it is documented, but it belongs to the IDE. The same reply describes the
-path actually used here differently: *"For the CLI/API heal flow, approve
-commits the heal and the status advances to done, and rerunning the scraper
-should reflect the fix."* The CLI documentation agrees, stating the fix
-*"commits to the existing scraper"* on approval with no further step, and
-neither the Self-Healing nor the CLI reference documents any production-save
-endpoint distinct from `resume_automation_job`.
+What survives the correction, and it is the part that matters: **an API call reported complete success for an operation that changed nothing in production.** Every signal a caller has access to — HTTP 200, `success: true`, `status: done` — was green while the collector kept serving the wrong value. The engineer's own closing advice is to distrust exactly that: *"Check the job's final status — confirm it went to done, not just that the approve call returned `success: true`,"* and then *"trigger the collector and verify the fields now match the approved preview."*
 
-So the offered explanation does not cover this case. Everything here went
-through `refactor_template` and `resume_automation_job`, where approval is
-documented as sufficient, and rerunning did not reflect the fix. A human
-confirmation has been requested and this section will be updated when it
-arrives. The cause remains undetermined: either approval does not promote the
-template, or the promoted template does not fix the page. No public endpoint
-distinguishes them, so this stays an observation rather than a diagnosis.
+That second sentence is post-promotion verification, described by Bright Data, and it is what NOTICE already does. It is also what caught this: the gate re-checked production, found the old value, and refused to mark the incident resolved. The system was right and the operator was wrong, which is the outcome a safety layer exists to produce.
 
-This is why post-promotion verification exists, and it is the single strongest argument for the gate. A pipeline that trusts `success: true` would have marked this collector repaired and resumed publishing zero.
+Done often doesn't mean successful — and here the reason was a defaulted parameter rather than anything broken. A pipeline that trusted `success: true` would have marked this collector repaired and resumed publishing zero for a fortnight.
 
 **6. A screenshot response is labelled `Content-Type: application/json`.** `POST /request` with `data_format: screenshot` returns PNG bytes, verified by the magic number `89 50 4e 47`, under a JSON content type. A client that branches on the header will try to parse an image, and one that trusts it cannot tell a successful capture from an error payload. NOTICE checks the magic number instead.
 

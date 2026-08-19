@@ -295,6 +295,19 @@ export class BrightDataClient {
    *
    *   {"validation_errors":["\"message\" is required","\"action\" is not allowed"]}
    *
+   * `auto_save` is the part that actually promotes the template, and it
+   * defaults to false. Approving without it resumes the job, returns HTTP 200
+   * and reports `success: true`, and leaves production running the previous
+   * template. That combination cost two days of investigation here: the
+   * approval genuinely succeeded, so every signal available said the repair had
+   * shipped, while a fresh trigger kept returning the old fields.
+   *
+   * Bright Data support confirmed the cause on 2026-08-18: "auto_save: true is
+   * what saves the approved template automatically once the job completes
+   * successfully. Since you didn't set it, the approved candidate may not have
+   * been saved as production." It only takes effect when `message` is true and
+   * the job succeeds, so it is sent only on acceptance.
+   *
    * Deliberately unguarded at this layer. The safety policy lives in the
    * incident engine, which must have verified the candidate before calling it.
    */
@@ -302,7 +315,7 @@ export class BrightDataClient {
     await this.#request({
       method: 'POST',
       path: `/dca/collectors/${encodeURIComponent(collectorId)}/resume_automation_job`,
-      body: { message: accept },
+      body: accept ? { message: true, auto_save: true } : { message: false },
       ...(signal === undefined ? {} : { signal }),
     });
   }
