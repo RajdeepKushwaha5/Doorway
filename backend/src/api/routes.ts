@@ -9,6 +9,7 @@ import {
   attemptRepair,
   buildFeed,
   compareBestDeal,
+  computeImpact,
   observeOnce,
   promoteRepair,
 } from '../pipeline/index.js';
@@ -576,6 +577,22 @@ export function buildRouter(deps: ApiDeps): Router {
    * has no way to see what it costs until the scheduler pauses or a bill
    * arrives, and neither is a good first notification.
    */
+  /**
+   * What this system prevented, rather than what it did.
+   *
+   * Read-only and unauthenticated like the rest of the reporting surface. The
+   * counts come straight from stored runs and incidents, so anyone doubting
+   * the headline can recompute it from `/api/incidents` by hand.
+   */
+  router.get('/api/stats/impact', async () => {
+    const collectors = await store.listCollectors();
+    const runs = (
+      await Promise.all(collectors.map(async (collector) => store.listRuns(collector.id, 500)))
+    ).flat();
+    const incidents = await store.listIncidents();
+    return computeImpact(runs, incidents);
+  });
+
   router.get('/api/budget', async () =>
     monitoringSpend(
       store,

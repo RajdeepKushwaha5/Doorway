@@ -340,3 +340,76 @@ describe('refusing an operation that does not apply', () => {
     expect(body.error).toContain('brightDataCollectorId');
   });
 });
+
+describe('the impact report', () => {
+  /**
+   * The number this endpoint exists to publish is a claim about what the
+   * system prevented, which makes it the easiest number in the project to
+   * overstate by accident. This asserts it stays reachable without a token and
+   * stays anchored to real records.
+   */
+  it('reports what was withheld, without a token', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brightDataCollectorId: 'c_impact1',
+        name: 'Impact fixture',
+        targetDomain: 'example.test',
+        watchUrls: ['https://example.test/p'],
+        witnessSpecs: [
+          {
+            path: 'price',
+            meaning: 'The purchase price.',
+            labels: ['price'],
+            excludeLabels: [],
+            kind: 'money',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+    const collector = (await created.json()) as { id: string };
+
+    await store.saveRun({
+      id: 'run-impact',
+      collectorId: collector.id,
+      brightDataSnapshotId: null,
+      targetUrls: ['https://example.test/p'],
+      version: 'production',
+      rows: [{ price: 25 }],
+      // Everything a conventional pipeline could check, passing.
+      checks: [
+        {
+          checkId: 'structure:required:price',
+          field: 'price',
+          status: 'pass',
+          severity: 1,
+          confidence: 1,
+          explanation: 'price is present',
+        },
+      ],
+      durationMs: 12,
+      observedAt: new Date().toISOString(),
+    });
+
+    await store.saveIncident(
+      incident({ id: 'inc-impact', collectorId: collector.id, runId: 'run-impact' }),
+    );
+
+    const response = await fetch(`${base}/api/stats/impact`);
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as {
+      withheld: number;
+      silent: number;
+      fields: string[];
+      examples: { field: string; shipped: unknown }[];
+    };
+
+    expect(body.withheld).toBe(1);
+    expect(body.silent).toBe(1);
+    expect(body.fields).toEqual(['price']);
+    expect(body.examples[0]).toMatchObject({ field: 'price', shipped: 25 });
+  });
+});

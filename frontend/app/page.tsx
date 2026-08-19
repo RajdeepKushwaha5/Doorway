@@ -8,6 +8,7 @@ import { AutoTypeTerminal } from '@/components/AutoTypeTerminal';
 import { SequentialGreenCards } from '@/components/SequentialGreenCards';
 import { SearchAndCollectorCarousel } from '@/components/SearchAndCollectorCarousel';
 import { BlindspotsMatrix } from '@/components/BlindspotsMatrix';
+import { ImpactBand } from '@/components/ImpactBand';
 import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
 import type { CollectorSummary, Incident } from '@/lib/types';
@@ -180,6 +181,11 @@ export default async function HomePage() {
           </div>
 
           <ComparisonAnimation />
+
+          {/* The section above argues that a wrong value survives every
+              conventional check. This is the count of times it did, on this
+              deployment, with the pages that proved it. */}
+          <ImpactBand />
         </section>
 
         {/* Section: "✦ Build anything / How it works" (Matching Parse.bot 3-step grid) */}

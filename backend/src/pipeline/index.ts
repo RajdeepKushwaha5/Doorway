@@ -10,6 +10,12 @@ export {
 export { buildFeed } from './feed.js';
 
 export {
+  computeImpact,
+  type ImpactStats,
+  type WithheldValue,
+} from './impact.js';
+
+export {
   compareBestDeal,
   type DealCandidate,
   type DealComparison,

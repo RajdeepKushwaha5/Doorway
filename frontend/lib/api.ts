@@ -5,6 +5,7 @@ import type {
   CollectorSummary,
   DealComparison,
   HealthEnvelope,
+  ImpactStats,
   Incident,
   JobRecord,
   RunRecord,
@@ -107,6 +108,9 @@ export const api = {
     request(`/api/incidents/${encodeURIComponent(id)}`),
 
   budget: (): Promise<BudgetStatus> => request('/api/budget'),
+
+  /** What was withheld, and how much of it nothing else would have caught. */
+  impact: (): Promise<ImpactStats> => request('/api/stats/impact'),
 
   bestDeal: (): Promise<DealComparison> => request('/api/consumer/best-deal'),
 

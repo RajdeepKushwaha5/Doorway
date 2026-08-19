@@ -200,3 +200,36 @@ export interface BudgetStatus {
   /** True when the scheduler has paused until the month rolls over. */
   exhausted: boolean;
 }
+
+/** One value that never reached a consumer, and what was on the page instead. */
+export interface WithheldValue {
+  incidentId: string;
+  collectorId: string;
+  field: string;
+  shipped: unknown;
+  actual: unknown;
+  evidence: string | null;
+  silent: boolean;
+  at: string;
+}
+
+/**
+ * What the system prevented, as opposed to what it did.
+ *
+ * Mirrors `ImpactStats` in the backend. Kept as a structural copy rather than
+ * imported across the workspace boundary, for the same reason as every other
+ * type in this file: the dashboard must build without the backend present.
+ */
+export interface ImpactStats {
+  runs: number;
+  incidents: number;
+  withheld: number;
+  silent: number;
+  restrained: number;
+  quarantined: number;
+  published: number;
+  fields: string[];
+  examples: WithheldValue[];
+  firstAt: string | null;
+  latestAt: string | null;
+}
