@@ -10,7 +10,7 @@ correct and be wrong.
 npm install
 cp .env.example .env      # only BRIGHTDATA_API_KEY is required
 npm run build
-npm test                  # 256 tests, no network and no credentials needed
+npm test                  # 258 tests, no network and no credentials needed
 ```
 
 The whole detection-to-blocked-repair loop runs offline against a scripted

@@ -107,7 +107,20 @@ export function buildRouter(deps: ApiDeps): Router {
   router.post('/api/collectors', async ({ body, request }) => {
     assertAdmin(request);
     const parsed = registerCollectorSchema.safeParse(body);
-    if (!parsed.success) throw new HttpError(400, parsed.error.issues[0]?.message ?? 'invalid body');
+    if (!parsed.success) {
+      // Name the field. "Required" on its own tells a caller nothing about
+      // which of a dozen fields they left out.
+      const issue = parsed.error.issues[0];
+      const where = issue?.path.join('.') ?? '';
+      throw new HttpError(
+        400,
+        issue === undefined
+          ? 'invalid body'
+          : where === ''
+            ? issue.message
+            : `${where}: ${issue.message}`,
+      );
+    }
 
     const collector: CollectorRecord = {
       id: randomUUID(),
@@ -322,19 +335,29 @@ export function buildRouter(deps: ApiDeps): Router {
     if (incident === null) throw new HttpError(404, 'incident not found');
     const collector = await requireCollector(store, incident.collectorId);
 
+    // Check first, then call. Rejecting used to hit Bright Data before asking
+    // whether there was anything to reject, so declining an incident with no
+    // pending candidate produced a 404 from their API and surfaced here as a
+    // 500. That reads as "we broke" when the truth is "you asked for something
+    // that does not apply", and it is the same class of mistake `approve`
+    // already guards against one route below.
+    const state = currentState(incident.history);
+    if (state !== 'awaiting_approval' && state !== 'verifying_candidate') {
+      throw new HttpError(
+        409,
+        `incident is in state "${state}", not "awaiting_approval"; there is no proposed repair to reject`,
+      );
+    }
+
     await client.rejectRepair(collector.brightDataCollectorId);
 
-    const state = currentState(incident.history);
-    const history =
-      state === 'awaiting_approval' || state === 'verifying_candidate'
-        ? [
-            ...incident.history,
-            transition(state, 'repair_rejected', {
-              actor: 'user',
-              reason: 'rejected by a human reviewer',
-            }),
-          ]
-        : incident.history;
+    const history = [
+      ...incident.history,
+      transition(state, 'repair_rejected', {
+        actor: 'user',
+        reason: 'rejected by a human reviewer',
+      }),
+    ];
 
     const updated = { ...incident, history };
     await store.saveIncident(updated);

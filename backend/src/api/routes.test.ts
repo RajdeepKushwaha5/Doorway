@@ -278,3 +278,65 @@ describe('correcting a registered collector', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('refusing an operation that does not apply', () => {
+  /**
+   * A 500 tells a caller the server broke. Rejecting an incident with no
+   * proposed repair is not a server fault, it is a request that does not
+   * apply, and the two must not look the same: the first invites a retry and
+   * a bug report, the second invites reading the message.
+   *
+   * This route used to call Bright Data before asking whether there was
+   * anything to reject, so their 404 surfaced here as our 500.
+   */
+  it('409s when rejecting an incident with no proposed repair', async () => {
+    // The incident has to point at a collector that exists, or the request
+    // fails at collector lookup and never reaches the guard under test.
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brightDataCollectorId: 'c_reject1',
+        name: 'Fixture',
+        targetDomain: 'example.test',
+        watchUrls: ['https://example.test/p'],
+        witnessSpecs: [
+          {
+            path: 'price',
+            meaning: 'The purchase price.',
+            labels: ['price'],
+            excludeLabels: [],
+            kind: 'money',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+    const collector = (await created.json()) as { id: string };
+
+    await store.saveIncident(
+      incident({ id: 'no-candidate', collectorId: collector.id, history: [] }),
+    );
+
+    const response = await fetch(`${base}/api/incidents/no-candidate/reject`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}` },
+    });
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toMatch(/no proposed repair to reject/);
+  });
+
+  it('names the offending field when a registration body is invalid', async () => {
+    const response = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'missing everything else' }),
+    });
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain('brightDataCollectorId');
+  });
+});
