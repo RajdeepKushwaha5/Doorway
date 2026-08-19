@@ -180,3 +180,101 @@ describe('transport behaviour', () => {
     expect(response.status).toBe(204);
   });
 });
+
+describe('correcting a registered collector', () => {
+  const collector = {
+    brightDataCollectorId: 'c_abc123',
+    name: 'Fixture',
+    targetDomain: 'example.test',
+    watchUrls: ['https://example.test/p'],
+    witnessSpecs: [
+      {
+        path: 'price',
+        meaning: 'The purchase price.',
+        labels: ['result'],
+        excludeLabels: [],
+        kind: 'money',
+        allowed: [],
+      },
+    ],
+  };
+
+  async function create(): Promise<{ id: string }> {
+    const response = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify(collector),
+    });
+    expect(response.status).toBe(200);
+    return (await response.json()) as { id: string };
+  }
+
+  /**
+   * Registration used to be a one-way door. The field most likely to need
+   * correcting is `witnessSpecs`, and a loose label there produces a confident
+   * wrong verdict rather than a visible error: a spec labelled "result" against
+   * a page whose header reads "1 result" made the witness match the count line
+   * and report drift on a page where nothing was wrong.
+   */
+  it('replaces a witness spec without disturbing the rest of the record', async () => {
+    const created = await create();
+
+    const response = await fetch(`${base}/api/collectors/${created.id}`, {
+      method: 'PUT',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        witnessSpecs: [
+          {
+            path: 'price',
+            meaning: 'The purchase price.',
+            labels: ['price'],
+            excludeLabels: ['featured'],
+            kind: 'money',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+
+    const after = await store.getCollector(created.id);
+    expect(after?.witnessSpecs[0]?.labels).toEqual(['price']);
+    expect(after?.brightDataCollectorId).toBe('c_abc123');
+    expect(after?.watchUrls).toEqual(['https://example.test/p']);
+    expect(after?.name).toBe('Fixture');
+  });
+
+  it('leaves untouched fields alone when only one is supplied', async () => {
+    const created = await create();
+
+    await fetch(`${base}/api/collectors/${created.id}`, {
+      method: 'PUT',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ freshnessMinutes: 90 }),
+    });
+
+    const after = await store.getCollector(created.id);
+    expect(after?.freshnessMinutes).toBe(90);
+    expect(after?.witnessSpecs[0]?.labels).toEqual(['result']);
+  });
+
+  it('refuses without the admin token', async () => {
+    const created = await create();
+    const response = await fetch(`${base}/api/collectors/${created.id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ freshnessMinutes: 90 }),
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('404s for a collector that does not exist', async () => {
+    const response = await fetch(`${base}/api/collectors/missing`, {
+      method: 'PUT',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ freshnessMinutes: 90 }),
+    });
+    expect(response.status).toBe(404);
+  });
+});

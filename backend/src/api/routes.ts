@@ -130,6 +130,46 @@ export function buildRouter(deps: ApiDeps): Router {
     return { collector, contract, runs, incidents };
   });
 
+  /**
+   * Correct a registered collector in place.
+   *
+   * Registration was a one-way door: a witness spec that turned out to be wrong
+   * could only be fixed by resetting the store. That is a bad property for the
+   * one field most likely to need correcting, because a loose `labels` entry
+   * produces a *confident wrong verdict* rather than an obvious error.
+   *
+   * This was written after exactly that happened here. A spec used "result" as
+   * a label against a page whose results header reads "1 result", so the
+   * witness matched the count line, disagreed with the collector, and reported
+   * drift on a page where nothing was wrong.
+   *
+   * Deliberately narrow. `brightDataCollectorId` cannot be changed, because the
+   * incidents, runs and verified snapshots already recorded against it are only
+   * meaningful for the collector that produced them.
+   */
+  router.put('/api/collectors/:id', async ({ params, body, request }) => {
+    assertAdmin(request);
+    const collector = await requireCollector(store, params['id']);
+
+    const parsed = registerCollectorSchema
+      .partial()
+      .omit({ brightDataCollectorId: true })
+      .safeParse(body ?? {});
+    if (!parsed.success) {
+      throw new HttpError(400, parsed.error.issues[0]?.message ?? 'invalid body');
+    }
+
+    // Undefined means "leave alone", so a caller correcting one spec does not
+    // have to resend the whole record and risk flattening the rest of it.
+    const patch = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, value]) => value !== undefined),
+    );
+
+    const updated: CollectorRecord = { ...collector, ...patch };
+    await store.saveCollector(updated);
+    return updated;
+  });
+
   router.post('/api/collectors/:id/run', async ({ params, body, request }) => {
     assertAdmin(request);
     const collector = await requireCollector(store, params['id']);
