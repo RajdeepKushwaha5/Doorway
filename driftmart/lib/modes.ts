@@ -20,6 +20,7 @@ export const MODE_IDS = [
   'missing_field',
   'sponsored_insertion',
   'pagination_collapse',
+  'search_drift',
 ] as const;
 
 export type ModeId = (typeof MODE_IDS)[number];
@@ -155,6 +156,33 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
   <h1 class="product-title">Vega Headphones (Sponsored)</h1>
   <p class="row"><span class="label">Sponsored price:</span> <span class="selling-price" data-testid="price">$99</span></p>
 </div>
+<div class="product">
+  <h1 class="product-title">Nova Headphones</h1>
+  <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$249</span></p>
+  <p class="row"><span class="label">Refundable deposit:</span> <span class="security-deposit">$25</span></p>
+  <p class="row"><span class="label">Availability:</span> <span class="stock">In stock</span></p>
+</div>`.trim(),
+  },
+
+  /**
+   * The fault lives on /search, not on this page.
+   *
+   * The product page is deliberately identical to baseline: nothing about the
+   * product markup is wrong in this mode. What moves is the search form's
+   * field name, so a collector that types into the box and clicks the button
+   * completes every step, submits a term the server ignores, and scrapes the
+   * featured product instead of the one it searched for.
+   *
+   * A layout fault and an interaction fault produce the same symptom — a
+   * plausible price for the wrong thing — and neither raises an error. This
+   * mode exists so the second kind can be demonstrated too.
+   */
+  search_drift: {
+    id: 'search_drift',
+    label: 'Search form renames its field. The box still works; the term is dropped.',
+    semanticChange: false,
+    expected: BASELINE_EXPECTED,
+    html: `
 <div class="product">
   <h1 class="product-title">Nova Headphones</h1>
   <p class="row"><span class="label">Price:</span> <span class="selling-price" data-testid="price">$249</span></p>

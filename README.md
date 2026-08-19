@@ -210,6 +210,51 @@ time was about three minutes.
 Neither is from the Scrapers Library. Real output from both is in
 [examples/](examples/).
 
+### A collector that drives the page, not just reads it
+
+Every collector above is one `navigate` away from its data, which is the easy
+case and where most scrapers stop. Scraper Studio's browser functions — `type`,
+`click`, `wait`, `select`, `tag_response` — exist for the other case, and a
+single navigate never touches them.
+
+[`examples/interaction-collector/`](examples/interaction-collector/) drives
+DriftMart's [`/search`](https://driftmart-3ut8.onrender.com/search), where the
+price only exists after a term is typed and the button pressed:
+
+```js
+navigate(input.url);
+wait('#site-search');
+type('#site-search', input.term);
+click('#do-search');
+wait('.results');
+collect(parse());
+```
+
+**This is where a new class of silent failure lives.** Switch the fixture to
+`search_drift`: the form renames the field it submits, from `q` to `query`, and
+leaves the input's id alone — the ordinary shape of a front-end refactor.
+
+Every step still succeeds. The box is found, the text is typed, the button is
+clicked, results render, and a product parses with a real price in stock.
+Nothing errors and nothing is null. The collector searched for Nova Headphones
+and returned **Vega Earbuds at $79**, because the server never received the
+term and fell back to a featured product.
+
+Measured on the running fixture:
+
+```
+witness   -> /search?q=Nova       -> Nova Headphones    price = 249
+collector -> /search?query=Nova   -> Vega Earbuds       price = 79
+
+sensors agree: NO  -> DRIFT DETECTED
+```
+
+NOTICE needed **no new detection logic** for this. The witness reads the
+canonical URL for the intended query; the collector reaches its answer by
+interacting. When the interaction drifts they land on different page states and
+the existing rule fires. It is the same rule that catches a moved price
+selector, applied one layer earlier — in the automation rather than the markup.
+
 ### The plain-language field description is the contract
 
 Scraper Studio repairs extraction against the sentence describing a field, not
