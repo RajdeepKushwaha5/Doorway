@@ -1,0 +1,83 @@
+
+> notice@0.1.0 blindspot
+> npm run blindspot --workspace backend -- c_msvllpds1n1dcoz8qx
+
+
+> @notice/backend@0.1.0 blindspot
+> node --env-file-if-exists=../.env dist/scripts/blindspot.js c_msvllpds1n1dcoz8qx
+
+
+Fixture    https://driftmart-3ut8.onrender.com/product/headphones
+Collector  c_msvllpds1n1dcoz8qx  (real Scraper Studio collector)
+Mode       selector_drift
+
+Switching the page to 'selector_drift' ...
+done. The page still looks completely normal to a person.
+
+==========================================================================
+1. WHAT BRIGHT DATA REPORTS
+==========================================================================
+
+POST /dca/trigger        HTTP 200
+collection_id            j_mszxeda1141as8um62
+GET  /dca/dataset        ready after 14.6s
+rows returned            1
+
+The row, exactly as the collector produced it:
+
+{
+  "product_name": "Nova Headphones",
+  "price": 25,
+  "availability": "In stock",
+  "input": {
+    "url": "https://driftmart-3ut8.onrender.com/product/headphones"
+  }
+}
+
+Bright Data has reported no error, opened no incident, and logged no
+warning. That is correct behaviour. The request did work.
+
+==========================================================================
+2. EVERY SAFEGUARD YOU ALREADY HAVE
+==========================================================================
+
+  [PASS]  Request succeeded           HTTP 200 from /dca/trigger
+  [PASS]  Response is valid JSON      parsed into an object without error
+  [PASS]  Row is not empty            4 fields returned
+  [PASS]  Required field present      'price' exists on the row
+  [PASS]  Field is not null           price = 25
+  [PASS]  Type check                  typeof price resolves to a number (25)
+  [PASS]  Range check                 price > 0
+  [PASS]  Schema validation (Zod)     every field matched its declared type
+  [PASS]  Retry logic                 never fired, because nothing failed
+
+All 9 checks passed. Nothing downstream has any reason to hesitate.
+
+==========================================================================
+3. THE SECOND SENSOR
+==========================================================================
+
+Reading the same URL through Web Unlocker as markdown. No selectors are
+involved, so it cannot drift the way an extractor does.
+
+witness value      249
+confidence         0.85  (labelled-line)
+read from line 15   "Purchase price: **$249**"
+
+==========================================================================
+4. WHAT NOTICE CONCLUDES
+==========================================================================
+
+collector said     25
+witness said       249
+agreement          disagree
+
+The two sensors disagree, so the extractor drifted rather than the
+page changing meaning. NOTICE quarantines the field, and the corrupt
+row never reaches the feed, the dashboard or an agent.
+
+==========================================================================
+Every check that exists today passed this row.
+The only thing that caught it was a second sensor that disagreed.
+==========================================================================
+

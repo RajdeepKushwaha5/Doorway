@@ -1,0 +1,32 @@
+
+> notice@0.1.0 benchmark
+> npm run benchmark --workspace backend
+
+
+> @notice/backend@0.1.0 benchmark
+> node --env-file-if-exists=../.env dist/scripts/benchmark.js
+
+
+Drift Discrimination Score
+fixture  https://driftmart-3ut8.onrender.com/product/headphones
+
+  no fault  baseline               nothing is wrong
+  no fault  genuine_price_change   the price really moved to 229
+  FAULT     selector_drift         reads the 25 deposit
+  FAULT     silent_zero            structured value says 0
+  FAULT     sponsored_insertion    reads the 99 sponsored card
+  FAULT     missing_field          availability disappeared
+
+==============================================================================
+Method                              Detection /4   Restraint /2    DDS
+==============================================================================
+Status, schema, null, type, range   2              2               67%
+Change monitor, alert on any diff   4              1               83%
+NOTICE, two independent sensors     4              2               100%
+==============================================================================
+
+Detection alone is easy. A monitor that alerts on everything scores full
+marks for it and is still unusable, because it fires on a price that
+genuinely changed and rewrites a collector that was working.
+
+Wrote D:\SCRAPE-VERSE-HACK\NOTICE\evals\dds.json

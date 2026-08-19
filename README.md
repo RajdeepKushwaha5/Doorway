@@ -63,6 +63,91 @@ evidence.
 
 ---
 
+## Don't take our word for it
+
+Every claim on this page can be re-run, and the raw output of each run is
+committed in [`docs/evidence/`](docs/evidence/) rather than retyped here.
+
+### 1. Every safeguard you already have passes a wrong row
+
+`npm run blindspot -- c_msvllpds1n1dcoz8qx` triggers the real Scraper Studio
+collector, reads the row back from `/dca/dataset`, and runs nine genuine checks
+against it — a real Zod schema, a range check with a lower bound, type, null,
+presence, retry. Verbatim from
+[`docs/evidence/blindspot.txt`](docs/evidence/blindspot.txt):
+
+```text
+  [PASS]  Request succeeded           HTTP 200 from /dca/trigger
+  [PASS]  Response is valid JSON      parsed into an object without error
+  [PASS]  Row is not empty            4 fields returned
+  [PASS]  Required field present      'price' exists on the row
+  [PASS]  Field is not null           price = 25
+  [PASS]  Type check                  typeof price resolves to a number (25)
+  [PASS]  Range check                 price > 0
+  [PASS]  Schema validation (Zod)     every field matched its declared type
+  [PASS]  Retry logic                 never fired, because nothing failed
+
+All 9 checks passed. Nothing downstream has any reason to hesitate.
+
+collector said     25
+witness said       249
+agreement          disagree
+```
+
+The checks are deliberately generous. A strawman here would make the result
+worthless, and these still miss a price wrong by a factor of ten.
+
+### 2. The score, computed rather than asserted
+
+`npm run benchmark` runs six live cases and computes what three methods
+conclude about each. Full output in
+[`docs/evidence/benchmark.txt`](docs/evidence/benchmark.txt), machine-readable
+in [`evals/dds.json`](evals/dds.json):
+
+```text
+Method                              Detection /4   Restraint /2    DDS
+Status, schema, null, type, range   2              2               67%
+Change monitor, alert on any diff   4              1               83%
+NOTICE, two independent sensors     4              2               100%
+```
+
+### 3. Bright Data, on why nothing in the platform reports this
+
+Not our characterisation. Their support engineer, asked directly on 2026-08-18:
+
+> "Self-Healing and schema validation are both built around missing/null/undefined
+> fields, not semantically wrong ones. [...] **There is no built-in
+> correctness/semantic check comparing the meaning of an extracted value against
+> what it should represent. That validation is expected to be caught outside the
+> platform.**"
+
+> "**There is no automatic diff/comparison of a candidate against prior
+> known-good results as a gating step.** The docs don't describe any such
+> regression check — so you're not missing a hidden feature here."
+
+### 4. A verdict you can re-check without us
+
+Every incident exports as a hash-sealed certificate, and
+[`/verify`](https://notice-frontend-bay.vercel.app/verify) re-derives the digest
+in your own browser with no network calls. Change one character and it fails.
+
+```bash
+curl https://notice-api-0vfo.onrender.com/api/incidents/<id>/certificate
+```
+
+### 5. In the Bright Data console
+
+The account's own view of the run that returned the wrong value: every request
+delivered, nothing errored, nothing spent.
+
+<!-- docs/screenshots/web-access-dashboard.png -->
+<!-- docs/screenshots/refactor-progress.png -->
+
+*Screenshots pending.* Until they are committed this section stands on the four
+above, all of which a reader can reproduce themselves.
+
+---
+
 ## Proved three ways
 
 Every claim here is demonstrable in under a minute, and each one has a command.
@@ -674,6 +759,15 @@ Done often doesn't mean successful — and here the reason was a defaulted param
 **6. A screenshot response is labelled `Content-Type: application/json`.** `POST /request` with `data_format: screenshot` returns PNG bytes, verified by the magic number `89 50 4e 47`, under a JSON content type. A client that branches on the header will try to parse an image, and one that trusts it cannot tell a successful capture from an error payload. NOTICE checks the magic number instead.
 
 **7. The trigger response names a field differently from every reader.** `POST /dca/trigger` returns `collection_id`; every other endpoint reads the same value as `snapshot_id`. Normalized at the client boundary.
+
+**9. Some sites are blocked pending KYC, and the refusal names the reason.** Attempting a regional retailer through Web Unlocker returned:
+
+```
+policy_20140 Residential Failed (bad_endpoint): Requested site is not available
+for immediate residential (no KYC) access mode in accordance with robots.txt.
+```
+
+Recorded because it is worth knowing before you plan a target list, and because it is the platform behaving well rather than badly: the refusal is explicit, it cites `robots.txt`, and it points at the form that lifts it. Bright Data's own product marketer described the same policy in the launch webinar — *"we purposefully block by default... we want to understand what is the purpose and then enable it to your account."* We did not pursue it, so the fleet stays on `books.toscrape.com` and a fixture we own.
 
 **8. An empty result is a completed run, not a pending one.** Bright Data's own Python boilerplate treats a non-empty array as the completion signal, so a legitimate zero-row result reads as "still building" and times out.
 
