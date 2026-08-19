@@ -34,10 +34,11 @@ export const healRequestSchema = z.object({
   /**
    * Inputs the healer should exercise, starting with the page that failed.
    *
-   * This is the field the `bdata` CLI drops. As of CLI v0.3.4, `scraper heal
+   * This is the field the `bdata` CLI drops. Through CLI v0.3.5, `scraper heal
    * --url` places the URL only in the printed next-step hint and sends
-   * `custom_input: []`, so the healer never sees the incident. NOTICE calls
-   * the API directly for exactly this reason.
+   * `custom_input: []`, so the healer never sees the incident. The CLI's own
+   * help says so: "Not sent to the heal call; heal only mutates the scraper."
+   * NOTICE calls the API directly for exactly this reason.
    */
   custom_input: z.array(z.object({ url: z.string().url() })),
 });

@@ -793,13 +793,22 @@ Documented because it shaped the architecture, not as criticism.
 
 **1. The CLI does not forward incident inputs to Self-Healing.** `bdata scraper heal --url <page>` places the URL only in the printed next-step hint. The request body it sends is `{"prompt": "...", "custom_input": []}`, so the healer never sees the page that failed. NOTICE calls `POST /dca/collectors/{id}/refactor_template` directly and puts the incident URL in `custom_input`.
 
+Still true on CLI v0.3.5, where the tool now documents it itself. Run `bdata scraper heal --help`:
+
+```text
+--url <url>   Verify target woven into the next-step hint. Not sent to
+              the heal call; heal only mutates the scraper.
+```
+
+That is the vendor stating the limitation in their own words, which is better evidence than our observation of the request body.
+
 **2. `bdata scraper run --version=dev` returns production output, not the candidate.** Verified on a live collector with a repair pending at the approval gate. The candidate used a scoped selector that provably fixed the incident, the preview showed it fixed, and running with `--version=dev` reproduced production's exact failure. On a page where both templates agree, the two runs are byte-identical. Anyone who believes they are testing a proposed repair before approving it is testing the code they already have.
 
 **3. `resume_automation_job` expects `{"message": boolean}`.** Not an action string. The API rejects `{"action":"approve"}` with `"action" is not allowed`, and `{"message": 12345}` with `"message" must be a boolean`. True accepts the repair, false rejects it. The gate stays open until answered, so an unanswered candidate blocks later heals on that collector.
 
 **4. Self-Healing progress signals the gate through `step`, not `status`.** The live payload is `{id, step, completed_steps, status, diff, success, preview_result}`. At the gate it reads `step: "user_approval"` with `status: "pending_answer"`. Matching on `status` alone reports a waiting job as pending and polls it to timeout.
 
-**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything — and `bdata scraper approve` does not send it.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true` — and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
+**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true` — and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
 
 Reproduced twice before the cause was known. On collector `c_mstkc1rkr8mit6wut`, job `ia_msvikpe02i5a3id7b2` reached `step: user_approval` with a `preview_result` showing the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again. A second run on 2026-08-17 (job `ia_mswmuyq11k2h1grrzj`) was sharper still, because the shapes disagreed: the approved candidate carried `title`, `availability`, `upc` and `rating`, while production returned a row carrying `symbol` and none of those four. Production was running a different template from the one that had just been approved.
 
