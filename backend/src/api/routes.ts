@@ -354,8 +354,15 @@ export function buildRouter(deps: ApiDeps): Router {
   router.get('/api/incidents/:id', async ({ params }) => {
     const incident = await store.getIncident(params['id'] ?? '');
     if (incident === null) throw new HttpError(404, 'incident not found');
-    const audit = await store.listAudit(incident.id);
-    return { incident, audit };
+    // The run carries the rows the collector actually returned when it broke.
+    // Without it the incident page can show what a repair produces and what
+    // the page says, but not what was wrong in the first place, which is the
+    // half a reader is there for.
+    const [audit, run] = await Promise.all([
+      store.listAudit(incident.id),
+      store.getRun(incident.runId),
+    ]);
+    return { incident, audit, run };
   });
 
   /**

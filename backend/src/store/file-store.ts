@@ -153,6 +153,11 @@ export class FileStore implements Store {
       .reverse();
   }
 
+  async getRun(id: string): Promise<RunRecord | null> {
+    const snapshot = await this.#load();
+    return snapshot.runs.find((run) => run.id === id) ?? null;
+  }
+
   async saveIncident(incident: IncidentRecord): Promise<void> {
     const snapshot = await this.#load();
     snapshot.incidents[incident.id] = incident;

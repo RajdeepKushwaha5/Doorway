@@ -4,6 +4,7 @@ import { ArrowLeft, ShieldCheck, Wrench } from '@phosphor-icons/react/dist/ssr';
 import { EvidenceTimeline, WitnessComparison } from '@/components/EvidenceTimeline';
 import { apiBase } from '@/lib/env';
 import { GateMatrix } from '@/components/GateMatrix';
+import { RepairDiff } from '@/components/RepairDiff';
 import { AcquisitionPanel } from '@/components/AcquisitionPanel';
 import { IncidentActions } from '@/components/IncidentActions';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
@@ -22,8 +23,9 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
 
   let incident;
+  let run;
   try {
-    ({ incident } = await api.getIncident(id));
+    ({ incident, run } = await api.getIncident(id));
   } catch (caught) {
     if (caught instanceof ApiError && caught.status === 404) notFound();
     throw caught;
@@ -171,6 +173,10 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
                 ]
           }
         />
+        {/* Pass or fail is the decision. This is the evidence behind it, which
+            is what somebody is actually looking for with their hand on the
+            approve button. */}
+        <RepairDiff results={incident.gateResults} run={run} />
       </section>
 
       <section data-reveal className="evidence-section">

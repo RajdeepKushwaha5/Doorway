@@ -413,3 +413,40 @@ describe('the impact report', () => {
     expect(body.examples[0]).toMatchObject({ field: 'price', shipped: 25 });
   });
 });
+
+describe('an incident carries the run that caused it', () => {
+  /**
+   * The incident page argues about what the collector returned. Until the run
+   * came back with it, that page could show what a repair produces and what
+   * the page says, but not the wrong value itself.
+   */
+  it('returns the run alongside the incident', async () => {
+    await store.saveRun({
+      id: 'run-1',
+      collectorId: 'col-1',
+      brightDataSnapshotId: null,
+      targetUrls: ['https://example.test/p'],
+      version: 'production',
+      rows: [{ price: { value: 25, currency: 'USD' } }],
+      checks: [],
+      durationMs: 12,
+      observedAt: new Date().toISOString(),
+    });
+    await store.saveIncident(incident({ id: 'inc-with-run', runId: 'run-1' }));
+
+    const response = await fetch(`${base}/api/incidents/inc-with-run`);
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as { run: { id: string; rows: unknown[] } | null };
+    expect(body.run?.id).toBe('run-1');
+    expect(body.run?.rows[0]).toEqual({ price: { value: 25, currency: 'USD' } });
+  });
+
+  it('returns null rather than failing when the run has aged out of the store', async () => {
+    await store.saveIncident(incident({ id: 'inc-no-run', runId: 'run-gone' }));
+
+    const response = await fetch(`${base}/api/incidents/inc-no-run`);
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { run: unknown }).run).toBeNull();
+  });
+});

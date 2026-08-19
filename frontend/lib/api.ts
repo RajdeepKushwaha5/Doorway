@@ -104,7 +104,7 @@ export const api = {
   listIncidents: (collectorId?: string): Promise<Incident[]> =>
     request(`/api/incidents${collectorId === undefined ? '' : `?collectorId=${collectorId}`}`),
 
-  getIncident: (id: string): Promise<{ incident: Incident }> =>
+  getIncident: (id: string): Promise<{ incident: Incident; run: RunRecord | null }> =>
     request(`/api/incidents/${encodeURIComponent(id)}`),
 
   budget: (): Promise<BudgetStatus> => request('/api/budget'),

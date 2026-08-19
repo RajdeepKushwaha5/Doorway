@@ -199,6 +199,15 @@ export interface Store {
 
   saveRun(run: RunRecord): Promise<void>;
   listRuns(collectorId: string, limit?: number): Promise<RunRecord[]>;
+  /**
+   * One run by id.
+   *
+   * Added so an incident can be shown beside the rows that caused it. Runs
+   * were only reachable by collector, which meant the one record that says
+   * what the collector actually returned was unavailable on the page arguing
+   * about what the collector actually returned.
+   */
+  getRun(id: string): Promise<RunRecord | null>;
 
   saveIncident(incident: IncidentRecord): Promise<void>;
   getIncident(id: string): Promise<IncidentRecord | null>;
