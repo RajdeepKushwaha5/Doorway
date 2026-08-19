@@ -348,16 +348,24 @@ export function LiveConsole({
                         },
                   );
                 }}
-                className={`mt-3 w-full rounded-lg border p-3 text-left font-mono text-[12px] transition-all disabled:opacity-40 ${
+                /* Centred, uppercase and tracked. Left-aligned text in a
+                   full-width bordered box reads as a text input, and people
+                   tried to type in it. This is an action, so it is shaped
+                   like the run button below rather than like a field. */
+                className={`mt-3 inline-flex w-full items-center justify-center rounded-md border-2 px-6 py-3 font-mono text-[12px] font-semibold uppercase tracking-pixel transition-all disabled:opacity-40 ${
                   drifted
-                    ? 'border-blocked bg-red-50 text-blocked'
-                    : 'border-surface-border bg-surface-soft/30 text-ivory hover:border-ivory/30'
+                    ? 'border-blocked bg-red-50 text-blocked hover:bg-red-100'
+                    : 'border-ivory bg-transparent text-ivory hover:bg-ivory hover:text-white'
                 }`}
               >
-                {drifted
-                  ? 'Field renamed and the term is being dropped. Press to restore.'
-                  : 'Rename the search field \u25b8'}
+                {drifted ? 'Restore the search field' : 'Rename the search field \u25b8'}
               </button>
+
+              {drifted ? (
+                <p className="mt-2 text-[11.5px] leading-normal text-blocked">
+                  Renamed. The box still works and the term is being dropped.
+                </p>
+              ) : null}
 
               <div className="mt-2">
                 <DecisionStream
