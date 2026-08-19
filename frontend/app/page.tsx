@@ -83,8 +83,17 @@ export default async function HomePage() {
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
 
-  const fixtureCollector = collectors.find((collector) =>
-    collector.targetDomain.includes('driftmart'),
+  const fixtureCollector = collectors.find(
+    (collector) =>
+      collector.targetDomain.includes('driftmart') && !collector.name.toLowerCase().includes('search'),
+  );
+
+  // The interaction collector, which drives the search box rather than reading
+  // a static page. Found by name because that is what distinguishes it; there
+  // is nothing structural on the record that says "this one clicks things".
+  const searchCollector = collectors.find(
+    (collector) =>
+      collector.targetDomain.includes('driftmart') && collector.name.toLowerCase().includes('search'),
   );
 
   // Counted, never floored. An earlier version used Math.max(length, 3), which
@@ -268,10 +277,32 @@ export default async function HomePage() {
             <RegisterCollector />
           </div>
 
-          <LiveConsole
-            collectorId={fixtureCollector?.brightDataCollectorId ?? 'c_msvllpds1n1dcoz8qx'}
-            fixtureUrl={fixtureCollector?.targetDomain ? `https://${fixtureCollector.targetDomain}` : 'https://driftmart-3ut8.onrender.com'}
-          />
+          {/* Only rendered when the fixture collector is actually registered.
+              The fallback here used to be a hardcoded `c_...` identifier,
+              which is the Bright Data id rather than the record id every route
+              keys on, so the run button answered 404 on any seeded deployment.
+              A console that cannot run anything says so instead. */}
+          {fixtureCollector === undefined ? (
+            <p className="rounded-lg border border-gray-200 bg-gray-50 p-5 font-mono text-[13px] leading-relaxed text-gray-600">
+              The DriftMart fixture collector is not registered on this deployment, so there is
+              nothing for the console to run. Register it above and this panel becomes live.
+            </p>
+          ) : (
+            <LiveConsole
+              collectorId={fixtureCollector.id}
+              brightDataId={fixtureCollector.brightDataCollectorId}
+              fixtureUrl={`https://${fixtureCollector.targetDomain}`}
+              {...(searchCollector === undefined || searchCollector.watchUrls[0] === undefined
+                ? {}
+                : {
+                    searchCollector: {
+                      id: searchCollector.id,
+                      brightDataId: searchCollector.brightDataCollectorId,
+                      url: searchCollector.watchUrls[0],
+                    },
+                  })}
+            />
+          )}
 
           <div className="mt-6">
             <OperationsPanel />

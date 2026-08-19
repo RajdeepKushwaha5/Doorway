@@ -5,6 +5,7 @@ import { EvidenceTimeline, WitnessComparison } from '@/components/EvidenceTimeli
 import { apiBase } from '@/lib/env';
 import { GateMatrix } from '@/components/GateMatrix';
 import { RepairDiff } from '@/components/RepairDiff';
+import { AuditLog } from '@/components/AuditLog';
 import { AcquisitionPanel } from '@/components/AcquisitionPanel';
 import { IncidentActions } from '@/components/IncidentActions';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
@@ -24,8 +25,9 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
 
   let incident;
   let run;
+  let audit;
   try {
-    ({ incident, run } = await api.getIncident(id));
+    ({ incident, run, audit } = await api.getIncident(id));
   } catch (caught) {
     if (caught instanceof ApiError && caught.status === 404) notFound();
     throw caught;
@@ -187,6 +189,19 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
       <section data-reveal className="evidence-section">
         <div className="evidence-section__heading"><p>06</p><div><p className="eyebrow">Audit trail</p><h2>Every transition, in order</h2></div></div>
         <EvidenceTimeline incident={incident} />
+
+        {/* The timeline says how the incident moved between states. This says
+            who moved it, which is the question anyone auditing an automated
+            repair actually has. The backend has written these from the start
+            and returned them on every fetch; nothing displayed them. */}
+        <div className="mt-8">
+          <p className="eyebrow">System log</p>
+          <p className="mb-4 mt-1 text-sm leading-6 text-muted">
+            Every action recorded against this incident, and whether NOTICE, Bright Data or an
+            operator took it.
+          </p>
+          <AuditLog events={audit} />
+        </div>
       </section>
       </div>
     </div>

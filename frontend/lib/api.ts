@@ -1,5 +1,6 @@
 import { serverApiBase } from './env';
 import type {
+  AuditEvent,
   BudgetStatus,
   CollectorContract,
   CollectorSummary,
@@ -104,7 +105,9 @@ export const api = {
   listIncidents: (collectorId?: string): Promise<Incident[]> =>
     request(`/api/incidents${collectorId === undefined ? '' : `?collectorId=${collectorId}`}`),
 
-  getIncident: (id: string): Promise<{ incident: Incident; run: RunRecord | null }> =>
+  getIncident: (
+    id: string,
+  ): Promise<{ incident: Incident; run: RunRecord | null; audit: AuditEvent[] }> =>
     request(`/api/incidents/${encodeURIComponent(id)}`),
 
   budget: (): Promise<BudgetStatus> => request('/api/budget'),

@@ -21,6 +21,28 @@ import type { Incident, JobRecord } from '@/lib/types';
  * operator clicks something that fails is worse than one where the button was
  * never there.
  */
+/**
+ * What a finished job actually did, in words rather than a status word.
+ *
+ * All three of these arrive on a job whose status is `succeeded`, because the
+ * worker succeeded at reaching a decision. Two of them mean production was not
+ * changed.
+ */
+const OUTCOME: Record<'approved' | 'rejected' | 'not_repairable', { text: string; tone: string }> = {
+  approved: {
+    text: 'The repair passed the gate and was promoted. Production now serves the new template.',
+    tone: 'text-verified',
+  },
+  rejected: {
+    text: 'The candidate was rejected and production is unchanged. It did not fix the incident page, or it broke a page that was working.',
+    tone: 'text-blocked',
+  },
+  not_repairable: {
+    text: 'Nothing was repaired, because this incident is not the collector\u2019s fault. Rewriting it would have damaged a collector that is working.',
+    tone: 'text-suspect',
+  },
+};
+
 export function IncidentActions({ incident }: { incident: Incident }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -180,6 +202,18 @@ function JobProgress({ jobId }: { jobId: string }) {
       <p className="mt-1 text-sm text-muted">
         {job?.detail ?? 'Waiting for a worker to pick this up.'}
       </p>
+
+      {/* A job that finishes is not a repair that shipped.
+
+          `succeeded` means the worker completed its work, and the work may
+          have been to reject the candidate. Showing only the status told an
+          operator "Repair job succeeded" while production was deliberately
+          left untouched, which is the one thing this panel must never imply.
+          The outcome is what actually happened, so it is stated in words. */}
+      {job?.outcome != null ? (
+        <p className={`mt-2 text-sm ${OUTCOME[job.outcome].tone}`}>{OUTCOME[job.outcome].text}</p>
+      ) : null}
+
       {job?.error != null ? <p className="mt-1 text-sm text-blocked">{job.error}</p> : null}
     </div>
   );

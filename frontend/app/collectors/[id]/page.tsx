@@ -5,6 +5,7 @@ import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
 import { AutomationPolicy } from '@/components/AutomationPolicy';
 import { ConsumerFeed } from '@/components/ConsumerFeed';
 import { TrustHistory } from '@/components/TrustHistory';
+import { WitnessSpecEditor } from '@/components/WitnessSpecEditor';
 import { api, ApiError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -109,6 +110,15 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
           Trust history
         </h2>
         <TrustHistory collector={collector} runs={runs} incidents={incidents} />
+      </section>
+
+      {/* PUT /api/collectors/:id existed to make exactly this correctable
+          without a store reset, and had no interface until now. */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          How the witness reads this page
+        </h2>
+        <WitnessSpecEditor collectorId={collector.id} specs={collector.witnessSpecs ?? []} />
       </section>
 
       <section className="space-y-3">

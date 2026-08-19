@@ -65,6 +65,27 @@ const MODES: Mode[] = [
     fault: true,
     verdict: 'extractor_drift',
   },
+  {
+    id: 'sponsored_insertion',
+    label: 'Insert a sponsored card',
+    effect: 'A sponsored listing at 99 is placed above the real product, carrying the same class.',
+    fault: true,
+    verdict: 'extractor_drift',
+  },
+  {
+    id: 'missing_field',
+    label: 'Delete a field from the page',
+    effect: 'Availability is removed. Both sensors agree it is gone, so nothing is repaired.',
+    fault: false,
+    verdict: 'genuine_source_change (do not heal)',
+  },
+  {
+    id: 'pagination_collapse',
+    label: 'Add a pager, change nothing',
+    effect: 'A next-page link appears. Every value on the page is unchanged.',
+    fault: false,
+    verdict: 'healthy',
+  },
 ];
 
 /**
@@ -81,10 +102,32 @@ type Phase =
 
 export function LiveConsole({
   collectorId,
+  brightDataId,
   fixtureUrl,
+  searchCollector,
 }: {
+  /**
+   * The NOTICE record id, which is what every API route keys on.
+   *
+   * Distinct from `brightDataId` and easy to confuse, which is exactly what
+   * happened: this panel was handed the `c_...` identifier, every run returned
+   * "collector not found", and the button at the centre of the demo had never
+   * worked on a seeded deployment. Two separate props now, so the one that is
+   * displayed cannot be mistaken for the one that is called.
+   */
   collectorId: string;
+  /** The `c_...` identifier, shown because it is the one a reader recognises. */
+  brightDataId: string;
   fixtureUrl: string;
+  /**
+   * The interaction collector, when one is registered.
+   *
+   * Kept separate rather than folded into the mode list above, because
+   * `search_drift` breaks a different page read by a different collector. A
+   * button in that list would have announced a verdict about the product page
+   * while breaking the search page, which is worse than not offering it.
+   */
+  searchCollector?: { id: string; brightDataId: string; url: string };
 }) {
   const [mode, setMode] = useState('baseline');
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
@@ -127,7 +170,7 @@ export function LiveConsole({
           </span>
         </div>
         <span className="font-mono text-[11px] uppercase tracking-pixel px-2 py-0.5 rounded border border-surface-border bg-white text-muted">
-          COLLECTOR: {collectorId}
+          COLLECTOR: {brightDataId}
         </span>
       </div>
 
@@ -135,7 +178,9 @@ export function LiveConsole({
         {/* Controls -------------------------------------------------- */}
         <div className="bg-white p-6 font-mono">
           <p className="text-[13px] leading-relaxed text-muted">
-            Inject a live layout change, then trigger the Bright Data collector. Watch standard checks pass green while NOTICE catches the truth.
+            Inject a live change into the page Bright Data is about to read, then run the
+            collector. Some of these are the collector&apos;s fault and some are the page telling
+            the truth about itself, which is the distinction a monitor cannot make.
           </p>
 
           <div className="mt-5 flex flex-col gap-2">
@@ -183,6 +228,58 @@ export function LiveConsole({
               {phase.message}
             </p>
           ) : null}
+
+          {/* The interaction failure, on its own collector.
+
+              A Scraper Studio collector that types into a box and clicks
+              search keeps working after the form renames its field: the input
+              id it was bound to is unchanged, so every step succeeds and the
+              term is silently dropped. The page returns a real product at a
+              real price, for a search nobody performed. Nothing in the run
+              errors, which is why it needs the same two-sensor test as a price
+              and not a new detector. */}
+          {searchCollector === undefined ? null : (
+            <div className="mt-5 border-t border-surface-border pt-4">
+              <p className="text-[11px] uppercase tracking-pixel text-muted font-semibold">
+                Interaction failure
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+                A different collector, on a different page. It types a search term and clicks. The
+                form renames its field while leaving the input id alone, so every step still
+                succeeds and the term is dropped. The results are real, and for a search nobody
+                ran.
+              </p>
+
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  switchTo({
+                    id: 'search_drift',
+                    label: 'Rename the search field',
+                    effect: 'The search box still works. The term never reaches the server.',
+                    fault: true,
+                    verdict: 'extractor_drift',
+                  });
+                }}
+                className="mt-3 w-full rounded-lg border border-surface-border bg-surface-soft/30 p-3 text-left font-mono text-[12px] text-muted transition-all hover:border-ivory/30 disabled:opacity-40"
+              >
+                Rename the search field
+              </button>
+
+              <div className="mt-2">
+                <DecisionStream
+                  collectorId={searchCollector.id}
+                  url={searchCollector.url}
+                  label="Run the search collector"
+                />
+              </div>
+
+              <p className="mt-2 text-[11px] leading-normal text-muted">
+                Collector {searchCollector.brightDataId} on {searchCollector.url}
+              </p>
+            </div>
+          )}
 
           <div className="mt-5 border-t border-surface-border pt-3 text-[12px] leading-normal text-muted">
             Expected verdict:{' '}

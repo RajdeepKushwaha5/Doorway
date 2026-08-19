@@ -305,3 +305,20 @@ export interface ImpactStats {
   firstAt: string | null;
   latestAt: string | null;
 }
+
+/**
+ * One durable record of something the system did.
+ *
+ * Distinct from a `TransitionRecord`, which says how an incident moved between
+ * states. These are the events themselves, with the actor that caused them:
+ * a run ingested, a heal queued, a repair rejected by Bright Data. The backend
+ * has always written and returned them; nothing displayed them until now.
+ */
+export interface AuditEvent {
+  id: string;
+  actor: 'system' | 'user' | 'brightdata';
+  eventType: string;
+  entityId: string;
+  payload: unknown;
+  at: string;
+}

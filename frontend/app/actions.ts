@@ -23,7 +23,11 @@ export type ActionResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function mutate<T>(path: string, body?: unknown): Promise<ActionResult<T>> {
+async function mutate<T>(
+  path: string,
+  body?: unknown,
+  method: 'POST' | 'PUT' = 'POST',
+): Promise<ActionResult<T>> {
   const token = process.env['NOTICE_ADMIN_TOKEN'];
   if (token === undefined || token.trim() === '') {
     return {
@@ -35,7 +39,7 @@ async function mutate<T>(path: string, body?: unknown): Promise<ActionResult<T>>
 
   try {
     const response = await fetch(`${BASE}${path}`, {
-      method: 'POST',
+      method,
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${token}`,
@@ -126,6 +130,33 @@ export async function startObservationAction(
     `/api/collectors/${encodeURIComponent(collectorId)}/observe`,
     url === undefined ? {} : { url },
   );
+}
+
+/**
+ * Correct a registered collector in place.
+ *
+ * The route behind this was written after a witness spec used "result" as a
+ * label against a page whose header reads "1 result": the witness matched the
+ * count line, disagreed with the collector, and reported drift on a page where
+ * nothing was wrong. A wrong label does not produce an obvious error, it
+ * produces a confident wrong verdict, which makes it the setting most in need
+ * of being fixable without a store reset.
+ *
+ * It has been reachable over HTTP since the day it was written and reachable
+ * from the interface since none, which is the gap this closes.
+ */
+export async function updateCollectorAction(
+  collectorId: string,
+  patch: unknown,
+): Promise<ActionResult> {
+  const result = await mutate(
+    `/api/collectors/${encodeURIComponent(collectorId)}`,
+    patch,
+    'PUT',
+  );
+  revalidatePath(`/collectors/${collectorId}`);
+  revalidatePath('/');
+  return result;
 }
 
 /** Observe a collector once, right now. */
