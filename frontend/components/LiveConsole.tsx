@@ -106,6 +106,8 @@ export function LiveConsole({
   fixtureUrl,
   searchCollector,
   initialMode,
+  canRunCollector,
+  canSwitchFixture,
 }: {
   /**
    * The NOTICE record id, which is what every API route keys on.
@@ -137,6 +139,10 @@ export function LiveConsole({
    * this whole page argues against.
    */
   initialMode: string | null;
+  /** Whether this deployment holds the token that runs a collector. */
+  canRunCollector: boolean;
+  /** Whether this deployment holds the token that switches the fixture. */
+  canSwitchFixture: boolean;
 }) {
   const [mode, setMode] = useState<string | null>(initialMode);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
@@ -166,6 +172,9 @@ export function LiveConsole({
   }
 
   const busy = pending || phase.kind === 'switching';
+  // Locked is not busy. A control that cannot work should say why rather than
+  // look momentarily unavailable.
+  const locked = !canSwitchFixture;
 
   return (
     <div className="terminal-window" data-reveal>
@@ -194,6 +203,15 @@ export function LiveConsole({
             the truth about itself, which is the distinction a monitor cannot make.
           </p>
 
+          {locked ? (
+            <p className="mt-4 rounded-lg border border-suspect/30 bg-amber-50 p-3 text-[12px] leading-relaxed text-suspect">
+              This dashboard cannot switch the fixture, because{' '}
+              <code className="font-semibold">DRIFTMART_ADMIN_TOKEN</code> is not set on the server
+              that renders it. The buttons below are disabled rather than left looking live. The
+              collector can still be run against whatever the page is serving now.
+            </p>
+          ) : null}
+
           <div className="mt-5 flex flex-col gap-2">
             {MODES.map((entry) => {
               const active = entry.id === mode;
@@ -201,7 +219,7 @@ export function LiveConsole({
                 <button
                   key={entry.id}
                   type="button"
-                  disabled={busy}
+                  disabled={busy || locked}
                   onClick={() => {
                     switchTo(entry);
                   }}
@@ -264,7 +282,16 @@ export function LiveConsole({
               reasoning during them turns the worst part of the demo into the
               part worth watching. */}
           <div className="mt-5">
-            <DecisionStream collectorId={collectorId} label="Run real collector" />
+            <DecisionStream
+              collectorId={collectorId}
+              label="Run real collector"
+              {...(canRunCollector
+                ? {}
+                : {
+                    disabledReason:
+                      'NOTICE_ADMIN_TOKEN is not set on the server that renders this dashboard, so no run can be authorized.',
+                  })}
+            />
           </div>
 
           {phase.kind === 'failed' ? (
@@ -322,6 +349,12 @@ export function LiveConsole({
                   collectorId={searchCollector.id}
                   url={searchCollector.url}
                   label="Run the search collector"
+                  {...(canRunCollector
+                ? {}
+                : {
+                    disabledReason:
+                      'NOTICE_ADMIN_TOKEN is not set on the server that renders this dashboard, so no run can be authorized.',
+                  })}
                 />
               </div>
 

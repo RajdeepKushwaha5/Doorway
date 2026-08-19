@@ -56,10 +56,18 @@ export function DecisionStream({
   collectorId,
   url,
   label = 'Run the collector',
+  disabledReason,
 }: {
   collectorId: string;
   url?: string;
   label?: string;
+  /**
+   * Why this cannot run, when it cannot.
+   *
+   * Set when the dashboard server has no admin token, so the control says so
+   * instead of failing on press.
+   */
+  disabledReason?: string;
 }) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
@@ -129,6 +137,7 @@ export function DecisionStream({
   }, [collectorId, url]);
 
   const busy = phase.kind === 'starting' || phase.kind === 'watching';
+  const blocked = disabledReason !== undefined;
   const verdict = events.find((event) => event.step === 'verdict');
 
   return (
@@ -136,11 +145,17 @@ export function DecisionStream({
       <button
         type="button"
         onClick={start}
-        disabled={busy}
+        disabled={busy || blocked}
         className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-ivory px-6 py-3.5 text-[13px] font-semibold uppercase tracking-pixel text-surface-raised shadow-md transition-all hover:bg-ivory/85 disabled:opacity-40"
       >
         {busy ? `Observing… ${String(elapsed)}s` : `${label} ▸`}
       </button>
+
+      {blocked ? (
+        <p className="mt-3 rounded border border-suspect/30 bg-amber-50 p-2.5 text-[12px] leading-normal text-suspect">
+          {disabledReason}
+        </p>
+      ) : null}
 
       {events.length > 0 || busy ? (
         <div className="mt-3 overflow-hidden rounded-lg border border-surface-border bg-[#0C0C0A]">

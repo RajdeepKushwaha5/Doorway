@@ -11,7 +11,7 @@ import { BlindspotsMatrix } from '@/components/BlindspotsMatrix';
 import { ImpactBand } from '@/components/ImpactBand';
 import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
-import { getFixtureModeAction } from '@/app/actions';
+import { getConsoleCapabilitiesAction, getFixtureModeAction } from '@/app/actions';
 import type { CollectorSummary, Incident } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -86,6 +86,10 @@ export default async function HomePage() {
   // printed it as fact, so anything that switched the fixture from outside this
   // page left the panel asserting a mode the page underneath was not serving.
   const fixtureMode = await getFixtureModeAction();
+
+  // Which controls this deployment can actually operate. Read here so a button
+  // that cannot work says so instead of failing when somebody presses it.
+  const capabilities = await getConsoleCapabilitiesAction();
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
 
@@ -299,6 +303,8 @@ export default async function HomePage() {
               brightDataId={fixtureCollector.brightDataCollectorId}
               fixtureUrl={`https://${fixtureCollector.targetDomain}`}
               initialMode={fixtureMode}
+              canRunCollector={capabilities.canRunCollector}
+              canSwitchFixture={capabilities.canSwitchFixture}
               {...(searchCollector === undefined || searchCollector.watchUrls[0] === undefined
                 ? {}
                 : {

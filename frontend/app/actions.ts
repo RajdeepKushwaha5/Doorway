@@ -115,6 +115,29 @@ export async function setFixtureModeAction(mode: string): Promise<ActionResult> 
 }
 
 /**
+ * Which controls this deployment can actually operate.
+ *
+ * Both tokens live only on the dashboard server, so the browser cannot know
+ * whether they are configured and every control rendered as though it worked.
+ * You learned otherwise by pressing it and reading a server error, which is a
+ * button that looks fine right up until you act on it. Reporting the state
+ * before the click is the same standard this project holds data to.
+ *
+ * Returns booleans and never the tokens themselves.
+ */
+export async function getConsoleCapabilitiesAction(): Promise<{
+  canRunCollector: boolean;
+  canSwitchFixture: boolean;
+}> {
+  const present = (value: string | undefined): boolean =>
+    value !== undefined && value.trim() !== '';
+  return {
+    canRunCollector: present(process.env['NOTICE_ADMIN_TOKEN']),
+    canSwitchFixture: present(process.env['DRIFTMART_ADMIN_TOKEN']),
+  };
+}
+
+/**
  * Read which mode the fixture is actually serving.
  *
  * The console used to open on a hardcoded `baseline` and print it as fact.

@@ -908,7 +908,24 @@ backend/scripts/phase0-matrix.ts    candidate-execution feasibility harness
 | Dashboard | Vercel | `frontend` | Vercel defaults, no config file |
 
 Render is configured by [render.yaml](render.yaml). Vercel needs no config file
-at all: set Root Directory to `frontend` and change nothing else.
+at all: set Root Directory to `frontend` and add nothing but environment
+variables.
+
+Those variables are not optional, and leaving them out fails in a way that
+looks like working software. The dashboard renders, the data loads, and every
+control appears live until somebody presses one:
+
+| Variable | Without it |
+|---|---|
+| `NEXT_PUBLIC_NOTICE_API_BASE` | The browser talks to `localhost:4000` and the live decision stream never connects |
+| `NOTICE_API_BASE` | Server-rendered pages fall back to the public value, which is usually fine |
+| `NOTICE_ADMIN_TOKEN` | Every run, heal, approve and reject is refused. Reads still work |
+| `DRIFTMART_ADMIN_TOKEN` | The fault console cannot switch the fixture, so the whole break-it-yourself walkthrough is dead |
+
+Both tokens must match the ones the corresponding service is running with, and
+neither takes a `NEXT_PUBLIC_` prefix, which would publish it in the browser
+bundle. The console now reports which of these it is missing rather than
+leaving the buttons looking operable, but the only fix is to set them.
 
 This is an npm workspace, so `tailwindcss`, `postcss` and `autoprefixer` hoist
 to the root `node_modules` and `frontend/node_modules` is never created. Vercel
