@@ -592,19 +592,33 @@ Reproduced twice before the cause was known. On collector `c_mstkc1rkr8mit6wut`,
 
 Fixed in `backend/src/brightdata/client.ts`: acceptance now sends `{"message": true, "auto_save": true}`, and it is sent only on acceptance because the parameter takes effect only when the job succeeds.
 
-**Confirmed a third time on 2026-08-19, and the CLI behaves the same way.** On
+**Reproduced a third time on 2026-08-19, through the CLI.** On
 `c_mszt6dg019q6p244j6`, `bdata scraper heal` produced a candidate whose
 `preview_result` read `product_page_url: /search?q=Nova`. `bdata scraper approve`
 returned `status: done` and finished on `completed_steps: [..., step_advance,
 user_approval]`. Production still returned `/product/headphones` — the old
-template. Re-approving the next candidate over the API with `auto_save: true`
-finished on `[..., user_approval, save_new_template]`, and production changed on
-the next run.
+template. Approving the next candidate with `auto_save: true` finished on
+`[..., user_approval, save_new_template]`, and production changed on the next run.
 
-`save_new_template` is the step. It appears only when `auto_save` is set, and
-the CLI's `approve` command does not set it.
+`save_new_template` is the step that promotes, and it appears only when
+`auto_save` is set.
 
-What survives the correction, and it is the part that matters: **an API call reported complete success for an operation that changed nothing in production.** Every signal a caller has access to — HTTP 200, `success: true`, `status: done` — was green while the collector kept serving the wrong value. The engineer's own closing advice is to distrust exactly that: *"Check the job's final status — confirm it went to done, not just that the approve call returned `success: true`,"* and then *"trigger the collector and verify the fields now match the approved preview."*
+**To be exact about whose mistake this is: ours again, twice over.** The API
+takes `auto_save` and the CLI takes `--auto-save`, documented in its own
+`--help`. Neither is the default, and we passed neither. There is no platform
+defect here.
+
+What is worth reporting is the shape of the default. Approving without it
+returns HTTP 200, reports `success: true`, advances the job to `done`, and
+promotes nothing. Every signal available to the caller is identical whether or
+not the template shipped; the only way to tell is to read `completed_steps` for
+`save_new_template`, or to go and look at production. That is a footgun rather
+than a bug, and it is one people fall into: in the organisers' own launch
+webinar, Bright Data's product marketer diagnosed a participant with exactly it
+— *"It might have been in a dev version. It might have not saved it to
+production. That could be the reason."*
+
+What survives all of it, and it is the part that matters: **a call reported complete success for an operation that changed nothing in production.** Every signal a caller has access to — HTTP 200, `success: true`, `status: done` — was green while the collector kept serving the wrong value. The engineer's own closing advice is to distrust exactly that: *"Check the job's final status — confirm it went to done, not just that the approve call returned `success: true`,"* and then *"trigger the collector and verify the fields now match the approved preview."*
 
 That second sentence is post-promotion verification, described by Bright Data, and it is what NOTICE already does. It is also what caught this: the gate re-checked production, found the old value, and refused to mark the incident resolved. The system was right and the operator was wrong, which is the outcome a safety layer exists to produce.
 
