@@ -137,6 +137,16 @@ export interface Incident {
   resolvedAt: string | null;
 }
 
+/** How the witness was told to read one field. Declared, never inferred. */
+export interface WitnessFieldSpec {
+  path: string;
+  meaning: string;
+  labels: string[];
+  excludeLabels: string[];
+  kind: 'money' | 'number' | 'text' | 'enum';
+  allowed: string[];
+}
+
 export interface CollectorSummary {
   id: string;
   brightDataCollectorId: string;
@@ -145,6 +155,13 @@ export interface CollectorSummary {
   status: 'active' | 'paused';
   watchUrls: string[];
   protectedFields: string[];
+  /**
+   * The fields somebody declared this collector is for.
+   *
+   * Present on the detail route, which returns the whole record. Optional here
+   * because the fleet listing is the same type and does not need it.
+   */
+  witnessSpecs?: WitnessFieldSpec[];
   /**
    * Whether a repair that passed the gate may promote itself.
    *

@@ -4,6 +4,7 @@ import { BaselineReview, RunNowButton } from '@/components/CollectorControls';
 import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
 import { AutomationPolicy } from '@/components/AutomationPolicy';
 import { ConsumerFeed } from '@/components/ConsumerFeed';
+import { TrustHistory } from '@/components/TrustHistory';
 import { api, ApiError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -99,6 +100,16 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
       <AutomationPolicy policy={collector.autoPromote} />
 
       <ConsumerFeed collectorId={collector.id} url={collector.watchUrls[0]} />
+
+      {/* The runs were already listed one per row, which answers "did it run".
+          The question about a source is whether its numbers have been worth
+          trusting, and when that stopped. */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          Trust history
+        </h2>
+        <TrustHistory collector={collector} runs={runs} incidents={incidents} />
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
