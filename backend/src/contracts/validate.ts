@@ -415,6 +415,41 @@ function learnedChecks(
             ? Math.abs(numeric - profile.numeric.median) / profile.numeric.mad
             : robustZScore(numeric, sample);
 
+        /*
+         * A baseline that never varied cannot produce a z-score, and silence
+         * here was publishing wrong values on the most trustworthy sources.
+         *
+         * `robustZScore` returns null when the spread is zero, and documents
+         * that the caller must treat it as "cannot judge" rather than
+         * "passed". This loop did neither: it emitted no check at all. Since
+         * `needsWitness` wakes the second sensor only on a `fail` or a `warn`,
+         * a price that had read 249 on every single observation could come
+         * back as 99 and be published as verified without the witness ever
+         * being asked. The steadier the source, the blinder the check, which
+         * is precisely backwards.
+         *
+         * A `warn` is the right severity and not a `fail`. A constant baseline
+         * genuinely is not evidence that a new value is wrong; it is a reason
+         * to go and look. That is what a warn buys: one Web Unlocker read, and
+         * then the classifier decides on evidence. If the page really says 99
+         * this resolves as `genuine_source_change` and the collector is left
+         * alone. If the page still says 249 it is `extractor_drift`. Neither
+         * outcome is decided here.
+         */
+        if (z === null && numeric !== profile.numeric.median) {
+          results.push({
+            checkId: `learned:numeric:${profile.path}`,
+            field: profile.path,
+            status: 'warn',
+            severity: SEVERITY.numericOutlier,
+            confidence: contract.confidence,
+            expected: `${profile.numeric.median}, unchanged on every observation so far`,
+            observed: numeric,
+            explanation: `"${profile.path}" is ${numeric}, and the baseline had read ${profile.numeric.median} on every observation until now. A constant baseline cannot produce an outlier score, so this asks the second sensor rather than deciding.`,
+          });
+          break;
+        }
+
         if (z !== null && z > thresholds.numericZScore) {
           results.push({
             checkId: `learned:numeric:${profile.path}`,

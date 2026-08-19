@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aggregateChecks } from '../shared/index.js';
 import { learnContract, type BaselineRun } from './learn.js';
 import { hasHardFailure, hasSuspicion, validateRun } from './validate.js';
-import type { Invariant } from './types.js';
+import type { CollectorContract, Invariant } from './types.js';
 
 /**
  * These scenarios mirror the DriftMart fault-injection modes, so the contract
@@ -160,5 +160,93 @@ describe('aggregateChecks', () => {
       validateRun({ rows: [{ ...HEALTHY_ROW, price: { value: 25, currency: 'USD' } }], contract }),
     );
     expect(drifted.weightedFailure).toBeGreaterThan(healthy.weightedFailure);
+  });
+});
+
+
+describe('a baseline that never varied', () => {
+  /**
+   * The worst bug this project has had, because it hid on exactly the sources
+   * anyone would trust most.
+   *
+   * `robustZScore` returns null when the spread is zero and documents that the
+   * caller must treat it as "cannot judge" rather than "passed". The validator
+   * did neither: it emitted no check at all. Since the witness is woken only by
+   * a `fail` or a `warn`, a price that had read 249 on every single observation
+   * could come back as 99 and be published as verified with the second sensor
+   * never asked. The steadier the source, the blinder the check.
+   */
+  function constantBaseline(value: number): CollectorContract {
+    return learnContract(
+      'col-1',
+      Array.from({ length: 8 }, () => ({
+        rows: [{ price: { value, currency: 'USD' } }],
+        observedAt: new Date().toISOString(),
+      })),
+      [{ kind: 'required', field: 'price' }],
+    );
+  }
+
+  it('warns when a value departs from a baseline that has never moved', () => {
+    const checks = validateRun({
+      rows: [{ price: { value: 99, currency: 'USD' } }],
+      contract: constantBaseline(249),
+    });
+
+    const numeric = checks.find((check) => check.checkId === 'learned:numeric:price.value');
+    expect(numeric?.status).toBe('warn');
+    expect(numeric?.explanation).toContain('every observation until now');
+  });
+
+  it('wakes the witness, which is the whole point of the warn', () => {
+    // `observeOnce` fetches the second sensor when any check fails or warns.
+    // Before the fix nothing was emitted at all, so this condition was false
+    // and the wrong value went straight into the verified feed.
+    const checks = validateRun({
+      rows: [{ price: { value: 99, currency: 'USD' } }],
+      contract: constantBaseline(249),
+    });
+
+    expect(checks.some((check) => check.status === 'fail' || check.status === 'warn')).toBe(true);
+  });
+
+  it('warns rather than fails, because a constant baseline is not proof of anything', () => {
+    // A steady price genuinely can move. The warn buys one witness read and
+    // decides nothing; the classifier resolves it as a source change or as
+    // drift on the evidence.
+    const checks = validateRun({
+      rows: [{ price: { value: 99, currency: 'USD' } }],
+      contract: constantBaseline(249),
+    });
+
+    expect(checks.find((check) => check.checkId === 'learned:numeric:price.value')?.status).not.toBe(
+      'fail',
+    );
+  });
+
+  it('stays quiet when the value has not moved', () => {
+    const checks = validateRun({
+      rows: [{ price: { value: 249, currency: 'USD' } }],
+      contract: constantBaseline(249),
+    });
+
+    expect(checks.find((check) => check.checkId === 'learned:numeric:price.value')).toBeUndefined();
+  });
+
+  it('still uses the spread when the baseline has one', () => {
+    const varied = learnContract(
+      'col-1',
+      [249, 250, 251, 249, 250, 251, 249, 250].map((value) => ({
+        rows: [{ price: { value, currency: 'USD' } }],
+        observedAt: new Date().toISOString(),
+      })),
+      [{ kind: 'required', field: 'price' }],
+    );
+
+    const checks = validateRun({ rows: [{ price: { value: 99, currency: 'USD' } }], contract: varied });
+    const numeric = checks.find((check) => check.checkId === 'learned:numeric:price.value');
+
+    expect(numeric?.status).toBe('warn');
+    expect(numeric?.explanation).toContain('robust deviations');
   });
 });
