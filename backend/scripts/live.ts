@@ -185,9 +185,12 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     }
     for (const incident of incidents) {
       out(
-        `${String(incident['id']).slice(0, 8)}  ${String(incident['verdict']).padEnd(24)} ${
+        // `verdict` is the classifier's internal field name; the stored record
+        // calls it `classification`. Reading the wrong one printed "undefined"
+        // in the one column an operator scans this list for.
+        `${String(incident['id']).slice(0, 8)}  ${String(incident['classification']).padEnd(24)} ${
           incident['quarantined'] === true ? 'quarantined' : 'published'
-        }`,
+        }  ${String(incident['createdAt']).replace('T', ' ').slice(0, 16)}`,
       );
     }
   },
