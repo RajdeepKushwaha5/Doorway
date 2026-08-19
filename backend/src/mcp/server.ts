@@ -34,6 +34,16 @@ export interface JsonRpcRequest {
 /** Reads the NOTICE API. Injected so tests need no network. */
 export type ApiReader = <T>(path: string) => Promise<T>;
 
+/**
+ * Performs an operation against the NOTICE API. Injected, and optional.
+ *
+ * Absent means the operational tools are not registered at all, rather than
+ * registered and failing. An agent that cannot see a tool cannot decide to try
+ * it, which is a better default than one that discovers it is unauthorised
+ * halfway through a repair.
+ */
+export type ApiWriter = <T>(path: string, body?: unknown) => Promise<T>;
+
 interface CollectorSummary {
   id: string;
   name: string;
@@ -98,7 +108,7 @@ interface Tool {
   run: (args: Record<string, unknown>) => Promise<string>;
 }
 
-export function buildTools(api: ApiReader): Tool[] {
+export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
   return [
   {
     name: 'list_monitored_sources',
@@ -243,6 +253,139 @@ export function buildTools(api: ApiReader): Tool[] {
       ].join('\n');
     },
   },
+
+    /**
+     * Everything below drives Bright Data rather than reading a verdict, and
+     * every one of them is registered only when an operator supplied a token.
+     *
+     * This is the half that makes an agent an operator instead of a reader: it
+     * can observe a source, drive Self-Healing with the real incident as
+     * evidence, and ask for a repair to be promoted. What it cannot do is ship
+     * a repair nobody proved, because `promote_repair` goes through the same
+     * gate a human does and the gate does not care who is asking.
+     */
+    ...(operate === undefined
+      ? []
+      : [
+          {
+            name: 'observe_source',
+            description:
+              'Run a monitored source now through Bright Data Scraper Studio and return the verdict. Costs page loads from the account allowance, so do not call it in a loop.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                source: { type: 'string', description: 'Collector id, Scraper Studio id, or name.' },
+              },
+              required: ['source'],
+            },
+            run: async (args: Record<string, unknown>): Promise<string> => {
+              const collector = await resolveCollector(api, String(args['source'] ?? ''));
+              const result = await operate<{
+                publishable: boolean;
+                incident: {
+                  id: string;
+                  classification: string;
+                  confidence: number;
+                  quarantined: boolean;
+                  affectedFields: string[];
+                  evidence: string[];
+                } | null;
+              }>(`/api/collectors/${collector.id}/run`);
+
+              if (result.incident === null) {
+                return [
+                  `${collector.name}: healthy.`,
+                  'Both sensors agree and the value is published to the verified feed.',
+                ].join('\n');
+              }
+
+              const incident = result.incident;
+              return [
+                `${collector.name}: ${incident.classification}`,
+                `incident      ${incident.id}`,
+                `confidence    ${incident.confidence.toFixed(2)}`,
+                `fields        ${incident.affectedFields.join(', ') || 'none recorded'}`,
+                `serving       ${incident.quarantined ? 'withheld' : 'still published'}`,
+                '',
+                ...incident.evidence.map((line) => `  - ${line}`),
+                '',
+                incident.classification === 'genuine_source_change'
+                  ? 'The page changed and the collector is reading it correctly. Do NOT repair this.'
+                  : 'Call repair_source with this incident id to drive Self-Healing with the failing page as evidence.',
+              ].join('\n');
+            },
+          },
+          {
+            name: 'repair_source',
+            description:
+              'Drive Bright Data Self-Healing for an incident, sending the page that actually failed as evidence, then replay the candidate against the incident and every pinned regression case. Never call this for a genuine_source_change.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                incident: { type: 'string', description: 'Incident id from observe_source.' },
+              },
+              required: ['incident'],
+            },
+            run: async (args: Record<string, unknown>): Promise<string> => {
+              const id = String(args['incident'] ?? '');
+              const queued = await operate<{ job?: { id: string }; jobId?: string }>(
+                `/api/incidents/${encodeURIComponent(id)}/heal`,
+              );
+              const job = queued.job?.id ?? queued.jobId ?? 'unknown';
+              return [
+                `Repair queued for incident ${id} as job ${job}.`,
+                '',
+                'Bright Data can take several minutes. Poll explain_verification for this',
+                'incident until gate results appear, then call promote_repair.',
+                '',
+                'A candidate only becomes eligible if it fixes the page that failed AND',
+                'breaks none of the pages that were already working.',
+              ].join('\n');
+            },
+          },
+          {
+            name: 'promote_repair',
+            description:
+              'Promote a repaired template to production. Refuses unless the candidate passed the gate. Use this instead of approving through the Bright Data API directly.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                incident: { type: 'string', description: 'Incident whose candidate should ship.' },
+              },
+              required: ['incident'],
+            },
+            run: async (args: Record<string, unknown>): Promise<string> => {
+              const id = String(args['incident'] ?? '');
+              try {
+                await operate(`/api/incidents/${encodeURIComponent(id)}/approve`);
+              } catch (error) {
+                // The refusal is the feature, so it is reported as an outcome
+                // rather than thrown. An agent that receives an error tends to
+                // retry; an agent that receives a reason tends to stop.
+                return [
+                  `REFUSED. The repair for ${id} was not promoted.`,
+                  '',
+                  `reason  ${error instanceof Error ? error.message : String(error)}`,
+                  '',
+                  'This is the gate working. Do not approve this repair through the Bright',
+                  'Data API to work around it, and do not retry unchanged: a candidate that',
+                  'cannot fix the failing page without breaking a working one is not a fix.',
+                  'Re-run repair_source with a sharper description of what is wrong.',
+                ].join('\n');
+              }
+
+              return [
+                `Promoted the repair for ${id}.`,
+                '',
+                'Production was re-verified after promotion rather than trusted. A green',
+                'approval is not evidence that production changed: the approve call takes',
+                'auto_save, it is off by default on both the API and the CLI, and without it',
+                'the job reports done while production keeps the old template.',
+              ].join('\n');
+            },
+          },
+        ]),
+
   ];
 }
 

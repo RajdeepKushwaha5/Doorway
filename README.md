@@ -27,7 +27,7 @@ worth protecting: the fixture is ours and it resets.
 From a clone, with no Bright Data account and no credentials:
 
 ```bash
-npm install && npm test          # 250 tests, no network
+npm install && npm test          # 256 tests, no network
 ```
 
 With an API key, to reproduce the claims in this README:
@@ -414,6 +414,53 @@ every six hours would otherwise file four a day about one unresolved fault.
 
 ---
 
+## Driven from a coding agent, end to end
+
+The Grand Prize criterion asks how the scraper was **driven from a coding
+agent**, so this is the whole loop, agent-operated, with the safety property
+intact.
+
+```bash
+claude mcp add notice -- npm run mcp
+```
+
+Read-only by default. Set `NOTICE_ADMIN_TOKEN` and three operational tools
+appear:
+
+| Tool | Drives |
+|---|---|
+| `observe_source` | `POST /dca/trigger`, then classify the row against the witness |
+| `repair_source` | `refactor_template`, with the page that actually failed as evidence |
+| `promote_repair` | `resume_automation_job`, **only if the candidate passed the gate** |
+
+Without the token those three are never registered, rather than registered and
+failing. A tool an agent cannot see is a tool it cannot decide to try.
+
+`promote_repair` is the point. An agent can diagnose a break and drive
+Self-Healing, and it cannot ship a repair nobody proved:
+
+```
+REFUSED. The repair for inc-9 was not promoted.
+
+reason  candidate did not pass the gate: broke 1 regression case
+
+This is the gate working. Do not approve this repair through the Bright
+Data API to work around it, and do not retry unchanged: a candidate that
+cannot fix the failing page without breaking a working one is not a fix.
+```
+
+That refusal is returned as an **outcome, not an error**, on purpose. An agent
+handed an error retries; an agent handed a reason stops. And the last line
+exists because the failure mode of a capable agent is to route around the
+guard — so the guard says, in words, not to.
+
+Also deliberate: `observe_source` tells an agent **not** to repair a
+`genuine_source_change`. The most expensive thing an autonomous repair loop can
+do is rewrite a collector that was working, and the tool that would start that
+repair is the right place to stop it.
+
+---
+
 ## Use it from an AI agent
 
 ```bash
@@ -704,7 +751,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 250 tests, no network required
+npm test                      # 256 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -761,7 +808,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 250 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 256 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

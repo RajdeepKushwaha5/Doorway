@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildTools, dispatch, PROTOCOL_VERSION, type ApiReader } from './server.js';
+import {
+  buildTools,
+  dispatch,
+  PROTOCOL_VERSION,
+  type ApiReader,
+  type ApiWriter,
+} from './server.js';
 
 /**
  * The refusal is the product.
@@ -221,5 +227,126 @@ describe('what an agent is allowed to receive', () => {
     const { text } = await call(api, 'explain_verification', { incident_id: 'inc-7' });
     expect(text).toContain('extractor_drift');
     expect(text).toContain('collector read 25, witness read 249');
+  });
+});
+
+
+describe('operating Bright Data through the gate', () => {
+  const api = reader({ '/api/collectors': [COLLECTOR] });
+
+  const operateWith = (
+    behaviour: (path: string) => Promise<unknown>,
+  ): { writer: ApiWriter; calls: string[] } => {
+    const calls: string[] = [];
+    const writer: ApiWriter = async <T>(path: string): Promise<T> => {
+      calls.push(path);
+      return (await behaviour(path)) as T;
+    };
+    return { writer, calls };
+  };
+
+  const run = async (
+    writer: ApiWriter | undefined,
+    name: string,
+    args: Record<string, unknown> = {},
+  ): Promise<string> => {
+    const response = await dispatch(
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } },
+      buildTools(api, writer),
+    );
+    const result = response?.result as { content: { text: string }[] } | undefined;
+    return result?.content[0]?.text ?? '';
+  };
+
+  /**
+   * A tool an agent cannot see is a tool it cannot decide to try. Registering
+   * these without a token would let a model start a repair and discover only
+   * partway through that it was never allowed to finish.
+   */
+  it('hides the operational tools entirely when no token was supplied', async () => {
+    const response = await dispatch(
+      { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+      buildTools(api),
+    );
+    const names = (response?.result as { tools: { name: string }[] }).tools.map((t) => t.name);
+
+    expect(names).not.toContain('observe_source');
+    expect(names).not.toContain('repair_source');
+    expect(names).not.toContain('promote_repair');
+    expect(names).toContain('get_verified_web_data');
+  });
+
+  it('offers them once a token is supplied', async () => {
+    const { writer } = operateWith(async () => ({}));
+    const response = await dispatch(
+      { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+      buildTools(api, writer),
+    );
+    const names = (response?.result as { tools: { name: string }[] }).tools.map((t) => t.name);
+
+    expect(names).toContain('observe_source');
+    expect(names).toContain('repair_source');
+    expect(names).toContain('promote_repair');
+  });
+
+  it('tells an agent not to repair a genuine source change', async () => {
+    const { writer } = operateWith(async () => ({
+      publishable: true,
+      incident: {
+        id: 'inc-9',
+        classification: 'genuine_source_change',
+        confidence: 0.88,
+        quarantined: false,
+        affectedFields: ['price'],
+        evidence: ['both sensors read 229'],
+      },
+    }));
+
+    const text = await run(writer, 'observe_source', { source: 'c_abc123' });
+    expect(text).toContain('genuine_source_change');
+    expect(text).toMatch(/Do NOT repair/i);
+  });
+
+  /**
+   * The one that matters. An agent must be able to drive a repair and must not
+   * be able to ship one nobody proved, and the refusal has to read as a reason
+   * rather than an error — an agent given an error retries, an agent given a
+   * reason stops.
+   */
+  it('refuses to promote a repair that did not pass the gate, and says why', async () => {
+    const { writer, calls } = operateWith(async () => {
+      throw new Error('candidate did not pass the gate: broke 1 regression case');
+    });
+
+    const text = await run(writer, 'promote_repair', { incident: 'inc-9' });
+
+    expect(calls).toEqual(['/api/incidents/inc-9/approve']);
+    expect(text).toContain('REFUSED');
+    expect(text).toContain('broke 1 regression case');
+    expect(text).toMatch(/do not approve this repair through the Bright\s+Data API/i);
+  });
+
+  it('does not present a refusal as a transport failure', async () => {
+    const { writer } = operateWith(async () => {
+      throw new Error('candidate did not pass the gate');
+    });
+    const response = await dispatch(
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name: 'promote_repair', arguments: { incident: 'inc-9' } },
+      },
+      buildTools(api, writer),
+    );
+    const result = response?.result as { isError?: boolean };
+    expect(result.isError).not.toBe(true);
+  });
+
+  it('reports a promotion and names the auto_save trap', async () => {
+    const { writer } = operateWith(async () => ({}));
+    const text = await run(writer, 'promote_repair', { incident: 'inc-9' });
+    expect(text).toContain('Promoted the repair');
+    expect(text).toContain('auto_save');
   });
 });

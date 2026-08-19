@@ -40,6 +40,42 @@ export BRIGHTDATA_API_KEY="..."
 alias notice="node backend/dist/scripts/notice.js"
 ```
 
+## Driving it over MCP
+
+The same loop is available as MCP tools, so a coding agent can operate the
+fleet without a shell.
+
+```bash
+claude mcp add notice -- npm run mcp
+```
+
+Read-only by default. Set `NOTICE_ADMIN_TOKEN` and three more tools appear:
+
+| Tool | Does |
+|---|---|
+| `observe_source` | Run a source now through Scraper Studio, return the verdict and evidence |
+| `repair_source` | Drive Self-Healing with the failing page as evidence, then replay the candidate |
+| `promote_repair` | Ship a repair — **refuses unless it passed the gate** |
+
+Without the token those three are not registered at all, rather than registered
+and failing. A tool you cannot see is a tool you cannot decide to try.
+
+`promote_repair` is the one to understand. It returns a refusal as an outcome
+rather than an error, because an agent handed an error retries and an agent
+handed a reason stops:
+
+```
+REFUSED. The repair for inc-9 was not promoted.
+
+reason  candidate did not pass the gate: broke 1 regression case
+
+This is the gate working. Do not approve this repair through the Bright
+Data API to work around it, and do not retry unchanged.
+```
+
+Do not route around it. A candidate that cannot fix the failing page without
+breaking a working one is not a fix.
+
 ## The normal loop
 
 1. `notice collectors` to see what is open.
