@@ -1,0 +1,28 @@
+
+Scrapling adaptive matching, against the DriftMart fixtures
+==========================================================================
+
+CASE A  a class is renamed, the value stays put
+        .selling-price  ->  .price-value,  still $249
+        Scrapling returned: '$249'
+        CORRECT, relocation worked exactly as advertised
+
+CASE B  the class survives and now wraps a different fact
+        .selling-price still matches, but it is the $25 deposit
+        the real price moved to <strong>, still $249
+        Scrapling returned: '$25'
+        WRONG, returned 25 when the page's price is 249
+        No error, no warning. Structurally there was nothing to fix.
+
+==========================================================================
+Case A is what adaptive matching is for, and it works.
+
+Case B is not a relocation problem. The selector never broke; the
+meaning underneath it moved. There is no structural signal to follow,
+so a valid element is returned with a valid number in it.
+
+NOTICE reads the same page a second time through Web Unlocker, with no
+selectors at all, finds 249 on the line 'Purchase price: $249', and
+withholds the field because the two sensors disagree.
+==========================================================================
+

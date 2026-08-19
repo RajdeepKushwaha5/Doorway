@@ -111,7 +111,61 @@ Change monitor, alert on any diff   4              1               83%
 NOTICE, two independent sensors     4              2               100%
 ```
 
-### 3. Bright Data, on why nothing in the platform reports this
+### 3. The leading adaptive scraper returns the wrong number here, and says nothing
+
+[Scrapling](https://github.com/d4vinci/Scrapling) has 75k stars and does the
+thing everyone reaches for when a scraper breaks: *"Smart Element Tracking —
+relocate elements after website changes using intelligent similarity
+algorithms."* Record an element once, and when the page changes it finds it
+again by structural similarity.
+
+It is good, and it works. Run it yourself:
+
+```bash
+pip install scrapling
+python docs/evidence/scrapling-comparison.py
+```
+
+Both cases use the DriftMart markup verbatim, and the output is committed in
+[`docs/evidence/scrapling-comparison.txt`](docs/evidence/scrapling-comparison.txt):
+
+```text
+CASE A  a class is renamed, the value stays put
+        .selling-price  ->  .price-value,  still $249
+        Scrapling returned: '$249'
+        CORRECT, relocation worked exactly as advertised
+
+CASE B  the class survives and now wraps a different fact
+        .selling-price still matches, but it is the $25 deposit
+        the real price moved to <strong>, still $249
+        Scrapling returned: '$25'
+        WRONG, returned 25 when the page's price is 249
+        No error, no warning. Structurally there was nothing to fix.
+```
+
+**Case A is the point in its favour, and it is not a small one.** A renamed
+class is the most common way a scraper dies, and relocation solves it without a
+human touching a selector.
+
+**Case B is not a relocation problem at all.** The selector never broke. It
+still matches, still resolves to one element, still returns a valid number. What
+moved was the *meaning* underneath it. There is no structural signal to follow,
+so a correct-looking answer comes back with the same confidence as a real one.
+
+That is the distinction this whole project turns on:
+
+| | Question asked | Signal used | When it is wrong |
+|---|---|---|---|
+| Adaptive relocation | where did my element go? | structural similarity | returns the wrong element, confidently |
+| NOTICE | is this value correct? | two sensors that cannot fail alike | withholds, and says why |
+
+They are not competitors. Relocation is the better answer to a rename, and
+nothing here relocates anything. But no amount of structural cleverness can tell
+you that `$25` is a deposit, because the page does not encode that structurally
+— it encodes it in the words next to it. Which is exactly what the second sensor
+reads.
+
+### 4. Bright Data, on why nothing in the platform reports this
 
 Not our characterisation. Their support engineer, asked directly on 2026-08-18:
 
@@ -125,7 +179,7 @@ Not our characterisation. Their support engineer, asked directly on 2026-08-18:
 > known-good results as a gating step.** The docs don't describe any such
 > regression check — so you're not missing a hidden feature here."
 
-### 4. A verdict you can re-check without us
+### 5. A verdict you can re-check without us
 
 Every incident exports as a hash-sealed certificate, and
 [`/verify`](https://notice-frontend-bay.vercel.app/verify) re-derives the digest
@@ -135,7 +189,7 @@ in your own browser with no network calls. Change one character and it fails.
 curl https://notice-api-0vfo.onrender.com/api/incidents/<id>/certificate
 ```
 
-### 5. In the Bright Data console
+### 6. In the Bright Data console
 
 The account's own view of the run that returned the wrong value: every request
 delivered, nothing errored, nothing spent.
@@ -143,7 +197,7 @@ delivered, nothing errored, nothing spent.
 <!-- docs/screenshots/web-access-dashboard.png -->
 <!-- docs/screenshots/refactor-progress.png -->
 
-*Screenshots pending.* Until they are committed this section stands on the four
+*Screenshots pending.* Until they are committed this section stands on the five
 above, all of which a reader can reproduce themselves.
 
 ---
