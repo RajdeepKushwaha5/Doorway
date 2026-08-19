@@ -165,6 +165,36 @@ you that `$25` is a deposit, because the page does not encode that structurally
 — it encodes it in the words next to it. Which is exactly what the second sensor
 reads.
 
+Three things in their source say the same thing more precisely than we can.
+Read at v0.4.14, commit `5d213a2`:
+
+- **`percentage: int = 40`** ([`parser.py:520`](https://github.com/D4Vinci/Scrapling/blob/main/scrapling/parser.py)
+  and four other signatures). Relocation accepts the best-scoring element on
+  the page provided it is at least 40% structurally similar to the one that
+  used to be there. When nothing clears the bar, the library's own warning
+  suggests moving the bar: *"Lower `percentage` if this is the right element."*
+- **The relocation benchmark measures milliseconds, not correctness.** Their
+  README's "Element Similarity" table reports 2.3ms against AutoScraper's
+  12.58ms under the heading that adaptive element finding "significantly
+  outperforms alternatives." There is no accuracy figure anywhere. That missing
+  number is what the [Drift Discrimination Score](#evaluation-the-drift-discrimination-score)
+  measures.
+- **A relocation becomes the new reference.** `save(elements[0], identifier)`
+  runs after a successful relocate when `auto_save` is on, and storage is
+  `INSERT OR REPLACE`. Relocate onto the wrong element once and the wrong
+  element becomes the definition of what you asked for.
+
+That last one is not a criticism so much as the reason one of our rules exists:
+NOTICE will not learn a baseline, or a page shape, from a run no human accepted
+and no second sensor confirmed.
+
+And the technique is worth borrowing, pointed at a different question. Their
+similarity scoring answers *where did my element go*, which is a guess. The
+same measurement answers *is this even the same document*, which is checkable,
+and NOTICE now uses it to make the witness prove it read the right page before
+it is allowed to accuse the collector. A consent wall scores 31%; a page whose
+price changed scores 100%. See [`backend/src/witness/shape.ts`](backend/src/witness/shape.ts).
+
 ### 4. Bright Data, on why nothing in the platform reports this
 
 Not our characterisation. Their support engineer, asked directly on 2026-08-18:
@@ -640,6 +670,7 @@ A monitor checks whether output arrived. NOTICE checks whether output is still *
 | Price reads the deposit | "value changed" | `extractor_drift`, heal with evidence |
 | Sensors saw different regions | "value changed" | `access_anomaly`, do not blame the collector |
 | Witness could not read the page | "value changed" | `inconclusive`, quarantine and ask a human |
+| Witness read a consent wall instead | "value changed" | `inconclusive`, and it says which labelled fields went missing |
 
 Sending a genuine source change to Self-Healing rewrites a collector that was working. That is the failure mode NOTICE exists to avoid as much as the corruption itself.
 
@@ -849,7 +880,7 @@ backend/src/
   shared/      normalization, redaction, acquisition context
   brightdata/  typed client + CLI wrapper
   contracts/   structural, learned and invariant validation
-  witness/     markdown extraction with evidence spans
+  witness/     markdown extraction with evidence spans, and the page-identity check
   incident/    classifier, prompt synthesis, approval gate, state machine
   pipeline/    observe, repair, feed
   store/       persistence boundary
