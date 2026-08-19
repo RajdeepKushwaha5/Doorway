@@ -11,6 +11,7 @@ import { BlindspotsMatrix } from '@/components/BlindspotsMatrix';
 import { ImpactBand } from '@/components/ImpactBand';
 import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
+import { getFixtureModeAction } from '@/app/actions';
 import type { CollectorSummary, Incident } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -80,6 +81,11 @@ export default async function HomePage() {
   } catch {
     offline = true;
   }
+
+  // Read rather than assumed. The console opened on a hardcoded `baseline` and
+  // printed it as fact, so anything that switched the fixture from outside this
+  // page left the panel asserting a mode the page underneath was not serving.
+  const fixtureMode = await getFixtureModeAction();
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
 
@@ -292,6 +298,7 @@ export default async function HomePage() {
               collectorId={fixtureCollector.id}
               brightDataId={fixtureCollector.brightDataCollectorId}
               fixtureUrl={`https://${fixtureCollector.targetDomain}`}
+              initialMode={fixtureMode}
               {...(searchCollector === undefined || searchCollector.watchUrls[0] === undefined
                 ? {}
                 : {

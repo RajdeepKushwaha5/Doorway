@@ -105,6 +105,7 @@ export function LiveConsole({
   brightDataId,
   fixtureUrl,
   searchCollector,
+  initialMode,
 }: {
   /**
    * The NOTICE record id, which is what every API route keys on.
@@ -128,8 +129,16 @@ export function LiveConsole({
    * while breaking the search page, which is worse than not offering it.
    */
   searchCollector?: { id: string; brightDataId: string; url: string };
+  /**
+   * What the fixture is serving right now, read on the server.
+   *
+   * Null when the fixture could not be reached. Shown as unknown rather than
+   * assumed, because a panel that claims a mode it never checked is the thing
+   * this whole page argues against.
+   */
+  initialMode: string | null;
 }) {
-  const [mode, setMode] = useState('baseline');
+  const [mode, setMode] = useState<string | null>(initialMode);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   // Bumped on every switch so the iframe refetches. Without it the browser
   // serves the previous layout and the page appears not to have changed,
@@ -137,7 +146,9 @@ export function LiveConsole({
   const [frame, setFrame] = useState(0);
   const [pending, startTransition] = useTransition();
 
-  const current = MODES.find((entry) => entry.id === mode) ?? MODES[0];
+  // No fallback to MODES[0]. An unreachable fixture is not baseline, and
+  // saying so was how this panel came to display a mode nobody had checked.
+  const current = MODES.find((entry) => entry.id === mode);
 
   function switchTo(next: Mode): void {
     setPhase({ kind: 'switching', mode: next.id });
@@ -202,9 +213,17 @@ export function LiveConsole({
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[13px] font-semibold text-ivory">{entry.label}</span>
+                    {/* The badge marks the mode the fixture is serving. Calling
+                        that a live fault on `baseline` labelled the innocent
+                        state a fault, on the one panel that has to be precise
+                        about which is which. */}
                     {active ? (
-                      <span className="text-[10px] uppercase tracking-pixel px-2 py-0.5 rounded bg-parse-accent text-white font-semibold">
-                        LIVE FAULT
+                      <span
+                        className={`text-[10px] uppercase tracking-pixel px-2 py-0.5 rounded font-semibold text-white ${
+                          entry.fault ? 'bg-blocked' : 'bg-parse-accent'
+                        }`}
+                      >
+                        {entry.fault ? 'LIVE FAULT' : 'SERVING NOW'}
                       </span>
                     ) : null}
                   </div>
@@ -214,6 +233,31 @@ export function LiveConsole({
                 </button>
               );
             })}
+          </div>
+
+          {/* Sits with the mode list it describes. It used to render below the
+              interaction panel, where it read as the expectation for the
+              search collector's run and contradicted the verdict shown just
+              above it. */}
+          <div className="mt-4 border-t border-surface-border pt-3 text-[12px] leading-normal text-muted">
+            Expected verdict for the product page:{' '}
+            {/* Three states, not two. "Could not be reached" and "serving a
+                mode this panel does not control" are different facts, and
+                collapsing them is the same mistake as assuming baseline. */}
+            {mode === null ? (
+              <span className="font-semibold text-muted">
+                unknown, the fixture could not be reached
+              </span>
+            ) : current === undefined ? (
+              <span className="font-semibold text-muted">
+                none. The fixture is serving <span className="text-ivory">{mode}</span>, which
+                changes the search page rather than this one.
+              </span>
+            ) : (
+              <span className={`font-semibold ${current.fault ? 'text-blocked' : 'text-verified'}`}>
+                {current.verdict}
+              </span>
+            )}
           </div>
 
           {/* The wait is thirty real seconds against Bright Data. Showing the
@@ -262,9 +306,15 @@ export function LiveConsole({
                     verdict: 'extractor_drift',
                   });
                 }}
-                className="mt-3 w-full rounded-lg border border-surface-border bg-surface-soft/30 p-3 text-left font-mono text-[12px] text-muted transition-all hover:border-ivory/30 disabled:opacity-40"
+                className={`mt-3 w-full rounded-lg border p-3 text-left font-mono text-[12px] transition-all disabled:opacity-40 ${
+                  mode === 'search_drift'
+                    ? 'border-blocked bg-red-50 text-blocked'
+                    : 'border-surface-border bg-surface-soft/30 text-ivory hover:border-ivory/30'
+                }`}
               >
-                Rename the search field
+                {mode === 'search_drift'
+                  ? 'Search field renamed. The term is being dropped now.'
+                  : 'Rename the search field \u25b8'}
               </button>
 
               <div className="mt-2">
@@ -281,22 +331,16 @@ export function LiveConsole({
             </div>
           )}
 
-          <div className="mt-5 border-t border-surface-border pt-3 text-[12px] leading-normal text-muted">
-            Expected verdict:{' '}
-            <span className={`font-semibold ${current?.fault === true ? 'text-blocked' : 'text-verified'}`}>
-              {current?.verdict ?? 'healthy'}
-            </span>
-          </div>
         </div>
 
         {/* The target page preview ---------------------------------- */}
-        <div className="bg-surface-soft/30 p-6 font-mono flex flex-col justify-between">
+        <div className="bg-surface-soft/30 p-6 font-mono flex flex-col">
           <div>
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] uppercase tracking-pixel text-muted font-semibold">Target Page Render</span>
                 <span className="text-[10px] font-mono uppercase bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
-                  {mode}
+                  {mode ?? 'unknown'}
                 </span>
               </div>
               <a

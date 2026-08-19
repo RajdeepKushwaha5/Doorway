@@ -115,6 +115,37 @@ export async function setFixtureModeAction(mode: string): Promise<ActionResult> 
 }
 
 /**
+ * Read which mode the fixture is actually serving.
+ *
+ * The console used to open on a hardcoded `baseline` and print it as fact.
+ * Anything that switched the fixture from outside the page, a CLI run, the
+ * blindspot script, another tab, left the panel asserting one mode while the
+ * page underneath served another. A dashboard displaying a value it never
+ * checked is the exact failure this project exists to argue against, and it
+ * was doing it on its own front page.
+ *
+ * Unauthenticated on the fixture's side because the current mode reveals
+ * nothing sensitive. Read here rather than from the browser because the
+ * fixture sets no CORS headers.
+ */
+export async function getFixtureModeAction(): Promise<string | null> {
+  const fixture = (process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com').replace(
+    /\/+$/,
+    '',
+  );
+  try {
+    const response = await fetch(`${fixture}/api/admin/mode`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { mode?: unknown };
+    return typeof body.mode === 'string' ? body.mode : null;
+  } catch {
+    // Unreachable is a real answer and is shown as one. Guessing "baseline"
+    // here is how the panel started lying in the first place.
+    return null;
+  }
+}
+
+/**
  * Start an observation and hand back somewhere to watch it.
  *
  * `runCollectorAction` waits for the verdict, which is right for a script and
