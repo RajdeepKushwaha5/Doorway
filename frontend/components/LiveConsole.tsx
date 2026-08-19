@@ -368,7 +368,10 @@ export function LiveConsole({
 
         {/* The target page preview ---------------------------------- */}
         <div className="bg-surface-soft/30 p-6 font-mono flex flex-col">
-          <div>
+          {/* `min-h-0` on both, or a flex child refuses to shrink below its
+              content and the iframe pushes the column taller instead of
+              filling it. */}
+          <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] uppercase tracking-pixel text-muted font-semibold">Target Page Render</span>
@@ -387,7 +390,7 @@ export function LiveConsole({
             </div>
 
             {/* Styled Browser Frame */}
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md flex flex-col">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md">
               {/* Mini Browser Address Bar */}
               <div className="flex items-center gap-2 px-3.5 py-2 border-b border-gray-200 bg-gray-50/90 text-[11px] text-gray-500">
                 <div className="flex items-center gap-1.5">
@@ -422,7 +425,7 @@ export function LiveConsole({
                 key={frame}
                 src={`${fixtureUrl}/product/headphones`}
                 title="DriftMart product page, live"
-                className="h-[300px] w-full bg-white"
+                className="min-h-[340px] w-full flex-1 bg-white"
                 sandbox="allow-same-origin"
               />
             </div>
