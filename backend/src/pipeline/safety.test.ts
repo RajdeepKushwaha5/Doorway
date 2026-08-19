@@ -577,3 +577,131 @@ describe('the conditions each sensor read under are kept, not just compared', ()
     expect(result.incident?.acquisition).toBeNull();
   });
 });
+
+
+describe('the witness has to prove it read the right page', () => {
+  let directory: string;
+  let store: FileStore;
+  let fake: FakeBrightData;
+
+  const PAGE = [
+    '# DriftMart',
+    '',
+    '## Nova Headphones',
+    '',
+    'Purchase price: $249',
+    'Refundable deposit: $25',
+    'Availability: In stock',
+  ].join('\n');
+
+  const CONSENT_WALL = [
+    '# Before you continue',
+    '',
+    'We and our partners use cookies to personalise content and measure ads.',
+    '',
+    '[Accept all](/consent/accept)',
+  ].join('\n');
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'notice-identity-'));
+    store = new FileStore(join(directory, 'store.json'));
+    fake = new FakeBrightData();
+    await store.saveContract(CONTRACT);
+  });
+
+  /**
+   * Teach the system what this page looks like, the only way it can be taught.
+   *
+   * The reference is written on the publishable path, so it takes a run where
+   * the witness actually woke and then agreed with the collector. A price that
+   * genuinely moved is exactly that: the numeric check trips, both sensors read
+   * the new value, and the verdict is `genuine_source_change`. That is the
+   * point of learning it there and nowhere else. A shape taken from a reading
+   * nobody trusted would let a consent wall become the definition of the page.
+   */
+  async function establishReference(): Promise<void> {
+    fake.rows = [{ ...HEALTHY, price: { value: 229, currency: 'USD' } }];
+    const result = await observeOnce(collectorRecord(), URL_A, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => ({
+        markdown: PAGE.replace('$249', '$229'),
+        fetchedAt: new Date().toISOString(),
+      }),
+    });
+    expect(result.incident?.classification).toBe('genuine_source_change');
+  }
+
+  it('learns the page shape only from a reading two sensors agreed on', async () => {
+    await establishReference();
+
+    const snapshot = await store.getVerifiedSnapshot('col-1', URL_A);
+    expect(snapshot?.shape?.labels).toContain('purchase price');
+    expect(snapshot?.shape?.headings).toEqual([1, 2]);
+  });
+
+  it('refuses to judge when the witness came back with a consent wall', async () => {
+    await establishReference();
+
+    // The collector returns the deposit, which on any other day is a drift.
+    // But the witness is looking at a cookie banner, so there is no second
+    // reading of this page and nothing to convict on.
+    fake.rows = [{ ...HEALTHY, price: { value: 25, currency: 'USD' } }];
+    const result = await observeOnce(collectorRecord(), URL_A, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => ({ markdown: CONSENT_WALL, fetchedAt: new Date().toISOString() }),
+    });
+
+    expect(result.incident?.classification).toBe('inconclusive');
+    expect(result.incident?.quarantined).toBe(true);
+    expect(result.publishable).toBe(false);
+    expect(result.incident?.evidence.join(' ')).toContain('did not read the page under observation');
+    expect(result.incident?.evidence.join(' ')).toContain('purchase price');
+    // The whole point: no accusation and no repair instruction against a
+    // collector on the evidence of a page nobody read.
+    expect(result.incident?.repairPrompt).toBeNull();
+  });
+
+  it('still catches a real drift when the witness read the right page', async () => {
+    await establishReference();
+
+    fake.rows = [{ ...HEALTHY, price: { value: 25, currency: 'USD' } }];
+    const result = await observeOnce(collectorRecord(), URL_A, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => ({ markdown: PAGE, fetchedAt: new Date().toISOString() }),
+    });
+
+    expect(result.incident?.classification).toBe('extractor_drift');
+  });
+
+  it('does not fire on a page whose value merely changed again', async () => {
+    await establishReference();
+
+    fake.rows = [{ ...HEALTHY, price: { value: 199, currency: 'USD' } }];
+    const result = await observeOnce(collectorRecord(), URL_A, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => ({
+        markdown: PAGE.replace('$249', '$199'),
+        fetchedAt: new Date().toISOString(),
+      }),
+    });
+
+    expect(result.incident?.classification).toBe('genuine_source_change');
+  });
+
+  it('stands down entirely when this URL has never been verified', async () => {
+    // Fail open. With no reference there is nothing to compare against, and a
+    // first observation must not be blocked by the absence of its own history.
+    fake.rows = [{ ...HEALTHY, price: { value: 25, currency: 'USD' } }];
+    const result = await observeOnce(collectorRecord(), URL_A, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => ({ markdown: PAGE, fetchedAt: new Date().toISOString() }),
+    });
+
+    expect(result.incident?.classification).toBe('extractor_drift');
+  });
+});

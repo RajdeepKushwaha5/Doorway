@@ -41,6 +41,10 @@ function toneFor(event: StreamEvent): string {
     if (verdict === 'access_anomaly') return 'text-suspect';
     return 'text-blocked';
   }
+  if (event.step === 'witness-identity') {
+    if (event.detail?.['compared'] !== true) return 'text-muted';
+    return event.detail['samePage'] === true ? 'text-verified' : 'text-blocked';
+  }
   if (event.step === 'compare') {
     return String(event.detail?.['agreement'] ?? '') === 'disagree' ? 'text-blocked' : 'text-muted';
   }

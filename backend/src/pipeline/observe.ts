@@ -4,8 +4,19 @@ import { scrapeMarkdown } from '../brightdata/index.js';
 import { learnContract, validateRun } from '../contracts/index.js';
 import { brief, type ObserveEmitter } from './events.js';
 import { classify, synthesizeRepairPrompt, transition } from '../incident/index.js';
-import { compareAcquisitionContexts, type AcquisitionContext } from '../shared/index.js';
-import { observeMarkdown, reconcile } from '../witness/index.js';
+import {
+  compareAcquisitionContexts,
+  type AcquisitionContext,
+  type CheckResult,
+} from '../shared/index.js';
+import {
+  compareShapes,
+  isSamePage,
+  observeMarkdown,
+  reconcile,
+  type ShapeComparison,
+  type WitnessObservation,
+} from '../witness/index.js';
 import type { CollectorRecord, IncidentRecord, RunRecord, Store } from '../store/index.js';
 
 /**
@@ -261,8 +272,10 @@ export async function observeOnce(
         verifiedAt: startedAt,
         // No witness was fetched, so there is no body to hash. Recorded as
         // empty rather than faked, because a hash nobody can check is worse
-        // than an absent one.
+        // than an absent one. The same goes for the page shape: no read
+        // happened, so there is no structure to remember.
         contentHash: '',
+        shape: null,
       });
     }
     const closed = await closeRecoveredIncidents(deps, collector.id, url, run.id, startedAt);
@@ -319,64 +332,22 @@ export async function observeOnce(
     });
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : String(caught);
-    const inconclusive: IncidentRecord = {
-      id: randomUUID(),
-      collectorId: collector.id,
-      runId: run.id,
-      classification: 'inconclusive',
-      confidence: 0,
-      affectedFields: [...new Set(checks.filter((c) => c.status !== 'pass').map((c) => c.field).filter((f): f is string => f !== undefined))],
-      evidence: [
-        ...checks.filter((c) => c.status === 'fail' || c.status === 'warn').map((c) => c.explanation),
-        `the independent witness could not be obtained: ${message}`,
-        'without a second sensor there is no way to tell a broken extractor from a changed page, so this run is quarantined rather than judged',
-      ],
-      witness: null,
-      // No picture either: if the witness could not read the page, a capture
-      // of it is unlikely to succeed and would delay a quarantine decision.
-      screenshotId: null,
-      repairPrompt: null,
-      history: [
-        transition('observed', 'validating', { actor: 'system', reason: 'collector run ingested' }),
-        transition('validating', 'witness_pending', {
-          actor: 'system',
-          reason: 'contract checks tripped',
-        }),
-        transition('witness_pending', 'inconclusive', {
-          actor: 'system',
-          reason: `witness acquisition failed: ${message}`,
-        }),
-      ],
-      gateResults: [],
-      // No witness reading exists, so there is no second context to compare
-      // against. Recorded as absent rather than half-filled: a panel showing
-      // one sensor's country beside a blank would imply a comparison nobody
-      // made.
-      acquisition: null,
-      quarantined: true,
-      createdAt: startedAt,
-      resolvedAt: null,
-    };
-
-    await deps.store.saveIncident(inconclusive);
-
-    // Worth telling someone about, arguably more than a clean drift: the
-    // system has stopped being able to check, and silence here looks exactly
-    // like everything being fine.
-    if (deps.notifyIncident !== undefined) {
-      try {
-        await deps.notifyIncident(inconclusive, collector.name);
-      } catch {
-        // Courtesy, not correctness.
-      }
-    }
-    await deps.store.appendAudit({
-      id: randomUUID(),
-      actor: 'system',
-      eventType: 'witness.fetch_failed',
-      entityId: inconclusive.id,
-      payload: { url, error: message },
-      at: startedAt,
+    const inconclusive = await quarantineWitness(deps, {
+      collector,
+      run,
+      url,
+      checks,
+      // No reading exists at all, so there is nothing to attach. Recorded as
+      // absent rather than as an empty observation, which would read as a
+      // witness that looked and found nothing.
+      observation: null,
+      startedAt,
+      reason: `the independent witness could not be obtained: ${message}`,
+      detail: [],
+      auditType: 'witness.fetch_failed',
+      auditPayload: { url, error: message },
+      // Nothing was read, so there is nothing to have checked the identity of.
+      pageIdentity: null,
     });
 
     return { run, incident: inconclusive, publishable: false };
@@ -388,6 +359,71 @@ export async function observeOnce(
     collector.witnessSpecs,
     witnessFetch.fetchedAt,
   );
+
+  /*
+   * Ask the second sensor to prove it read the right page.
+   *
+   * Everything downstream treats the witness as ground truth, and until now
+   * nothing checked that the document it read was the one under observation.
+   * A consent wall, an interstitial, a login redirect and a soft 404 are all
+   * successful responses carrying a real document, and the witness would read
+   * any of them exactly as attentively as the product page.
+   *
+   * The comparison is against the last snapshot two sensors agreed on, so the
+   * definition of "this page" can never be learned from a reading nobody
+   * trusted. With no such snapshot yet there is nothing to compare against and
+   * the check stands down: a first observation must not be blocked by the
+   * absence of its own history.
+   */
+  const reference = await deps.store.getVerifiedSnapshot(collector.id, url);
+  const identity =
+    reference === null || reference.shape === null
+      ? null
+      : compareShapes(reference.shape, observation.shape);
+
+  if (identity === null) {
+    emit({
+      step: 'witness-identity',
+      line: 'page identity   no verified reading of this URL yet, nothing to compare against',
+      detail: { compared: false },
+    });
+  } else {
+    emit({
+      step: 'witness-identity',
+      line: `page identity   ${(identity.similarity * 100).toFixed(0)}% of the structure matches the last verified read${
+        isSamePage(identity) ? '' : ' -> NOT THE SAME PAGE'
+      }`,
+      detail: {
+        compared: true,
+        similarity: identity.similarity,
+        parts: identity.parts,
+        notes: identity.notes,
+        samePage: isSamePage(identity),
+      },
+    });
+  }
+
+  if (identity !== null && !isSamePage(identity)) {
+    // The witness cannot testify about a page it did not read. Downgraded to
+    // `inconclusive` rather than allowed to accuse the collector, because the
+    // cost of being wrong here is a human looking at it, while the cost of
+    // proceeding is a working collector rewritten on the evidence of a cookie
+    // banner.
+    const mismatch = await quarantineWitness(deps, {
+      collector,
+      run,
+      url,
+      checks,
+      observation,
+      startedAt,
+      reason: `the witness did not read the page under observation: only ${(identity.similarity * 100).toFixed(0)}% of its structure matches the last verified read of this URL`,
+      detail: identity.notes,
+      auditType: 'witness.page_mismatch',
+      auditPayload: { url, similarity: identity.similarity, parts: identity.parts },
+      pageIdentity: identity,
+    });
+    return { run, incident: mismatch, publishable: false };
+  }
 
   const firstRow = result.rows[0] ?? null;
   for (const value of observation.values) {
@@ -557,6 +593,10 @@ export async function observeOnce(
       witness: witnessContext,
       alignment: compareAcquisitionContexts(collectorContext, witnessContext),
     },
+    // Kept on the passing path too. That the witness demonstrably read the
+    // right page is the reason the disagreement below is worth acting on, and
+    // an operator should be able to see it rather than assume it.
+    pageIdentity: identity,
     // Quarantine anything not positively verified. Publishing a row that only
     // "probably" survived is the failure this system exists to prevent.
     quarantined: classification.verdict !== 'healthy' && classification.verdict !== 'genuine_source_change',
@@ -596,8 +636,109 @@ export async function observeOnce(
       contractVersion: contract.version,
       verifiedAt: startedAt,
       contentHash: observation.contentHash,
+      // The reference for "is this the same page" is learned only here, on a
+      // reading two sensors agreed about. A shape taken from a run nobody
+      // trusted would let a consent wall become the definition of the page.
+      shape: observation.shape,
     });
   }
 
   return { run, incident, publishable };
+}
+
+
+/**
+ * Record a run the second sensor could not adjudicate, and stop.
+ *
+ * Two paths reach this: the witness fetch failed outright, and the witness
+ * returned a document that is not the page under observation. Both mean the
+ * same thing operationally, which is that there is no second reading worth
+ * comparing against, so the run is quarantined rather than judged. Blaming the
+ * collector on half the evidence is the failure this whole system exists to
+ * avoid, and it would be a strange thing to do here of all places.
+ */
+async function quarantineWitness(
+  deps: ObserveDeps,
+  input: {
+    collector: CollectorRecord;
+    run: RunRecord;
+    url: string;
+    checks: CheckResult[];
+    /** The reading, when one exists. Null when the fetch itself failed. */
+    observation: WitnessObservation | null;
+    startedAt: string;
+    /** One sentence naming what went wrong, shown first in the evidence. */
+    reason: string;
+    /** Supporting lines, such as which labels disappeared. */
+    detail: string[];
+    auditType: string;
+    auditPayload: Record<string, unknown>;
+    /** The identity check, when one was possible. */
+    pageIdentity: ShapeComparison | null;
+  },
+): Promise<IncidentRecord> {
+  const incident: IncidentRecord = {
+    id: randomUUID(),
+    collectorId: input.collector.id,
+    runId: input.run.id,
+    classification: 'inconclusive',
+    confidence: 0,
+    affectedFields: [
+      ...new Set(
+        input.checks
+          .filter((check) => check.status !== 'pass')
+          .map((check) => check.field)
+          .filter((field): field is string => field !== undefined),
+      ),
+    ],
+    evidence: [
+      ...input.checks
+        .filter((check) => check.status === 'fail' || check.status === 'warn')
+        .map((check) => check.explanation),
+      input.reason,
+      ...input.detail,
+      'without a second sensor there is no way to tell a broken extractor from a changed page, so this run is quarantined rather than judged',
+    ],
+    witness: input.observation,
+    screenshotId: null,
+    repairPrompt: null,
+    history: [
+      transition('observed', 'validating', { actor: 'system', reason: 'collector run ingested' }),
+      transition('validating', 'witness_pending', {
+        actor: 'system',
+        reason: 'contract checks tripped',
+      }),
+      transition('witness_pending', 'inconclusive', { actor: 'system', reason: input.reason }),
+    ],
+    gateResults: [],
+    acquisition: null,
+    pageIdentity: input.pageIdentity,
+    quarantined: true,
+    createdAt: input.startedAt,
+    resolvedAt: null,
+  };
+
+  await deps.store.saveIncident(incident);
+
+  // Worth telling someone about, arguably more than a clean drift: the system
+  // has stopped being able to check, and silence here looks exactly like
+  // everything being fine.
+  if (deps.notifyIncident !== undefined) {
+    try {
+      await deps.notifyIncident(incident, input.collector.name);
+    } catch {
+      // Courtesy, not correctness.
+    }
+  }
+
+  await deps.store.appendAudit({
+    id: randomUUID(),
+    actor: 'system',
+    eventType: input.auditType,
+    entityId: incident.id,
+    payload: input.auditPayload,
+    at: input.startedAt,
+  });
+
+  return incident;
 }

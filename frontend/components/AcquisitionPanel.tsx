@@ -1,4 +1,4 @@
-import type { AcquisitionContext, ContextAlignment, Incident } from '@/lib/types';
+import type { AcquisitionContext, ContextAlignment, Incident, PageIdentity } from '@/lib/types';
 
 /**
  * Under what conditions each sensor read the page.
@@ -127,17 +127,101 @@ function Sensor({
   );
 }
 
+/**
+ * Whether the second sensor read the page it was sent to.
+ *
+ * Everything on this screen argues from what the witness saw, which made the
+ * witness the one thing here taken on trust. It is now asked to prove the
+ * document it read is the one that was verified before, by structure rather
+ * than by content: a page whose price changed keeps its headings, its labels
+ * and its length, while a consent wall or a soft 404 keeps almost none of them.
+ *
+ * Shown when it passes as well as when it fails. That the witness demonstrably
+ * read the right page is the reason a disagreement is worth acting on, and a
+ * reader should not have to assume it.
+ */
+function PageIdentityBlock({ identity }: { identity: PageIdentity | null }) {
+  if (identity === null) {
+    return (
+      <div className="mt-5 border border-surface-border bg-surface-soft p-5">
+        <p className="eyebrow">Page identity</p>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          This URL had never been verified before, so there was no earlier reading to compare the
+          witness against. The check stands down rather than guessing: a first observation must not
+          be blocked by the absence of its own history.
+        </p>
+      </div>
+    );
+  }
+
+  const percent = Math.round(identity.similarity * 100);
+
+  return (
+    <div
+      className={`mt-5 border p-5 ${
+        identity.samePage ? 'border-verified/30 bg-parse-accentBg' : 'border-blocked/40 bg-red-50'
+      }`}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <p className="eyebrow">
+          {identity.samePage ? 'The witness read the right page' : 'The witness read a different page'}
+        </p>
+        <span className="font-mono text-sm text-ivory">{percent}% structural match</span>
+      </div>
+
+      <p className="mt-2 text-sm leading-6 text-muted">{identity.reason}.</p>
+
+      {identity.notes.length > 0 ? (
+        <ul className="mt-3 space-y-1.5">
+          {identity.notes.map((note) => (
+            <li key={note} className="border border-surface-border bg-surface p-3 text-sm text-muted">
+              {note}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="mt-4 grid grid-cols-2 gap-x-6 sm:grid-cols-4">
+        {(
+          [
+            ['labelled fields', identity.parts.labels],
+            ['headings', identity.parts.headings],
+            ['length', identity.parts.density],
+            ['links and tables', identity.parts.media],
+          ] as const
+        ).map(([label, value]) => (
+          <div key={label} className="border-t border-surface-border pt-2">
+            <div className="font-mono text-sm text-ivory">{Math.round(value * 100)}%</div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-muted">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {identity.samePage ? null : (
+        <p className="mt-4 text-sm leading-6 text-muted">
+          Because the witness did not read this page, its reading cannot be used to convict the
+          collector. The run is quarantined and no repair was proposed. A monitor that skipped this
+          check would have rewritten a working collector on the evidence of a page nobody read.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function AcquisitionPanel({ incident }: { incident: Incident }) {
   const acquisition = incident.acquisition;
 
   if (acquisition === null) {
     return (
-      <p className="text-sm leading-6 text-muted">
-        No acquisition record was kept for this incident. It predates the point where the two
-        sensors&apos; conditions were stored, or it opened before any comparison was made. Shown as
-        absent rather than assumed, because an assumed country is exactly the kind of plausible
-        wrong value this system exists to refuse.
-      </p>
+      <div>
+        <p className="text-sm leading-6 text-muted">
+          No acquisition record was kept for this incident. It predates the point where the two
+          sensors&apos; conditions were stored, or it opened before any comparison was made. Shown
+          as absent rather than assumed, because an assumed country is exactly the kind of plausible
+          wrong value this system exists to refuse.
+        </p>
+        <PageIdentityBlock identity={incident.pageIdentity} />
+      </div>
     );
   }
 
@@ -196,6 +280,8 @@ export function AcquisitionPanel({ incident }: { incident: Incident }) {
           </>
         )}
       </div>
+
+      <PageIdentityBlock identity={incident.pageIdentity} />
 
       {anomaly ? (
         <p className="mt-4 text-sm leading-6 text-muted">

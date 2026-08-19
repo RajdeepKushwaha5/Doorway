@@ -3,6 +3,7 @@ import { compareValues, type ValueAgreement } from '../shared/index.js';
 import { getPath } from '../contracts/paths.js';
 import { extractFields } from './extract.js';
 import type { EvidenceSpan, WitnessFieldSpec, WitnessObservation } from './spec.js';
+import { pageShape } from './shape.js';
 
 /** How the collector and the witness compared on a single field. */
 export interface FieldComparison {
@@ -63,6 +64,7 @@ export function observeMarkdown(
     excerpt: markdown.slice(0, EXCERPT_LIMIT),
     values,
     notFound,
+    shape: pageShape(markdown),
   };
 }
 

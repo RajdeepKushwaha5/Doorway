@@ -16,3 +16,12 @@ export {
   type WitnessObservation,
   type WitnessValue,
 } from './spec.js';
+
+export {
+  compareShapes,
+  isSamePage,
+  pageShape,
+  SAME_PAGE_THRESHOLD,
+  type PageShape,
+  type ShapeComparison,
+} from './shape.js';

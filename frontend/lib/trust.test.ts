@@ -67,6 +67,7 @@ function incident(runId: string, classification: Incident['classification']): In
     gateResults: [],
     quarantined: classification === 'extractor_drift',
     acquisition: null,
+    pageIdentity: null,
     createdAt: '2026-08-19T10:00:00.000Z',
     resolvedAt: null,
   };

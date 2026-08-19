@@ -85,6 +85,21 @@ export interface GateCaseResult {
   executionError: string | null;
 }
 
+/**
+ * Whether the witness read the page under observation.
+ *
+ * Mirrors `ShapeComparison` in the backend. `similarity` is supporting
+ * evidence, not the decision: `samePage` is the decision, and `reason` says
+ * why in one sentence.
+ */
+export interface PageIdentity {
+  similarity: number;
+  parts: { labels: number; headings: number; density: number; media: number };
+  notes: string[];
+  samePage: boolean;
+  reason: string;
+}
+
 /** The conditions one sensor observed a page under. */
 export interface AcquisitionContext {
   requestedUrl: string;
@@ -133,6 +148,13 @@ export interface Incident {
    * that open an incident without ever reaching a comparison.
    */
   acquisition: IncidentAcquisition | null;
+  /**
+   * Whether the witness read the page under observation.
+   *
+   * Null when this URL had never been verified, so there was nothing to
+   * compare against, and on the path where the witness never read at all.
+   */
+  pageIdentity: PageIdentity | null;
   createdAt: string;
   resolvedAt: string | null;
 }

@@ -25,6 +25,7 @@ export type ObserveStep =
   | 'witness-skip'
   | 'witness-wake'
   | 'witness-fetch'
+  | 'witness-identity'
   | 'witness-read'
   | 'compare'
   | 'verdict'

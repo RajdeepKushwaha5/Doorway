@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { PageShape } from './shape.js';
 
 /**
  * How to find one field in prose, independently of the collector.
@@ -76,4 +77,11 @@ export interface WitnessObservation {
   values: WitnessValue[];
   /** Fields the witness looked for and could not find. */
   notFound: string[];
+  /**
+   * The structure of the page, with every value discarded.
+   *
+   * Kept so a later read can be asked whether it is even the same document.
+   * The content hash cannot answer that: it changes when one digit changes.
+   */
+  shape: PageShape;
 }

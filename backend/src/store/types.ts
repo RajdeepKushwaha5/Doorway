@@ -6,7 +6,12 @@ import type {
   IncidentClassification,
 } from '../shared/index.js';
 import type { CollectorContract, Invariant } from '../contracts/index.js';
-import type { WitnessFieldSpec, WitnessObservation } from '../witness/index.js';
+import type {
+  PageShape,
+  ShapeComparison,
+  WitnessFieldSpec,
+  WitnessObservation,
+} from '../witness/index.js';
 import type { GateCaseResult, GoldenCase, TransitionRecord } from '../incident/index.js';
 
 /** A Scraper Studio collector under observation. */
@@ -130,6 +135,18 @@ export interface IncidentRecord {
     witness: AcquisitionContext;
     alignment: ContextAlignment;
   } | null;
+  /**
+   * Whether the witness read the page under observation, and how sure of that.
+   *
+   * The second sensor was the one thing in this system taken on faith. It is
+   * now asked to prove the document it read is the one that was verified
+   * before, and the answer is kept whichever way it went: a passing check is
+   * the reason a disagreement is worth acting on, not a formality.
+   *
+   * Null when there was no verified reading of this URL to compare against,
+   * and on the path where the witness never read at all.
+   */
+  pageIdentity: ShapeComparison | null;
   createdAt: string;
   resolvedAt: string | null;
 }
@@ -142,6 +159,18 @@ export interface VerifiedSnapshot {
   contractVersion: number;
   verifiedAt: string;
   contentHash: string;
+  /**
+   * The structure of the page as the witness last read it and was believed.
+   *
+   * Recorded only here, on the record written when two sensors agreed, so the
+   * reference for "is this the same page" can never be learned from a reading
+   * nobody trusted. That is the same rule the statistical baseline follows,
+   * applied to the second sensor.
+   *
+   * Null when the run was healthy enough that no witness was fetched, and on
+   * snapshots written before this existed.
+   */
+  shape: PageShape | null;
 }
 
 /**

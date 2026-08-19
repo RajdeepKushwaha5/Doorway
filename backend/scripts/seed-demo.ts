@@ -18,7 +18,14 @@ import {
   compareAcquisitionContexts,
   type AcquisitionContext,
 } from '../src/shared/index.js';
-import { observeMarkdown, reconcile, type WitnessFieldSpec } from '../src/witness/index.js';
+import {
+  compareShapes,
+  hashContent,
+  observeMarkdown,
+  pageShape,
+  reconcile,
+  type WitnessFieldSpec,
+} from '../src/witness/index.js';
 import { FileStore, type CollectorRecord, type IncidentRecord, type RunRecord } from '../src/store/index.js';
 
 const LIVE_URL = 'https://driftmart.example/product/headphones';
@@ -147,7 +154,11 @@ async function main(): Promise<void> {
     data: HEALTHY,
     contractVersion: contract.version,
     verifiedAt: minutesAgo(50),
-    contentHash: '',
+    contentHash: hashContent(MARKDOWN),
+    // The reference the witness self-check compares against. Seeded from the
+    // healthy page so the demo has something to be measured against, exactly
+    // as a real deployment would after its first agreed reading.
+    shape: pageShape(MARKDOWN),
   });
 
   // Now the drift.
@@ -243,6 +254,10 @@ async function main(): Promise<void> {
       witness: witnessContext,
       alignment: compareAcquisitionContexts(collectorContext, witnessContext),
     },
+    // The witness demonstrably read the same document it read when this page
+    // was last verified, which is what makes the disagreement below evidence
+    // rather than noise.
+    pageIdentity: compareShapes(pageShape(MARKDOWN), observation.shape),
     gateResults: [
       {
         url: LIVE_URL,
