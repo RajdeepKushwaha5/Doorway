@@ -210,16 +210,19 @@ time was about three minutes.
 Neither is from the Scrapers Library. Real output from both is in
 [examples/](examples/).
 
-### A collector that drives the page, not just reads it
+### A collector that drives the page, and the failure nothing else caught
 
-Every collector above is one `navigate` away from its data, which is the easy
-case and where most scrapers stop. Scraper Studio's browser functions — `type`,
-`click`, `wait`, `select`, `tag_response` — exist for the other case, and a
-single navigate never touches them.
+Every other collector here is one `navigate` away from its data. That is the
+easy case, and it never touches the browser functions Scraper Studio exposes
+for the harder one.
 
-[`examples/interaction-collector/`](examples/interaction-collector/) drives
-DriftMart's [`/search`](https://driftmart-3ut8.onrender.com/search), where the
-price only exists after a term is typed and the button pressed:
+`c_mszt6dg019q6p244j6` operates
+[`/search`](https://driftmart-3ut8.onrender.com/search), where no price exists
+until a term is typed and a button pressed. It was built with
+`bdata scraper create`, then corrected with `bdata scraper heal` when the first
+version tried to shortcut to the product page instead of using the form. The
+stages are in
+[`examples/interaction-collector/`](examples/interaction-collector/):
 
 ```js
 navigate(input.url);
@@ -230,30 +233,56 @@ wait('.results');
 collect(parse());
 ```
 
-**This is where a new class of silent failure lives.** Switch the fixture to
-`search_drift`: the form renames the field it submits, from `q` to `query`, and
-leaves the input's id alone — the ordinary shape of a front-end refactor.
+**Then switch the fixture to `search_drift`.** The form renames the field it
+submits, `q` to `query`, and leaves the input's id alone — the ordinary shape of
+a front-end refactor.
 
-Every step still succeeds. The box is found, the text is typed, the button is
-clicked, results render, and a product parses with a real price in stock.
-Nothing errors and nothing is null. The collector searched for Nova Headphones
-and returned **Vega Earbuds at $79**, because the server never received the
-term and fell back to a featured product.
+Every step still succeeds. Real run, real collector:
 
-Measured on the running fixture:
-
-```
-witness   -> /search?q=Nova       -> Nova Headphones    price = 249
-collector -> /search?query=Nova   -> Vega Earbuds       price = 79
-
-sensors agree: NO  -> DRIFT DETECTED
+```json
+{
+  "product_name": "Vega Earbuds",
+  "price": 79,
+  "availability": "In stock",
+  "product_page_url": "https://driftmart-3ut8.onrender.com/search?query=Nova"
+}
 ```
 
-NOTICE needed **no new detection logic** for this. The witness reads the
-canonical URL for the intended query; the collector reaches its answer by
-interacting. When the interaction drifts they land on different page states and
-the existing rule fires. It is the same rule that catches a moved price
-selector, applied one layer earlier — in the automation rather than the markup.
+The box was found. The text was typed. The button was clicked. Results
+rendered. A product parsed, with a real price, in stock. The row is complete and
+schema-valid, and it is **the wrong product** — the server never received the
+term and fell back to a featured item.
+
+#### Why nothing in the platform reports this
+
+Not a criticism, and not a guess. Bright Data's own support engineer, asked
+directly:
+
+> "Self-Healing and schema validation are both built around missing/null/undefined
+> fields, not semantically wrong ones. [...] There is no built-in
+> correctness/semantic check comparing the meaning of an extracted value against
+> what it should represent. That validation is expected to be caught outside the
+> platform."
+
+There is nothing here for Self-Healing to trigger on. No field is null, nothing
+errored, the request succeeded and the dataset row is valid. The Web Access
+dashboard counts one more successful request. **The only symptom is that the
+answer is wrong.**
+
+#### What NOTICE did
+
+```
+verdict     : extractor_drift
+quarantined : true
+publishable : false
+evidence    : "price": collector reported 79, witness read 249 from "Price: $249"
+```
+
+And it needed **no new detection logic**. The witness reads the canonical URL
+for the intended query; the collector reaches its answer by interacting. When
+the interaction drifts they land on different page states and the existing rule
+fires — the same rule that catches a moved price selector, applied one layer
+earlier, in the automation rather than in the markup.
 
 ### The plain-language field description is the contract
 
@@ -553,7 +582,7 @@ Documented because it shaped the architecture, not as criticism.
 
 **4. Self-Healing progress signals the gate through `step`, not `status`.** The live payload is `{id, step, completed_steps, status, diff, success, preview_result}`. At the gate it reads `step: "user_approval"` with `status: "pending_answer"`. Matching on `status` alone reports a waiting job as pending and polls it to timeout.
 
-**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true` — and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
+**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything — and `bdata scraper approve` does not send it.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true` — and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
 
 Reproduced twice before the cause was known. On collector `c_mstkc1rkr8mit6wut`, job `ia_msvikpe02i5a3id7b2` reached `step: user_approval` with a `preview_result` showing the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again. A second run on 2026-08-17 (job `ia_mswmuyq11k2h1grrzj`) was sharper still, because the shapes disagreed: the approved candidate carried `title`, `availability`, `upc` and `rating`, while production returned a row carrying `symbol` and none of those four. Production was running a different template from the one that had just been approved.
 
@@ -562,6 +591,18 @@ Reproduced twice before the cause was known. On collector `c_mstkc1rkr8mit6wut`,
 > "Your payload was `{"message": true}` with `auto_save` omitted (it defaults to false). Per the schema, `auto_save: true` is what 'saves the approved template automatically once the job completes successfully.' Since you didn't set it, the approved candidate may not have been saved as production — which is consistent with the collector still returning the old fields."
 
 Fixed in `backend/src/brightdata/client.ts`: acceptance now sends `{"message": true, "auto_save": true}`, and it is sent only on acceptance because the parameter takes effect only when the job succeeds.
+
+**Confirmed a third time on 2026-08-19, and the CLI behaves the same way.** On
+`c_mszt6dg019q6p244j6`, `bdata scraper heal` produced a candidate whose
+`preview_result` read `product_page_url: /search?q=Nova`. `bdata scraper approve`
+returned `status: done` and finished on `completed_steps: [..., step_advance,
+user_approval]`. Production still returned `/product/headphones` — the old
+template. Re-approving the next candidate over the API with `auto_save: true`
+finished on `[..., user_approval, save_new_template]`, and production changed on
+the next run.
+
+`save_new_template` is the step. It appears only when `auto_save` is set, and
+the CLI's `approve` command does not set it.
 
 What survives the correction, and it is the part that matters: **an API call reported complete success for an operation that changed nothing in production.** Every signal a caller has access to — HTTP 200, `success: true`, `status: done` — was green while the collector kept serving the wrong value. The engineer's own closing advice is to distrust exactly that: *"Check the job's final status — confirm it went to done, not just that the approve call returned `success: true`,"* and then *"trigger the collector and verify the fields now match the approved preview."*
 

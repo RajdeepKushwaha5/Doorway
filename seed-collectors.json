@@ -130,5 +130,54 @@
     ],
     "goldenCases": [],
     "currency": "GBP"
+  },
+  {
+    "brightDataCollectorId": "c_mszt6dg019q6p244j6",
+    "name": "DriftMart search (interaction)",
+    "targetDomain": "driftmart-3ut8.onrender.com",
+    "currency": "USD",
+    "watchUrls": [
+      "https://driftmart-3ut8.onrender.com/search?q=Nova"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "price",
+        "meaning": "The purchase price of the product the search returned, not a featured or sponsored product.",
+        "labels": [
+          "price"
+        ],
+        "excludeLabels": [
+          "deposit",
+          "refundable",
+          "sponsored",
+          "featured"
+        ],
+        "kind": "money",
+        "allowed": []
+      }
+    ],
+    "invariants": [
+      {
+        "kind": "required",
+        "field": "price"
+      },
+      {
+        "kind": "range",
+        "field": "price",
+        "min": 1
+      },
+      {
+        "kind": "required",
+        "field": "product_name"
+      }
+    ],
+    "protectedFields": [
+      "price",
+      "product_name"
+    ],
+    "goldenCases": [],
+    "schedule": null,
+    "autoPromote": "never",
+    "freshnessMinutes": null
   }
 ]
