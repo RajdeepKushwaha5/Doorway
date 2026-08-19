@@ -137,28 +137,44 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     }
 
     let failed = 0;
+    let observed = 0;
     for (const collector of collectors) {
       const name = String(collector['name']);
       const id = String(collector['id']);
+      // Every watched page, not just the first. The worker has always fanned
+      // out this way; the manual path defaulted to `watchUrls[0]`, so a
+      // collector watching five pages reported on one and looked healthy while
+      // four went unobserved.
+      const urls = Array.isArray(collector['watchUrls'])
+        ? (collector['watchUrls'] as string[])
+        : [];
       rule();
-      out(`Observing ${name} ...`);
-      try {
-        const result = (await authed(`/api/collectors/${id}/run`)) as Record<string, unknown>;
-        const incident = result['incident'] as Record<string, unknown> | null;
-        const verdict = incident === null ? 'healthy' : String(incident['classification']);
-        out(`  verdict      ${verdict}`);
-        out(`  publishable  ${String(result['publishable'])}`);
-      } catch (error) {
-        failed += 1;
-        out(`  FAILED       ${error instanceof Error ? error.message : String(error)}`);
+      out(`${name}  (${String(urls.length)} page${urls.length === 1 ? '' : 's'})`);
+
+      for (const url of urls) {
+        observed += 1;
+        const label = url.replace(/^https?:\/\//, '').slice(0, 58);
+        try {
+          const result = (await authed(`/api/collectors/${id}/run`, { url })) as Record<
+            string,
+            unknown
+          >;
+          const incident = result['incident'] as Record<string, unknown> | null;
+          const verdict = incident === null ? 'healthy' : String(incident['classification']);
+          out(`  ${verdict.padEnd(22)} ${label}`);
+        } catch (error) {
+          failed += 1;
+          out(`  ${'FAILED'.padEnd(22)} ${label}`);
+          out(`    ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     }
     rule();
-    out(`${String(collectors.length - failed)} of ${String(collectors.length)} observed.`);
+    out(`${String(observed - failed)} of ${String(observed)} pages observed.`);
 
-    // A non-zero exit when every single one failed, so a scheduled job can tell
-    // "the fleet is fine" apart from "nothing was reachable".
-    if (failed === collectors.length) process.exitCode = 1;
+    // A non-zero exit only when nothing at all was reachable, so a scheduled job
+    // can tell "the fleet is fine" apart from "the API was asleep".
+    if (observed > 0 && failed === observed) process.exitCode = 1;
   },
 
   async incidents() {

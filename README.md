@@ -383,6 +383,23 @@ A monitor checks whether output arrived. NOTICE checks whether output is still *
 
 Sending a genuine source change to Self-Healing rewrites a collector that was working. That is the failure mode NOTICE exists to avoid as much as the corruption itself.
 
+### Why this only matters at scale, which is the same reason Bright Data does
+
+Bright Data's own framing is that you do not need them for ten pages. You need
+them when you are pulling thousands, because that is when blocking, rendering
+and retries stop being someone's afternoon.
+
+Verification has exactly the same shape. Scrape one page and you check it by
+eye. Scrape a thousand across fifty collectors and nobody checks anything, so a
+selector that quietly moved onto the wrong element is invisible by construction
+and stays invisible until a customer finds it.
+
+That is why the parts of this that look like over-engineering are the parts that
+matter: contracts learned per collector rather than hand-written, a page-load
+budget that pauses monitoring instead of quietly spending the month's
+allowance, and a scheduler that fans out across every watched URL. None of it
+earns its keep on two pages. All of it is required on two thousand.
+
 ### Why the Bright Data console does not already show this
 
 Reasonable first objection, since the platform surfaces a lot. All of it is about delivery. A console can report that a request succeeded because it watched the request; it cannot report that a value is wrong, because nothing in it ever learns what the value was supposed to be.

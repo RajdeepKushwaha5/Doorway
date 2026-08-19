@@ -65,7 +65,7 @@ const FAQS = [
   {
     q: 'Can it approve its own repairs?',
     tag: 'safety',
-    a: 'Only a candidate that fixes the incident and preserves every pinned regression case can be promoted, and never twice. On a real collector this month, Bright Data reported a repair as succeeded while production still returned the wrong value. That is why promotion is verified afterwards rather than trusted.',
+    a: 'Only a candidate that fixes the incident and preserves every pinned regression case can be promoted, and never twice. On a real collector this month an approval returned HTTP 200 and reported success while production still served the old template, because the approve call needs auto_save and it defaults to false. Our mistake, caught by re-checking production instead of trusting the flag. That is why promotion is verified afterwards.',
   },
 ];
 
@@ -86,7 +86,17 @@ export default async function HomePage() {
     collector.targetDomain.includes('driftmart'),
   );
 
-  const activeCount = offline ? 3 : Math.max(collectors.length, 3);
+  // Counted, never floored. An earlier version used Math.max(length, 3), which
+  // reported three live collectors against a fleet of two — a rounded-up number
+  // on a page whose whole argument is that a plausible number can be wrong.
+  //
+  // Pages matter more than collectors here: one collector can watch many URLs,
+  // and the cost, the budget guard and the reason any of this is needed all
+  // scale with pages rather than with collectors.
+  const pagesWatched = collectors.reduce(
+    (total, collector) => total + collector.watchUrls.length,
+    0,
+  );
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-mono">
@@ -100,7 +110,15 @@ export default async function HomePage() {
               </h1>
 
               <p className="mt-5 font-mono text-[14.5px] sm:text-[16px] leading-relaxed text-gray-600 max-w-[660px]">
-                <span className="tabular-nums text-gray-900 font-semibold">{activeCount} live collectors</span> monitored by{' '}
+                {offline ? (
+                  <span className="tabular-nums text-gray-900 font-semibold">Scraper Studio collectors</span>
+                ) : (
+                  <span className="tabular-nums text-gray-900 font-semibold">
+                    {collectors.length} live collector{collectors.length === 1 ? '' : 's'},{' '}
+                    {pagesWatched} page{pagesWatched === 1 ? '' : 's'}
+                  </span>
+                )}{' '}
+                held against{' '}
                 <span className="text-gray-900 font-semibold">2 independent sensors</span>, catching silent scraper drift before it reaches your application.
               </p>
 
@@ -109,7 +127,7 @@ export default async function HomePage() {
                   href="#control-room"
                   className="font-neuebit text-[14px] font-semibold uppercase tracking-[0.1em] px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors inline-flex items-center gap-1.5"
                 >
-                  CONTROL ROOM FREE →
+                  OPEN THE CONTROL ROOM →
                 </Link>
                 <Link
                   href="/verified"
