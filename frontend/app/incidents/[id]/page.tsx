@@ -150,7 +150,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
 
       {incident.repairPrompt !== null ? (
         <section data-reveal data-delay="3" className="evidence-section">
-          <div className="evidence-section__heading"><p>03</p><div><p className="eyebrow">Repair instruction</p><h2>Diagnosis sent to Self Healing</h2></div></div>
+          <div className="evidence-section__heading"><p>03b</p><div><p className="eyebrow">Repair instruction</p><h2>Diagnosis sent to Self Healing</h2></div></div>
           <pre className="overflow-x-auto whitespace-pre-wrap border border-surface-border bg-surface-soft p-6 font-mono text-sm text-muted">
             {incident.repairPrompt}
           </pre>

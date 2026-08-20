@@ -180,6 +180,41 @@ describe('synthesizeRepairPrompt', () => {
     expect(prompt.text).toContain('current non-refundable purchase price');
   });
 
+  /**
+   * The field under repair is normally protected as well, because protecting a
+   * field means a repair may not *drop* it, not that its value may not change.
+   * The prompt said "Do not change these fields", so the healer was told to fix
+   * price and to leave price alone in the same paragraph.
+   */
+  it('does not tell the healer to leave the field it is repairing alone', () => {
+    const prompt = synthesizeRepairPrompt({
+      classification,
+      reconciliation,
+      specs: SPECS,
+      protectedFields: ['price', 'product_name'],
+    });
+
+    expect(prompt.text).not.toContain('Do not change these fields');
+    expect(prompt.text).toContain('must still be present in the output');
+    // The instruction to repair price is still there, unambiguously.
+    expect(prompt.text).toContain('price');
+    expect(prompt.text).toContain('249');
+  });
+
+  it('does not end the declared meaning with a doubled full stop', () => {
+    const prompt = synthesizeRepairPrompt({
+      classification,
+      reconciliation,
+      specs: SPECS,
+      protectedFields: [],
+    });
+
+    // The meaning is a human sentence that usually ends in a stop already, and
+    // appending another produced "...sponsored listing price.." in a prompt
+    // that goes to Bright Data.
+    expect(prompt.text).not.toMatch(/\.\./);
+  });
+
   it('stays within the documented character limit', () => {
     const prompt = synthesizeRepairPrompt({
       classification,

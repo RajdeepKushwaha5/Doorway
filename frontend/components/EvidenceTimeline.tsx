@@ -40,6 +40,28 @@ export function EvidenceTimeline({ incident }: { incident: Incident }) {
 }
 
 /** Side-by-side collector and witness values, with the source line shown. */
+/**
+ * Print a witness reading the way a person reads it.
+ *
+ * Money arrives normalized as `{ value, currency }`, and `JSON.stringify` put
+ * `{"value":249,"currency":null}` on the most-read screen in the project. The
+ * null currency reads as a defect when it only means the page never said which
+ * currency it was, which is a deliberate refusal to guess a symbol shared by
+ * more than twenty of them.
+ */
+function readable(value: unknown): string {
+  if (value === null) return 'nothing';
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if ('value' in record) {
+      const currency = typeof record['currency'] === 'string' ? ` ${record['currency']}` : '';
+      return `${String(record['value'])}${currency}`;
+    }
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 export function WitnessComparison({ incident }: { incident: Incident }) {
   const witness = incident.witness;
 
@@ -77,7 +99,7 @@ export function WitnessComparison({ incident }: { incident: Incident }) {
               <tr key={value.path}>
                 <td className="px-4 py-2 font-mono text-xs">{value.path}</td>
                 <td className="px-4 py-2 font-mono text-xs text-ivory">
-                  {JSON.stringify(value.value)}
+                  {readable(value.value)}
                 </td>
                 <td className="px-4 py-2">
                   <span className="block text-xs text-muted">{value.evidence.line}</span>
@@ -94,7 +116,7 @@ export function WitnessComparison({ incident }: { incident: Incident }) {
                     }`}
                   >
                     {value.confidence >= 0.7
-                      ? 'strong enough to auto-promote a repair'
+                      ? 'meets the 0.70 evidence bar for automatic promotion'
                       : 'too weak to auto-promote; a human decides'}
                   </span>
                 </td>

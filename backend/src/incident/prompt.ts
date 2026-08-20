@@ -95,7 +95,12 @@ export function synthesizeRepairPrompt(input: PromptInput): SynthesizedPrompt {
     }
 
     if (spec !== undefined) {
-      sentence += ` Extract ${spec.meaning}.`;
+      // The declared meaning is a human sentence and usually ends in a full
+      // stop already. Appending another produced "…sponsored listing price.."
+      // in a prompt that goes to Bright Data, and a lower-case start read as a
+      // fragment mid-instruction.
+      const meaning = spec.meaning.trim().replace(/\.+$/, '');
+      sentence += ` Extract ${meaning.charAt(0).toLowerCase()}${meaning.slice(1)}.`;
       if (spec.excludeLabels.length > 0) {
         sentence += ` Exclude ${spec.excludeLabels.slice(0, 4).join(', ')}.`;
       }
@@ -111,7 +116,18 @@ export function synthesizeRepairPrompt(input: PromptInput): SynthesizedPrompt {
 
   const closing: string[] = [`Expected values for this page: ${expected}.`];
   if (protectedFields.length > 0) {
-    closing.push(`Do not change these fields: ${protectedFields.join(', ')}.`);
+    /*
+     * "Do not change these fields" contradicted the instruction above it.
+     *
+     * A protected field is one a repair may not *drop*: the gate checks only
+     * that it is still present and non-empty, never that its value is
+     * unchanged. But the prompt said "do not change", and `price` is normally
+     * both protected and the field under repair, so the healer was told to fix
+     * price and to leave price alone in the same paragraph.
+     */
+    closing.push(
+      `These fields must still be present in the output: ${protectedFields.join(', ')}.`,
+    );
   }
   closing.push('Preserve the existing output schema.');
 
