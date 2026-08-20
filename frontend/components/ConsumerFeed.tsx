@@ -59,10 +59,20 @@ export async function ConsumerFeed({ collectorId, url }: { collectorId: string; 
         </p>
       )}
 
+      {/* The payload below is the last reading two sensors agreed on, which
+          still contains the field being withheld. Saying only "Withheld: price"
+          above a body containing a price reads as a contradiction, when what it
+          means is that the live value was refused and this is the older one. */}
       {fieldsDegraded.length > 0 ? (
-        <p className="border border-blocked/40 bg-blocked/10 p-3 text-sm text-blocked">
-          Withheld: {fieldsDegraded.join(', ')}
-        </p>
+        <div className="border border-blocked/40 bg-blocked/10 p-3 text-sm text-blocked">
+          <p className="font-semibold">Withheld now: {fieldsDegraded.join(', ')}</p>
+          <p className="mt-1 leading-6">
+            The current reading of {fieldsDegraded.length === 1 ? 'this field' : 'these fields'} was
+            refused. What follows is the last value two sensors agreed on
+            {lastVerified === null ? '' : `, from ${lastVerified.replace('T', ' ').slice(0, 16)}`}.
+            Nothing downstream is served the value that failed.
+          </p>
+        </div>
       ) : null}
 
       <pre className="overflow-x-auto border border-surface-border bg-surface-soft p-4 font-mono text-xs text-ivory/80">

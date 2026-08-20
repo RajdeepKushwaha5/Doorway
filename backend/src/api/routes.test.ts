@@ -471,3 +471,64 @@ describe('the bare host', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('accepting a baseline', () => {
+  /**
+   * Every acceptance produced "v1", because the route called `learnContract`
+   * with its default version. A second baseline was then indistinguishable
+   * from the first, and a verified snapshot's `contractVersion` could not say
+   * which profile had actually verified it.
+   */
+  it('moves the contract version on each acceptance', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brightDataCollectorId: 'c_version1',
+        name: 'Version fixture',
+        targetDomain: 'example.test',
+        watchUrls: ['https://example.test/p'],
+        witnessSpecs: [
+          {
+            path: 'price',
+            meaning: 'The purchase price.',
+            labels: ['price'],
+            excludeLabels: [],
+            kind: 'money',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+    const collector = (await created.json()) as { id: string };
+
+    for (const id of ['run-a', 'run-b']) {
+      await store.saveRun({
+        id,
+        collectorId: collector.id,
+        brightDataSnapshotId: null,
+        targetUrls: ['https://example.test/p'],
+        version: 'production',
+        rows: [{ price: { value: 249, currency: 'USD' } }],
+        checks: [],
+        durationMs: 10,
+        observedAt: new Date().toISOString(),
+      });
+    }
+
+    const accept = async (runIds: string[]): Promise<number> => {
+      const response = await fetch(
+        `${base}/api/collectors/${collector.id}/baseline`,
+        {
+          method: 'POST',
+          headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ runIds }),
+        },
+      );
+      return ((await response.json()) as { version: number }).version;
+    };
+
+    expect(await accept(['run-a'])).toBe(1);
+    expect(await accept(['run-a', 'run-b'])).toBe(2);
+  });
+});

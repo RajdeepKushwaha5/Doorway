@@ -30,6 +30,11 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
 
   const { collector, contract, runs, incidents } = detail;
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
+
+  // A healthy observation is stored as an incident too, and listing those
+  // filled this section with rows reading "Verified, no field isolated" that
+  // buried the one incident worth opening.
+  const notable = incidents.filter((incident) => incident.classification !== 'healthy');
   const hasBaseline = (contract?.sampleCount ?? 0) > 0;
 
   return (
@@ -143,11 +148,14 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Incidents</h2>
-        {incidents.length === 0 ? (
-          <p className="text-sm text-muted">Nothing has tripped a contract yet.</p>
+        {notable.length === 0 ? (
+          <p className="text-sm text-muted">
+            Nothing has disagreed yet. Every observation of this collector agreed with its
+            independent witness.
+          </p>
         ) : (
           <ul className="space-y-2">
-            {incidents.slice(0, 10).map((incident) => (
+            {notable.slice(0, 10).map((incident) => (
               <li key={incident.id}>
                 <Link
                   href={`/incidents/${incident.id}`}

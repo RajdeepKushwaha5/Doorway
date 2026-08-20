@@ -373,7 +373,16 @@ export function buildRouter(deps: ApiDeps): Router {
       observedAt: run.observedAt,
     }));
 
-    const contract = learnContract(collector.id, accepted, collector.invariants);
+    // Version off the contract already stored, not the default of 1.
+    //
+    // Every acceptance produced "v1", so a second baseline was indistinguishable
+    // from the first and a verified snapshot's `contractVersion` could not say
+    // which profile actually verified it. The number is displayed and recorded,
+    // so it has to move when the thing it describes moves.
+    const existing = await store.getContract(collector.id);
+    const version = existing === null ? 1 : existing.version + 1;
+
+    const contract = learnContract(collector.id, accepted, collector.invariants, version);
     await store.saveContract(contract);
     return contract;
   });
