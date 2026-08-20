@@ -450,3 +450,24 @@ describe('an incident carries the run that caused it', () => {
     expect(((await response.json()) as { run: unknown }).run).toBeNull();
   });
 });
+
+describe('the bare host', () => {
+  /**
+   * Everything lives under `/api/`, so `/` answered 404. Literally correct and
+   * indistinguishable from a dead service to anyone who trimmed the URL, which
+   * is what a reviewer following a link is most likely to do.
+   */
+  it('describes the service instead of 404ing', async () => {
+    const response = await fetch(`${base}/`);
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as { service: string; read: Record<string, string> };
+    expect(body.service).toBe('NOTICE');
+    expect(body.read['health']).toBe('/api/health');
+  });
+
+  it('still 404s a path that genuinely does not exist', async () => {
+    const response = await fetch(`${base}/not-a-route`);
+    expect(response.status).toBe(404);
+  });
+});

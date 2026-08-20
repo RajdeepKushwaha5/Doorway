@@ -91,6 +91,38 @@ export function buildRouter(deps: ApiDeps): Router {
     ...(deps.notifyIncident === undefined ? {} : { notifyIncident: deps.notifyIncident }),
   };
 
+  /**
+   * An index, because people paste the bare host into a browser.
+   *
+   * Every endpoint lives under `/api/`, so the router answered `/` with a 404.
+   * That is literally correct and reads as a broken service to anyone who
+   * trimmed the URL, which is exactly what a reviewer following a link in the
+   * README is likely to do. Answering with what this is and where to look
+   * costs nothing and removes the wrong first impression.
+   *
+   * Read-only routes only. The mutating ones need a bearer token and listing
+   * them here would invite attempts that can only end in 401.
+   */
+  router.get('/', async () => ({
+    service: 'NOTICE',
+    what: 'Detects when a Bright Data collector silently returns a wrong value, by holding it against an independent second sensor that reads the same page without selectors.',
+    status: 'ok',
+    at: new Date().toISOString(),
+    dashboard: 'https://notice-frontend-bay.vercel.app',
+    fixture: 'https://driftmart-3ut8.onrender.com',
+    repository: 'https://github.com/prabhatkumar67/notice',
+    read: {
+      health: '/api/health',
+      collectors: '/api/collectors',
+      incidents: '/api/incidents',
+      impact: '/api/stats/impact',
+      budget: '/api/budget',
+      verifiedFeed: '/api/feed/{collectorId}',
+      certificate: '/api/incidents/{id}/certificate',
+    },
+    note: 'Writes require a bearer token and are not listed. Verdicts are exportable as certificates you can re-derive offline.',
+  }));
+
   router.get('/api/health', async () => ({ status: 'ok', at: new Date().toISOString() }));
 
   router.get('/api/collectors', async () => {
