@@ -38,7 +38,15 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
   const hasBaseline = (contract?.sampleCount ?? 0) > 0;
 
   return (
-    <div className="space-y-10">
+    <div className="bg-surface pt-20">
+      {/* Every other page constrains its width; this one did not, so on a wide
+          monitor each row of JSON and the trust chart stretched the full
+          viewport and the header sat under the fixed nav. */}
+      <div className="section-index mx-auto max-w-6xl">
+        <span>COLLECTOR</span>
+        <span>[ OPERATIONS ]</span>
+      </div>
+      <div className="mx-auto max-w-6xl space-y-10 px-6 pb-24 pt-12 lg:px-8">
       <nav className="text-sm">
         <Link href="/" className="text-muted underline underline-offset-4 hover:text-ivory">
           Fleet
@@ -176,6 +184,7 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
           </ul>
         )}
       </section>
+      </div>
     </div>
   );
 }

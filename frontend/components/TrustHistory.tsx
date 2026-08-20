@@ -31,7 +31,7 @@ function Sparkline({ points, field }: { points: Point[]; field: string }) {
   const span = max - min === 0 ? 1 : max - min;
 
   const width = 720;
-  const height = 120;
+  const height = 150;
   const padX = 12;
   const padY = 14;
   const step = points.length === 1 ? 0 : (width - padX * 2) / (points.length - 1);
@@ -63,10 +63,12 @@ function Sparkline({ points, field }: { points: Point[]; field: string }) {
   if (current.length > 1) segments.push(current.join(' '));
 
   return (
-    <div className="overflow-x-auto">
+    /* Capped, and the scale sits against the plot rather than at the far
+       edges of whatever width the page happens to be. */
+    <div className="max-w-3xl overflow-x-auto rounded-lg border border-surface-border bg-surface-soft p-4">
       <svg
         viewBox={`0 0 ${String(width)} ${String(height)}`}
-        className="h-[120px] w-full min-w-[420px]"
+        className="h-[150px] w-full min-w-[420px]"
         role="img"
         aria-label={`${field} over the last ${String(points.length)} observations`}
       >
@@ -99,10 +101,15 @@ function Sparkline({ points, field }: { points: Point[]; field: string }) {
           );
         })}
       </svg>
-      <div className="mt-1 flex justify-between font-mono text-[11px] text-muted">
-        <span>{String(min)}</span>
-        <span>{field}</span>
-        <span>{String(max)}</span>
+      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2 border-t border-surface-border pt-2 font-mono text-[11px] text-muted">
+        <span>
+          <span className="text-ivory">{field}</span> over {points.length} observation
+          {points.length === 1 ? '' : 's'}
+        </span>
+        <span>
+          low <span className="text-ivory">{String(min)}</span> · high{' '}
+          <span className="text-ivory">{String(max)}</span>
+        </span>
       </div>
     </div>
   );

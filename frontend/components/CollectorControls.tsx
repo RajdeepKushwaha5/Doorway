@@ -51,6 +51,48 @@ export function RunNowButton({ collectorId, url }: { collectorId: string; url?: 
  * on exactly the thing it exists to catch. A human looks at the sample output
  * and decides.
  */
+/**
+ * The few values a person needs to judge a run, in reading order.
+ *
+ * Deliberately not every field: the question at this checkbox is whether the
+ * reading is correct, and a serialised row answers it worse than four labelled
+ * values do.
+ */
+function summarise(row: unknown): { label: string; value: string }[] {
+  if (row === null || typeof row !== 'object') return [];
+  const record = row as Record<string, unknown>;
+  const out: { label: string; value: string }[] = [];
+
+  for (const [key, raw] of Object.entries(record)) {
+    if (key === 'input' || raw === null || raw === undefined) continue;
+    if (out.length >= 4) break;
+
+    let value: string;
+    if (typeof raw === 'object') {
+      const money = raw as Record<string, unknown>;
+      if (!('value' in money)) continue;
+      const currency = typeof money['currency'] === 'string' ? ` ${money['currency']}` : '';
+      value = `${String(money['value'])}${currency}`;
+    } else {
+      value = String(raw);
+    }
+    out.push({ label: key.replace(/_/g, ' '), value });
+  }
+
+  return out;
+}
+
+/** Which page this run read, since one collector watches several. */
+function pageOf(run: RunRecord): string | null {
+  const first = run.targetUrls[0];
+  if (first === undefined) return null;
+  try {
+    return new URL(first).pathname;
+  } catch {
+    return first;
+  }
+}
+
 export function BaselineReview({
   collectorId,
   runs,
@@ -136,9 +178,23 @@ export function BaselineReview({
                       {warnings > 0 ? `, ${String(warnings)} warning${warnings === 1 ? '' : 's'}` : ''}
                     </span>
                   </span>
-                  <code className="mt-1 block truncate font-mono text-xs text-muted">
-                    {JSON.stringify(run.rows[0] ?? null)}
-                  </code>
+                  {/* A stringified row stretched the full width and read as
+                      noise. The decision here is "is this reading correct",
+                      which needs the values and the page they came from, not
+                      the serialisation. */}
+                  <span className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    {summarise(run.rows[0]).map((entry) => (
+                      <span key={entry.label} className="font-mono text-xs">
+                        <span className="text-muted">{entry.label} </span>
+                        <span className="text-ivory">{entry.value}</span>
+                      </span>
+                    ))}
+                  </span>
+                  {pageOf(run) === null ? null : (
+                    <span className="mt-1 block truncate font-mono text-[11px] text-muted">
+                      {pageOf(run)}
+                    </span>
+                  )}
                 </span>
               </label>
             </li>
@@ -164,7 +220,7 @@ export function BaselineReview({
             }
           });
         }}
-        className="status-chip border border-verified/40 bg-verified/10 px-3 py-1.5 text-verified disabled:opacity-40"
+        className="inline-flex items-center justify-center rounded-md border-2 border-verified bg-verified/10 px-6 py-3 font-mono text-[12px] font-semibold uppercase tracking-pixel text-verified transition-all hover:bg-verified hover:text-white disabled:cursor-not-allowed disabled:border-surface-border disabled:bg-transparent disabled:text-muted disabled:opacity-100"
       >
         {pending
           ? 'Learning'
