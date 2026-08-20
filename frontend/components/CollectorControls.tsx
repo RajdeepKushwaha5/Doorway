@@ -54,16 +54,36 @@ export function RunNowButton({ collectorId, url }: { collectorId: string; url?: 
 export function BaselineReview({
   collectorId,
   runs,
+  incidents = [],
 }: {
   collectorId: string;
   runs: RunRecord[];
+  /**
+   * Used to exclude runs that were already judged wrong.
+   *
+   * A drifted run carries no *failing* check when the baseline is empty, so it
+   * looked eligible and the interface offered a row reading `price 25` as
+   * material for teaching the system what normal is. Accepting it would have
+   * taught NOTICE that the deposit is the price, which is the precise failure
+   * the manual-acceptance rule exists to prevent.
+   */
+  incidents?: { runId: string; classification: string }[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
 
-  const eligible = runs.filter((run) => !run.checks.some((check) => check.status === 'fail'));
+  const judgedWrong = new Set(
+    incidents
+      .filter((incident) => incident.classification !== 'healthy')
+      .map((incident) => incident.runId),
+  );
+
+  const eligible = runs.filter(
+    (run) => !run.checks.some((check) => check.status === 'fail') && !judgedWrong.has(run.id),
+  );
+  const excluded = runs.length - eligible.length;
 
   const toggle = (id: string): void => {
     setSelected((current) => {
@@ -86,7 +106,12 @@ export function BaselineReview({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Select the runs you have looked at and believe are correct. {eligible.length} eligible.
+        Select the runs you have looked at and believe are correct. {eligible.length} eligible
+        {excluded > 0
+          ? `, ${String(excluded)} withheld from this list because a verdict already found them wrong`
+          : ''}
+        . This is what the system will treat as normal, so a wrong choice here teaches it the wrong
+        thing.
       </p>
 
       <ul className="space-y-2">
@@ -141,7 +166,11 @@ export function BaselineReview({
         }}
         className="status-chip border border-verified/40 bg-verified/10 px-3 py-1.5 text-verified disabled:opacity-40"
       >
-        {pending ? 'Learning' : `Accept ${String(selected.size)} as baseline`}
+        {pending
+          ? 'Learning'
+          : selected.size === 0
+            ? 'Select runs to accept'
+            : `Accept ${String(selected.size)} run${selected.size === 1 ? '' : 's'} as baseline`}
       </button>
 
       {message !== null ? (

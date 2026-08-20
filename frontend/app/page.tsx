@@ -9,6 +9,7 @@ import { SequentialGreenCards } from '@/components/SequentialGreenCards';
 import { SearchAndCollectorCarousel } from '@/components/SearchAndCollectorCarousel';
 import { BlindspotsMatrix } from '@/components/BlindspotsMatrix';
 import { ImpactBand } from '@/components/ImpactBand';
+import { FleetTable } from '@/components/FleetTable';
 import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
 import { getConsoleCapabilitiesAction, getFixtureModeAction } from '@/app/actions';
@@ -318,6 +319,11 @@ export default async function HomePage() {
           )}
 
           <div className="mt-6">
+          {/* The only route into the collector and incident pages. Both were
+              fully built and linked from nowhere, so the screens carrying the
+              actual evidence could only be reached by typing a URL. */}
+          <FleetTable collectors={collectors} incidents={incidents} />
+
             <OperationsPanel />
           </div>
         </section>

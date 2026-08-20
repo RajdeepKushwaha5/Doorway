@@ -63,7 +63,20 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
 
       <section className="grid gap-4 sm:grid-cols-3">
         <Stat label="Baseline runs" value={String(contract?.sampleCount ?? 0)} />
-        <Stat label="Contract version" value={contract === null ? 'none' : `v${String(contract.version)}`} />
+        {/* "v1" beside "Baseline runs 0" read as a contradiction. A contract is
+            created empty on the first observation so declared invariants can be
+            enforced immediately; the version is real, the statistics are not
+            there yet, and saying which is which removes the confusion. */}
+        <Stat
+          label="Contract version"
+          value={
+            contract === null
+              ? 'none'
+              : contract.sampleCount === 0
+                ? `v${String(contract.version)}, invariants only`
+                : `v${String(contract.version)}`
+          }
+        />
         <Stat label="Open incidents" value={String(open.length)} />
       </section>
 
@@ -125,7 +138,7 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
           Baseline acceptance
         </h2>
-        <BaselineReview collectorId={collector.id} runs={runs} />
+        <BaselineReview collectorId={collector.id} runs={runs} incidents={incidents} />
       </section>
 
       <section className="space-y-3">
