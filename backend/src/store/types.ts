@@ -252,6 +252,7 @@ export interface Store {
 
   saveVerifiedSnapshot(snapshot: VerifiedSnapshot): Promise<void>;
   getVerifiedSnapshot(collectorId: string, url: string): Promise<VerifiedSnapshot | null>;
+  listVerifiedSnapshots(): Promise<VerifiedSnapshot[]>;
 
   saveJob(job: JobRecord): Promise<void>;
   getJob(id: string): Promise<JobRecord | null>;

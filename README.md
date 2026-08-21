@@ -1,4 +1,24 @@
-# NOTICE
+# Doorway
+
+**Describe the future you want. Doorway turns official scholarships, fellowships, internships,
+grants and research programmes into a living opportunity world, then keeps every important field
+accurate as the web changes.**
+
+Doorway is one product with three internal systems:
+
+1. The Collector Foundry uses a coding agent and Bright Data Scraper Studio to turn long-tail
+   official pages into durable structured sources.
+2. The Opportunity Engine normalizes those records and creates transparent student matches.
+3. The Trust Engine, developed under the internal name NOTICE, verifies high-consequence fields,
+   separates genuine source changes from extractor failures, and proves repairs before restoring a
+   quarantined opportunity.
+
+The public APIs are `GET /api/doorway/opportunities` and `POST /api/doorway/world`. The existing
+collector, witness, incident and repair APIs remain the internal Trust Engine.
+
+---
+
+## Trust Engine: NOTICE
 
 **When a collector and an independent Bright Data witness disagree, the collector broke. When they agree but differ from history, the world changed. When the evidence conflicts, NOTICE refuses to heal.**
 

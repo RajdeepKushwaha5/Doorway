@@ -16,9 +16,9 @@ export default async function DriftMartIndex() {
 
   return (
     <>
-      <h1 style={{ fontSize: 22, marginBottom: '0.25rem' }}>DriftMart</h1>
+      <h1 style={{ fontSize: 22, marginBottom: '0.25rem' }}>Doorway Lab</h1>
       <p style={{ color: '#555', marginTop: 0, fontSize: 14 }}>
-        A controlled fault-injection target for the NOTICE project. Currently serving mode{' '}
+        A controlled fault-injection target for Doorway. Currently serving mode{' '}
         <code>{current}</code>.
       </p>
 
@@ -29,6 +29,9 @@ export default async function DriftMartIndex() {
       </p>
       <p>
         <a href="/product/headphones">/product/headphones</a>
+      </p>
+      <p>
+        <a href="/opportunity/ai-fellowship">/opportunity/ai-fellowship</a> - Doorway opportunity source
       </p>
 
       <h2 style={{ fontSize: 16, marginTop: '2rem' }}>Permanent fixtures</h2>
@@ -60,7 +63,7 @@ export default async function DriftMartIndex() {
 
       <h2 style={{ fontSize: 16, marginTop: '2rem' }}>Why this exists</h2>
       <p style={{ fontSize: 14, color: '#555', maxWidth: '46rem' }}>
-        NOTICE decides whether a website changed or a scraper broke. Proving it needs a page that
+        Doorway decides whether a website changed or a scraper broke. Proving it needs a page that
         can be made to do both on demand, which no real store will do on cue. The live page and the
         fixture for a given mode render from the same definition, so the fixtures cannot drift away
         from what the live page actually served.

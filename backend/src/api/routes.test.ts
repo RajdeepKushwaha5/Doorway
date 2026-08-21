@@ -462,7 +462,7 @@ describe('the bare host', () => {
     expect(response.status).toBe(200);
 
     const body = (await response.json()) as { service: string; read: Record<string, string> };
-    expect(body.service).toBe('NOTICE');
+    expect(body.service).toBe('Doorway');
     expect(body.read['health']).toBe('/api/health');
   });
 
@@ -530,5 +530,84 @@ describe('accepting a baseline', () => {
 
     expect(await accept(['run-a'])).toBe(1);
     expect(await accept(['run-a', 'run-b'])).toBe(2);
+  });
+});
+
+describe('Doorway public world', () => {
+  it('projects verified collector data and matches it over HTTP', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brightDataCollectorId: 'c_doorway1',
+        name: 'Doorway fellowship fixture',
+        targetDomain: 'example.test',
+        watchUrls: ['https://example.test/fellowship'],
+        witnessSpecs: [
+          {
+            path: 'deadline',
+            meaning: 'The final application deadline.',
+            labels: ['application deadline'],
+            excludeLabels: ['early interest'],
+            kind: 'text',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+    expect(created.status).toBe(200);
+    const collector = (await created.json()) as { id: string };
+    await store.saveVerifiedSnapshot({
+      collectorId: collector.id,
+      url: 'https://example.test/fellowship',
+      data: {
+        title: 'Open AI Research Fellowship',
+        provider: 'Example Foundation',
+        opportunity_type: 'fellowship',
+        interests: ['artificial intelligence'],
+        funding_level: 'fully funded',
+        deadline: '2026-09-18',
+        locations: ['India'],
+        application_url: 'https://example.test/apply',
+      },
+      contractVersion: 1,
+      verifiedAt: new Date().toISOString(),
+      contentHash: 'test',
+      shape: null,
+      confirmedBy: 'two_sensors',
+    });
+
+    const catalog = await fetch(`${base}/api/doorway/opportunities`);
+    expect(catalog.status).toBe(200);
+    expect(((await catalog.json()) as { opportunities: unknown[] }).opportunities).toHaveLength(1);
+
+    const world = await fetch(`${base}/api/doorway/world`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        country: 'India',
+        educationLevel: 'Undergraduate',
+        interests: ['artificial intelligence'],
+        skills: [],
+        opportunityTypes: ['fellowship'],
+        fundingRequirement: 'full',
+        locations: [],
+      }),
+    });
+    expect(world.status).toBe(200);
+    const body = (await world.json()) as {
+      matches: { score: number; opportunity: { title: string } }[];
+    };
+    expect(body.matches[0]?.opportunity.title).toBe('Open AI Research Fellowship');
+    expect(body.matches[0]?.score).toBeGreaterThan(80);
+  });
+
+  it('rejects a malformed profile instead of guessing', async () => {
+    const response = await fetch(`${base}/api/doorway/world`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ country: '', opportunityTypes: [] }),
+    });
+    expect(response.status).toBe(400);
   });
 });

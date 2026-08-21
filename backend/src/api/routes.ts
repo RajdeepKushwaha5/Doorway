@@ -24,6 +24,7 @@ import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, binary, HttpError, Router, stream } from './http.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
+import { buildWorld, opportunitiesFromSnapshots, profileSchema } from '../doorway/index.js';
 
 /**
  * Ceiling on a candidate replay.
@@ -104,8 +105,8 @@ export function buildRouter(deps: ApiDeps): Router {
    * them here would invite attempts that can only end in 401.
    */
   router.get('/', async () => ({
-    service: 'NOTICE',
-    what: 'Detects when a Bright Data collector silently returns a wrong value, by holding it against an independent second sensor that reads the same page without selectors.',
+    service: 'Doorway',
+    what: 'Builds a verified opportunity world from Bright Data Scraper Studio collectors, with an independent Trust Engine that catches silent extraction drift.',
     status: 'ok',
     at: new Date().toISOString(),
     dashboard: 'https://notice-frontend-bay.vercel.app',
@@ -118,6 +119,8 @@ export function buildRouter(deps: ApiDeps): Router {
       impact: '/api/stats/impact',
       budget: '/api/budget',
       verifiedFeed: '/api/feed/{collectorId}',
+      opportunities: '/api/doorway/opportunities',
+      opportunityWorld: 'POST /api/doorway/world',
       certificate: '/api/incidents/{id}/certificate',
     },
     note: 'Writes require a bearer token and are not listed. Verdicts are exportable as certificates you can re-derive offline.',
@@ -647,6 +650,53 @@ export function buildRouter(deps: ApiDeps): Router {
       Number(process.env['NOTICE_MONTHLY_PAGE_LOAD_BUDGET'] ?? DEFAULT_MONTHLY_BUDGET),
     ),
   );
+
+  /**
+   * Doorway's public catalog is a projection of verified collector snapshots.
+   * It never reads raw runs, so a quarantined value cannot accidentally enter
+   * the student-facing world through a second code path.
+   */
+  router.get('/api/doorway/opportunities', async () => {
+    const [collectors, snapshots, incidents] = await Promise.all([
+      store.listCollectors(),
+      store.listVerifiedSnapshots(),
+      store.listIncidents(),
+    ]);
+    const opportunities = opportunitiesFromSnapshots(snapshots, collectors, incidents);
+    return {
+      opportunities,
+      generatedAt: new Date().toISOString(),
+      sources: new Set(opportunities.map((opportunity) => opportunity.collectorId)).size,
+    };
+  });
+
+  router.get('/api/doorway/opportunities/:id', async ({ params }) => {
+    const [collectors, snapshots, incidents] = await Promise.all([
+      store.listCollectors(),
+      store.listVerifiedSnapshots(),
+      store.listIncidents(),
+    ]);
+    const opportunity = opportunitiesFromSnapshots(snapshots, collectors, incidents).find(
+      (candidate) => candidate.id === params['id'],
+    );
+    if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
+    return opportunity;
+  });
+
+  router.post('/api/doorway/world', async ({ body }) => {
+    const parsed = profileSchema.safeParse(body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new HttpError(400, issue?.message ?? 'invalid student profile');
+    }
+    const [collectors, snapshots, incidents] = await Promise.all([
+      store.listCollectors(),
+      store.listVerifiedSnapshots(),
+      store.listIncidents(),
+    ]);
+    const opportunities = opportunitiesFromSnapshots(snapshots, collectors, incidents);
+    return buildWorld(parsed.data, opportunities);
+  });
 
   router.get('/api/consumer/best-deal', async () => compareBestDeal(store));
 

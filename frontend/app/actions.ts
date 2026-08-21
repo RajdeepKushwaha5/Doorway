@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { serverApiBase } from '@/lib/env';
+import type { DoorwayProfile, DoorwayWorld } from '@/lib/types';
 
 /**
  * Server actions: the only place the admin token exists.
@@ -22,6 +23,38 @@ const BASE = serverApiBase();
 export type ActionResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; error: string };
+
+export async function buildDoorwayWorldAction(
+  profile: DoorwayProfile,
+): Promise<ActionResult<DoorwayWorld>> {
+  try {
+    const response = await fetch(`${BASE}/api/doorway/world`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(profile),
+      cache: 'no-store',
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | DoorwayWorld
+      | { error?: string }
+      | null;
+    if (!response.ok) {
+      return {
+        ok: false,
+        error:
+          payload !== null && 'error' in payload && typeof payload.error === 'string'
+            ? payload.error
+            : `request failed with ${String(response.status)}`,
+      };
+    }
+    return { ok: true, data: payload as DoorwayWorld };
+  } catch (caught) {
+    return {
+      ok: false,
+      error: caught instanceof Error ? caught.message : 'the Doorway engine could not be reached',
+    };
+  }
+}
 
 async function mutate<T>(
   path: string,

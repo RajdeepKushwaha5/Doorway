@@ -26,16 +26,15 @@ export async function SiteFooter() {
               and no credit card describes a product that does not exist. */}
           <div>
             <h3 className="font-mondwest font-normal not-italic text-[28px] sm:text-[34px] leading-tight text-white">
-              Clone it, add one key, run it.
+              Build a world from the live web.
             </h3>
             <p className="font-mono text-[12px] text-gray-400 mt-1">
               {/* "Only BRIGHTDATA_API_KEY is required" was true of reading and
                   false of everything else: mutations need NOTICE_ADMIN_TOKEN,
                   and a deployed witness needs an Unlocker zone or it silently
                   falls back to a CLI no server has. */}
-              MIT licensed and self-hosted. Reading needs only BRIGHTDATA_API_KEY. Running or
-              repairing a collector also needs NOTICE_ADMIN_TOKEN, and a deployed witness needs
-              BRIGHTDATA_UNLOCKER_ZONE.
+              Bright Data finds the sources, Scraper Studio structures them, and Doorway keeps
+              every important field tied to evidence.
             </p>
           </div>
 
@@ -47,10 +46,10 @@ export async function SiteFooter() {
               READ THE SOURCE →
             </a>
             <Link
-              href="/verified"
+              href="/#world"
               className="border border-gray-700 hover:border-gray-500 text-white font-mono text-[11px] uppercase tracking-wider px-5 py-3 rounded-md transition-colors whitespace-nowrap"
             >
-              BROWSE VERIFIED FEED
+              BUILD MY WORLD
             </Link>
           </div>
         </div>
@@ -59,23 +58,23 @@ export async function SiteFooter() {
       {/* Main CTA Section */}
       <div className="max-w-[1400px] mx-auto px-6 text-center pb-16 border-b border-gray-200">
         <h2 className="font-mondwest font-normal not-italic text-[52px] sm:text-[76px] leading-[0.95] tracking-tight text-gray-900 max-w-[900px] mx-auto">
-          The wrong fact is the only symptom.
+          A life-changing door should not stay hidden.
         </h2>
         {/* Not 24/7. The scheduler defaults to a six-hour interval and pauses
             against a monthly page-load ceiling, because both sensors draw from
             the same free-tier allowance. Advertising continuous watching would
             promise a bill nobody agreed to. */}
         <p className="font-mono text-[13px] text-gray-500 max-w-[540px] mx-auto mt-4 leading-relaxed">
-          No exception, no null, no alert. Two Bright Data sensors read the same page on a schedule,
-          and a value they disagree on is withheld until it can be proven again.
+          Doorway turns fragmented opportunity pages into one living world, then keeps that world
+          accurate as sources and layouts change.
         </p>
 
         <div className="mt-7">
           <Link
-            href="/#control-room"
+            href="/#world"
             className="inline-flex items-center gap-2 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] px-8 py-3.5 bg-black text-white rounded-md hover:bg-neutral-800 transition-colors"
           >
-            OPEN THE CONTROL ROOM →
+            OPEN THE OPPORTUNITY WORLD →
           </Link>
         </div>
       </div>
@@ -88,12 +87,12 @@ export async function SiteFooter() {
             <Link href="/" className="flex items-center gap-2 select-none group">
               <NoticeLogo className="w-6 h-6 text-black transition-transform group-hover:scale-105" />
               <span className="font-mondwest font-normal not-italic text-[26px] text-gray-900 leading-none">
-                Notice
+                Doorway
               </span>
             </Link>
             <p className="text-gray-500 text-[12px] leading-relaxed max-w-[280px]">
-              Dual-sensor drift detection for Bright Data Scraper Studio and Web Unlocker. A value
-              that cannot be defended is withheld rather than published.
+              A verified opportunity world built from official sources with Bright Data Scraper
+              Studio, Web Unlocker and the Doorway Trust Engine.
             </p>
 
             <div className="pt-1">
@@ -128,9 +127,9 @@ export async function SiteFooter() {
             </div>
             <ul className="space-y-2.5 text-gray-600 text-[12px]">
               <li><Link href="/" className="hover:text-black">Discover</Link></li>
-              <li><Link href="/verified" className="hover:text-black">Verified Feed</Link></li>
-              <li><Link href="/#control-room" className="hover:text-black">Control Room</Link></li>
-              <li><Link href="/#problem" className="hover:text-black">Dual Sensor Verification</Link></li>
+              <li><Link href="/#world" className="hover:text-black">Opportunity World</Link></li>
+              <li><Link href="/engine" className="hover:text-black">Trust Engine</Link></li>
+              <li><Link href="/verify" className="hover:text-black">Verify Evidence</Link></li>
             </ul>
           </div>
 
@@ -170,8 +169,8 @@ export async function SiteFooter() {
             </div>
             <ul className="space-y-2.5 text-gray-600 text-[12px]">
               <li><Link href="/#system" className="hover:text-black">Architecture &amp; Self-Healing</Link></li>
-              <li><Link href="/#faq" className="hover:text-black">FAQ</Link></li>
-              <li><Link href="/#system" className="hover:text-black">Model Context Protocol (MCP)</Link></li>
+              <li><Link href="/engine" className="hover:text-black">Collector Operations</Link></li>
+              <li><Link href="/engine#system" className="hover:text-black">Model Context Protocol (MCP)</Link></li>
               <li>
                 <a href="https://github.com/prabhatkumar67/notice" target="_blank" rel="noreferrer" className="hover:text-black flex items-center gap-1">
                   GitHub Repository ↗
@@ -183,7 +182,7 @@ export async function SiteFooter() {
 
         {/* Bottom Copyright Bar */}
         <div className="mt-12 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-gray-400 text-[11px]">
-          <span>© 2026 NOTICE. Trust the data, not the green check.</span>
+          <span>© 2026 DOORWAY. Find the opportunities the web hides.</span>
           <span>Into the Scrape-Verse Hackathon</span>
         </div>
       </div>

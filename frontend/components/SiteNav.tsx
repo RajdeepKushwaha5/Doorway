@@ -14,13 +14,9 @@ import { NoticeLogo } from '@/components/NoticeLogo';
  * was never there.
  */
 const links = [
-  { href: '/#problem', label: 'DISCOVER', active: true },
-  { href: '/#gap', label: 'THE GAP' },
-  { href: '/#system', label: 'HOW IT WORKS' },
-  { href: '/#automation', label: 'AUTOMATION' },
-  { href: '/#control-room', label: 'CONTROL ROOM' },
-  { href: '/#faq', label: 'FAQ' },
-  { href: '/verified', label: 'VERIFIED FEED' },
+  { href: '/#world', label: 'OPPORTUNITY WORLD', active: true },
+  { href: '/#system', label: 'HOW IT LIVES' },
+  { href: '/engine', label: 'TRUST ENGINE' },
   { href: '/verify', label: 'VERIFY' },
 ];
 
@@ -34,7 +30,7 @@ export function SiteNav() {
         <Link href="/" className="flex items-center gap-2 select-none shrink-0 group">
           <NoticeLogo className="w-5 h-5 text-black transition-transform group-hover:scale-105" />
           <span className="font-mondwest font-normal not-italic text-[24px] leading-none tracking-tight text-gray-900">
-            Notice
+            Doorway
           </span>
         </Link>
 
@@ -79,10 +75,10 @@ export function SiteNav() {
         </a>
 
         <Link
-          href="/#control-room"
+          href="/#world"
           className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] px-4 py-1.5 bg-black text-white rounded-[6px] hover:bg-neutral-800 transition-colors whitespace-nowrap"
         >
-          Control Room
+          Build my world
         </Link>
 
         <button

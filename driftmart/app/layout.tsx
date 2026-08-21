@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'DriftMart',
+  title: 'Doorway Lab',
   description:
-    'A controlled fault-injection target used to demonstrate NOTICE. Not a real store, and not a real product.',
+    'A controlled fault-injection target used to demonstrate Doorway. Not a real opportunity provider.',
   robots: { index: false, follow: false },
 };
 
@@ -24,9 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             marginBottom: '1.5rem',
           }}
         >
-          <strong>Test fixture.</strong> DriftMart is a controlled fault-injection target built to
-          demonstrate the NOTICE project. It is not a real store, nothing here is for sale, and its
-          failures are deliberately injected rather than spontaneous.
+          <strong>Test fixture.</strong> Doorway Lab is a controlled fault-injection target. It is
+          not a real opportunity provider, no application is accepted, and its failures are
+          deliberately injected rather than spontaneous.
         </p>
         {children}
       </body>

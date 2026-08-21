@@ -1,8 +1,8 @@
 {
-  "name": "notice",
+  "name": "doorway",
   "version": "0.1.0",
   "private": true,
-  "description": "Incident-to-verified-repair control plane for Bright Data Scraper Studio",
+  "description": "A verified opportunity world built and maintained with Bright Data Scraper Studio",
   "license": "MIT",
   "type": "module",
   "engines": {

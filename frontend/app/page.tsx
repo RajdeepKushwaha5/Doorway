@@ -14,6 +14,7 @@ import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
 import { getConsoleCapabilitiesAction, getFixtureModeAction } from '@/app/actions';
 import type { CollectorSummary, Incident } from '@/lib/types';
+import { DoorwayHome } from '@/components/DoorwayHome';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,7 +73,11 @@ const FAQS = [
   },
 ];
 
-export default async function HomePage() {
+export default function HomePage() {
+  return <DoorwayHome />;
+}
+
+export async function NoticeEnginePage() {
   let collectors: CollectorSummary[] = [];
   let incidents: Incident[] = [];
   let offline = false;

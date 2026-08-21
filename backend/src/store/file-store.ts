@@ -185,6 +185,12 @@ export class FileStore implements Store {
     return (await this.#load()).verified[`${collectorId}::${url}`] ?? null;
   }
 
+  async listVerifiedSnapshots(): Promise<VerifiedSnapshot[]> {
+    return Object.values((await this.#load()).verified).sort((a, b) =>
+      b.verifiedAt.localeCompare(a.verifiedAt),
+    );
+  }
+
   async saveJob(job: JobRecord): Promise<void> {
     const snapshot = await this.#load();
     snapshot.jobs[job.id] = job;

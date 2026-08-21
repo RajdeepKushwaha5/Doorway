@@ -331,3 +331,74 @@ export interface AuditEvent {
   payload: unknown;
   at: string;
 }
+
+export type OpportunityType =
+  | 'scholarship'
+  | 'fellowship'
+  | 'internship'
+  | 'grant'
+  | 'hackathon'
+  | 'research-program';
+
+export interface DoorwayProfile {
+  country: string;
+  educationLevel: string;
+  interests: string[];
+  skills: string[];
+  opportunityTypes: OpportunityType[];
+  fundingRequirement: 'full' | 'partial' | 'any';
+  locations: string[];
+}
+
+export interface DoorwayOpportunity {
+  id: string;
+  collectorId: string;
+  sourceUrl: string;
+  title: string;
+  provider: string;
+  type: OpportunityType;
+  summary: string;
+  eligibility: string[];
+  interests: string[];
+  funding: {
+    amount: number | null;
+    currency: string | null;
+    coverage: string[];
+    level: 'full' | 'partial' | 'unspecified';
+  };
+  deadline: string | null;
+  deadlineRaw: string | null;
+  locations: string[];
+  remote: boolean | null;
+  requiredDocuments: string[];
+  applicationUrl: string;
+  trust: {
+    status: 'verified' | 'partially_verified' | 'stale' | 'quarantined';
+    confirmedBy: 'two_sensors' | 'contract_only';
+    lastVerifiedAt: string;
+    incidentId: string | null;
+    fieldsDegraded: string[];
+  };
+}
+
+export interface DoorwayMatch {
+  opportunity: DoorwayOpportunity;
+  score: number;
+  eligible: true | false | 'unknown';
+  matchedRequirements: string[];
+  unmetRequirements: string[];
+  unknownRequirements: string[];
+  explanation: string[];
+}
+
+export interface DoorwayWorld {
+  generatedAt: string;
+  profile: DoorwayProfile;
+  matches: DoorwayMatch[];
+  stats: {
+    sources: number;
+    opportunities: number;
+    verified: number;
+    closingSoon: number;
+  };
+}

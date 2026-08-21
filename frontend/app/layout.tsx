@@ -25,14 +25,14 @@ const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', displ
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {
-    default: 'NOTICE | Trust the data, not the green check',
-    template: '%s | NOTICE',
+    default: 'Doorway | Find the opportunities the web hides',
+    template: '%s | Doorway',
   },
   description:
-    'NOTICE catches believable but wrong scraper data, decides whether the site changed or the extractor broke, and proves every repair before production.',
+    'Doorway turns scattered scholarships, fellowships, internships and grants into a living, verified opportunity world built with Bright Data.',
   openGraph: {
-    title: 'NOTICE | Trust the data, not the green check',
-    description: 'The verification layer for Bright Data Scraper Studio collectors.',
+    title: 'Doorway | Find the opportunities the web hides',
+    description: 'A living opportunity world built and maintained with Bright Data Scraper Studio.',
     images: ['/notice-signal-hero.png'],
   },
 };

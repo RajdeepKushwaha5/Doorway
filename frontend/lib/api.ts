@@ -10,6 +10,9 @@ import type {
   Incident,
   JobRecord,
   RunRecord,
+  DoorwayProfile,
+  DoorwayWorld,
+  DoorwayOpportunity,
 } from './types';
 
 /**
@@ -121,4 +124,13 @@ export const api = {
     request(
       `/api/feed/${encodeURIComponent(collectorId)}${url === undefined ? '' : `?url=${encodeURIComponent(url)}`}`,
     ),
+
+  doorwayOpportunities: (): Promise<{
+    opportunities: DoorwayOpportunity[];
+    generatedAt: string;
+    sources: number;
+  }> => request('/api/doorway/opportunities'),
+
+  doorwayWorld: (profile: DoorwayProfile): Promise<DoorwayWorld> =>
+    request('/api/doorway/world', { method: 'POST', body: JSON.stringify(profile) }),
 };
