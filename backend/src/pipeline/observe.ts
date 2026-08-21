@@ -647,6 +647,41 @@ export async function observeOnce(
     });
   }
 
+  /*
+   * A source that has come good again may leave its quarantine here too.
+   *
+   * Recovery used to be detectable on exactly one path: the contracts pass, so
+   * the witness is never woken. That reads as symmetric and is not, because it
+   * answers the wrong question. An `extractor_drift` incident is not opened by
+   * a contract failing. It is opened by two independent sensors reading the
+   * same page and disagreeing. The matching recovery signal is therefore the
+   * two of them agreeing again, which is what a publishable verdict here means
+   * and is strictly more evidence than a contract pass against the collector's
+   * own history.
+   *
+   * Withholding that path had a sharp edge on exactly the collectors least able
+   * to survive it. A contract needs a baseline before it can assert anything,
+   * so a young collector always wakes the witness, so it can never reach the
+   * other path. A source that tripped one incident in its first days stayed
+   * quarantined permanently, and Doorway went on withholding a real opportunity
+   * from students while both sensors agreed on every field of it.
+   *
+   * The incident written just above is untouched: a publishable verdict records
+   * it unquarantined, and only open quarantining incidents for this same URL
+   * are closed.
+   */
+  const closed = publishable
+    ? await closeRecoveredIncidents(deps, collector.id, url, run.id, startedAt)
+    : 0;
+
+  if (closed > 0) {
+    emit({
+      step: 'recovery',
+      line: `recovered       ${String(closed)} incident(s) closed, both sensors agree again`,
+      detail: { incidentsClosed: closed, basis: 'two_sensors' },
+    });
+  }
+
   return { run, incident, publishable };
 }
 

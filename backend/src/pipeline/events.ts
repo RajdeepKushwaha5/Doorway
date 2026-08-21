@@ -29,6 +29,8 @@ export type ObserveStep =
   | 'witness-read'
   | 'compare'
   | 'verdict'
+  /** A prior quarantine lifted because both sensors agree again. */
+  | 'recovery'
   | 'error';
 
 export interface ObserveEvent {

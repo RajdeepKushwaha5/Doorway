@@ -229,6 +229,54 @@ describe('NOTICE end-to-end', () => {
     expect(still?.quarantined).toBe(true);
   });
 
+  /**
+   * The same recovery, for a collector too young to have a baseline.
+   *
+   * Recovery was detectable on exactly one path: every contract passes, so the
+   * witness is never woken. That path is unreachable for a new source, because
+   * a contract needs history before it can assert anything, so the witness is
+   * woken on every run and the collector never qualifies. A source that tripped
+   * one incident in its first days stayed quarantined permanently.
+   *
+   * The signal that closes it here is the one that opened it. Drift is declared
+   * when two independent sensors read the same page and disagree, so two
+   * sensors agreeing again is the answer to that exact question, and a stronger
+   * one than a contract passing against the collector's own short history.
+   */
+  it('closes an incident on renewed agreement, with no baseline to lean on', async () => {
+    const young: CollectorRecord = { ...collector, id: 'col-young', goldenCases: [] };
+    await store.saveCollector(young);
+    // Deliberately no learnContract call: this collector has no history.
+
+    fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
+    const broken = await observeOnce(young, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+    expect(broken.incident?.quarantined).toBe(true);
+    expect(broken.publishable).toBe(false);
+
+    // The extractor is fixed. Both sensors now read the same page the same way.
+    fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+    const recovered = await observeOnce(young, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+    expect(recovered.publishable).toBe(true);
+    expect(recovered.incident?.quarantined).toBe(false);
+
+    const closed = await store.getIncident(broken.incident!.id);
+    expect(closed?.resolvedAt).not.toBeNull();
+    expect(closed?.quarantined).toBe(false);
+    expect(closed?.history.at(-1)?.to).toBe('resolved');
+
+    // And the point of all of it: the row is served again.
+    const feed = await buildFeed(store, young.id, INCIDENT_URL);
+    expect(feed.health.status).toBe('verified');
+  });
+
   it('detects drift, quarantines it, and never publishes the corrupt value', async () => {
     fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
     const result = await observeOnce(collector, INCIDENT_URL, {
