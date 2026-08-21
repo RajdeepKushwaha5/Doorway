@@ -137,7 +137,42 @@ function fromLabelledLine(lines: readonly string[], spec: WitnessFieldSpec): Wit
 
     const separator = line.search(/[:–—-]/);
     const candidate = separator === -1 ? line : line.slice(separator + 1);
-    const coerced = coerce(candidate.trim(), spec);
+
+    /*
+     * A line that is only the label may or may not also be the value.
+     *
+     * With no separator, `candidate` is the whole line, which is the label we
+     * just matched. Sometimes that is right: a spec can use a product's own
+     * name as the label to find its title, and there the label is the value.
+     * Sometimes it is badly wrong. Rendered to markdown a definition list puts
+     * the term and its description on separate lines:
+     *
+     *   Application deadline
+     *
+     *   18 September 2026
+     *
+     * For money and number the mistake is self-correcting, since "Application
+     * deadline" does not coerce to a number and the fallback below gets its
+     * turn. For a text field it coerces perfectly, because a label is valid
+     * text, so the witness answered with the question: it reported
+     * `deadline_raw` as "Application deadline" and called a collector that had
+     * read the date correctly a drift.
+     *
+     * What separates the two cases is the line underneath. A line that looks
+     * like `Something: value` belongs to a different field, so the bare label
+     * is the best reading of this one. A line carrying a bare value is the
+     * description of this term, and is what the page means.
+     *
+     * Definition lists are how government portals, university pages and
+     * foundation sites publish structured facts, which is most of what this
+     * system is pointed at.
+     */
+    const following = lines.slice(index + 1).find((entry) => normalizeText(entry) !== '');
+    const followingIsOwnField =
+      following === undefined || /^\s*[A-Za-z][^:\n]{0,47}:\s*\S/.test(normalizeText(following));
+
+    const preferLineBelow = separator === -1 && !followingIsOwnField;
+    const coerced = preferLineBelow ? null : coerce(candidate.trim(), spec);
 
     if (coerced !== null) {
       return {

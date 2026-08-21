@@ -203,3 +203,90 @@ describe('reconcile', () => {
     expect(summary.weakestDisagreementConfidence).toBeGreaterThan(0.5);
   });
 });
+
+/**
+ * The label is not the value, except when it is.
+ *
+ * Rendered to markdown, a `<dl>` puts the term on one line and its description
+ * on another. That is how government portals, university pages and foundation
+ * sites publish structured facts, which is most of what Doorway is pointed at.
+ *
+ * A text field made this mistake silently. `coerce` accepts a label as valid
+ * text, so with no separator on the line the witness answered with the question:
+ * it read `deadline_raw` as "Application deadline" and reported drift against a
+ * collector that had read the date correctly. On a live run against a real
+ * Bright Data collector that produced a false `extractor_drift`, which
+ * quarantined a genuine opportunity.
+ *
+ * Money and number were never affected, because "Application deadline" does not
+ * coerce to a number and the next-line fallback got its turn. Only text hid it.
+ */
+describe('definition lists', () => {
+  const DEFINITION_MARKDOWN = `
+# Open AI Research Fellowship
+
+Funding
+
+Fully funded
+
+Application deadline
+
+18 September 2026
+
+Location: India
+`.trim();
+
+  const deadlineSpec: WitnessFieldSpec = {
+    path: 'deadline_raw',
+    meaning: 'the date applications close',
+    labels: ['application deadline', 'deadline'],
+    excludeLabels: ['early interest', 'notification'],
+    kind: 'text',
+    allowed: [],
+  };
+
+  const fundingSpec: WitnessFieldSpec = {
+    path: 'funding_level',
+    meaning: 'how much of the cost the award covers',
+    labels: ['funding', 'award'],
+    excludeLabels: [],
+    kind: 'text',
+    allowed: [],
+  };
+
+  it('reads the description below the term, not the term', () => {
+    const deadline = extractField(DEFINITION_MARKDOWN, deadlineSpec);
+    expect(deadline?.value).toBe('18 September 2026');
+
+    const funding = extractField(DEFINITION_MARKDOWN, fundingSpec);
+    expect(funding?.value).toBe('Fully funded');
+  });
+
+  it('still takes the value beside the label when the line carries one', () => {
+    const spec: WitnessFieldSpec = {
+      path: 'location',
+      meaning: 'where the opportunity is held',
+      labels: ['location'],
+      excludeLabels: [],
+      kind: 'text',
+      allowed: [],
+    };
+    expect(extractField(DEFINITION_MARKDOWN, spec)?.value).toBe('India');
+  });
+
+  /**
+   * The guard must not fire when the label genuinely is the value. A spec can
+   * name a product's own title to find it, and there the bare line is right.
+   */
+  it('keeps a bare line whose neighbour is another labelled field', () => {
+    const spec: WitnessFieldSpec = {
+      path: 'name',
+      meaning: 'The product title',
+      labels: ['Nova Headphones', 'product'],
+      excludeLabels: [],
+      kind: 'text',
+      allowed: [],
+    };
+    expect(extractField(DRIFTMART_MARKDOWN, spec)?.value).toBe('Nova Headphones');
+  });
+});
