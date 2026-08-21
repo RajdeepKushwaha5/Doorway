@@ -287,15 +287,33 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
             <div key={line}>+ {line}</div>
           ))}
         </div>
-        <a
-          href={opportunity.applicationUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-5 flex items-center justify-between border-t border-black pt-4 font-neuebit text-[11px] uppercase tracking-[0.12em] hover:text-[#f06449]"
-        >
-          <span>{quarantined ? 'Inspect evidence' : 'Open official door'}</span>
-          <span>↗</span>
-        </a>
+        {/* The label used to read "Inspect evidence" while the link still went
+            to the application page, so a card whose values are withheld sent a
+            student off to apply on them. The destination now matches what the
+            card says it is. */}
+        {quarantined ? (
+          <Link
+            href={`/opportunities/${opportunity.id}`}
+            className="mt-5 flex items-center justify-between border-t border-black pt-4 font-neuebit text-[11px] uppercase tracking-[0.12em] text-blocked hover:text-black"
+          >
+            <span>Held back, see why</span>
+            <span>→</span>
+          </Link>
+        ) : (
+          <div className="mt-5 flex items-center justify-between gap-4 border-t border-black pt-4 font-neuebit text-[11px] uppercase tracking-[0.12em]">
+            <Link href={`/opportunities/${opportunity.id}`} className="hover:text-[#f06449]">
+              Evidence →
+            </Link>
+            <a
+              href={opportunity.applicationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[#f06449]"
+            >
+              Open official door ↗
+            </a>
+          </div>
+        )}
       </div>
     </article>
   );

@@ -1,199 +1,187 @@
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Eye, ShieldCheck, WarningOctagon } from '@phosphor-icons/react/dist/ssr';
 import { api } from '@/lib/api';
-import type { DealComparison } from '@/lib/types';
+import type { DoorwayOpportunity } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-export default async function VerifiedConsumerPage() {
-  let comparison: DealComparison | null = null;
+/**
+ * What a student is actually served, and what they are not.
+ *
+ * This page used to compare headphone prices, which belonged to the retail
+ * demonstration the engine was first built against and says nothing about
+ * Doorway. The question that matters here is narrower and much more
+ * consequential: an aggregator shows you whatever it last scraped, and Doorway
+ * shows you only what it can still stand behind.
+ *
+ * The difference is a deadline. A scholarship page whose closing date moved,
+ * or whose extractor started reading the wrong line, will keep serving a date
+ * to anyone who does not check. A student plans an evening of work around that
+ * date. So every opportunity here is listed with what is known about it, and
+ * the ones that cannot be confirmed are shown as held rather than quietly
+ * served alongside the rest.
+ */
+
+const GROUPS = [
+  {
+    key: 'verified' as const,
+    title: 'Served as current',
+    blurb:
+      'Two independent Bright Data sensors read the source page and agreed. These are safe to plan around.',
+    tone: 'border-verified/40',
+  },
+  {
+    key: 'partially_verified' as const,
+    title: 'Served, with the weaker claim stated',
+    blurb:
+      'These passed the checks learned for their source, but the independent witness was not consulted on this reading. Real, and a smaller claim.',
+    tone: 'border-suspect/40',
+  },
+  {
+    key: 'stale' as const,
+    title: 'Served with its age attached',
+    blurb:
+      'Two sensors agreed on this once, but not recently. The date is shown so nobody mistakes it for a fresh reading.',
+    tone: 'border-suspect/40',
+  },
+  {
+    key: 'quarantined' as const,
+    title: 'Withheld',
+    blurb:
+      'The source changed and the two readings no longer agree. An aggregator would still be serving the old value. Doorway holds it back and says so.',
+    tone: 'border-blocked/40',
+  },
+];
+
+export default async function VerifiedPage() {
+  let opportunities: DoorwayOpportunity[] = [];
+  let offline = false;
+
   try {
-    comparison = await api.bestDeal();
+    ({ opportunities } = await api.doorwayOpportunities());
   } catch {
-    comparison = null;
+    offline = true;
   }
 
-  // Mirrors what `compareBestDeal` now returns for this fleet: the naive
-  // pipeline ranks 25 USD against 51.77 GBP and takes the smaller number, and
-  // the verified side refuses to answer at all, because those two prices cannot
-  // be ordered without an exchange rate this system does not have.
-  const activeComparison: DealComparison = comparison ?? {
-    diverged: true,
-    explanation: [
-      'An unguarded pipeline would recommend "Nova Headphones" at 25 USD, which is the refundable deposit a drifted selector captured.',
-      'The remaining candidates are priced in USD and GBP, which cannot be ranked without an exchange rate this system does not have.',
-      'NOTICE recommends nothing rather than answering that one currency is cheaper than another.',
-    ],
-    unguarded: {
-      pick: {
-        collectorId: 'c_msvllpds1n1dcoz8qx',
-        collectorName: 'DriftMart headphones',
-        title: 'Nova Headphones',
-        price: 25,
-        currency: 'USD',
-        url: 'https://driftmart-3ut8.onrender.com/product/headphones',
-      },
-      considered: [
-        {
-          collectorId: 'c_msvllpds1n1dcoz8qx',
-          collectorName: 'DriftMart headphones',
-          title: 'Nova Headphones',
-          price: 25,
-          currency: 'USD',
-          url: 'https://driftmart-3ut8.onrender.com/product/headphones',
-        },
-        {
-          collectorId: 'c_msvk2zahnc2mizts6',
-          collectorName: 'Books to Scrape',
-          title: 'A Light in the Attic',
-          price: 51.77,
-          currency: 'GBP',
-          url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
-        },
-      ],
-    },
-    verified: {
-      // Null on purpose. Withholding is the answer here, and the panel already
-      // renders "No recommendation" for it.
-      pick: null,
-      considered: [
-        {
-          collectorId: 'c_msvllpds1n1dcoz8qx',
-          collectorName: 'DriftMart headphones',
-          title: 'Nova Headphones',
-          price: null,
-          currency: 'USD',
-          url: 'https://driftmart-3ut8.onrender.com/product/headphones',
-          health: 'quarantined',
-          stale: true,
-        },
-        {
-          collectorId: 'c_msvk2zahnc2mizts6',
-          collectorName: 'Books to Scrape',
-          title: 'A Light in the Attic',
-          price: 51.77,
-          currency: 'GBP',
-          url: 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
-          health: 'healthy',
-          stale: false,
-        },
-      ],
-    },
-  };
+  const counted = (status: DoorwayOpportunity['trust']['status']): DoorwayOpportunity[] =>
+    opportunities.filter((opportunity) => opportunity.trust.status === status);
 
-  const { unguarded, verified, diverged, explanation } = activeComparison;
-  // The fallback exists because the API sleeps on a free tier, and an empty
-  // page reads as a broken product. But unlabelled example data presented as a
-  // live decision is the exact failure this project argues against, so when the
-  // backend could not be reached the page says so rather than implying it ran.
-  const isExample = comparison === null;
+  const withheld = counted('quarantined').length;
+
   return (
-    <div className="bg-surface pt-10">
-      <div className="section-index mx-auto max-w-7xl">
-        <span>VERIFIED DECISIONS</span>
-        <span>{isExample ? 'EXAMPLE · API UNREACHABLE' : '[ 01 / 03 ]'}</span>
-      </div>
-      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 lg:px-8">
-        <Link href="/#control-room" className="footer-link inline-flex items-center gap-2 text-sm"><ArrowLeft size={16} /> Control room</Link>
+    <div className="min-h-screen bg-white text-gray-900">
+      <div className="mx-auto max-w-[1100px] px-6 py-16 lg:px-10">
+        <nav className="font-mono text-[12px]">
+          <Link href="/" className="text-gray-500 underline underline-offset-4 hover:text-black">
+            The world
+          </Link>
+        </nav>
 
-        <header data-reveal className="verified-hero mt-8">
-          <div>
-            <p className="eyebrow"><span className="signal-square" /> Downstream consequence</p>
-            <h1 className="mt-4 max-w-3xl font-mondwest font-normal not-italic text-4xl sm:text-5xl lg:text-6xl leading-[1.0] text-gray-900 tracking-tight">The cheapest answer can be the most expensive mistake.</h1>
+        <header className="mt-6 border-b border-black pb-8">
+          <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-[#f06449]">
+            The verified feed
           </div>
-          <div className="verified-hero__aside">
-            <p>Both pipelines see the same collectors. Only one requires evidence before it recommends a deal.</p>
-            <div><span>QUESTION</span><strong>Which product is actually the best deal?</strong></div>
-          </div>
+          <h1 className="mt-3 max-w-[900px] font-mondwest text-[clamp(34px,5vw,60px)] leading-[0.95] tracking-[-0.02em]">
+            Every opportunity, and how far we will vouch for it.
+          </h1>
+          <p className="mt-5 max-w-[760px] font-mono text-[13px] leading-relaxed text-gray-600">
+            An aggregator shows whatever it last scraped. A closing date that moved, or an extractor
+            that started reading the wrong line, keeps being served to anyone who does not check.
+            Students plan around those dates. So nothing reaches the world above without a stated
+            basis, and anything that cannot be confirmed is held rather than quietly mixed in.
+          </p>
         </header>
 
-        <section data-reveal data-delay="1" className={`decision-banner ${diverged ? 'is-diverged' : ''}`}>
-          <div className="decision-banner__icon">
-            {diverged ? <WarningOctagon size={26} weight="fill" /> : <ShieldCheck size={26} weight="fill" />}
-          </div>
-          <div>
-            <p>{diverged ? 'THE ANSWERS DISAGREE' : 'THE ANSWERS AGREE'}</p>
-            <div>
-              {diverged ? explanation.map((line) => <p key={line}>{line}</p>) : <p>Every collector is verified, so guarded and unguarded pipelines reach the same conclusion. NOTICE makes the normal case provable too.</p>}
+        {offline ? (
+          <p className="mt-10 border border-suspect/40 bg-amber-50 p-5 font-mono text-[13px] leading-relaxed text-suspect">
+            The Doorway API could not be reached, so this page cannot say what is currently served.
+            It shows nothing rather than a cached guess.
+          </p>
+        ) : opportunities.length === 0 ? (
+          <p className="mt-10 border border-gray-200 bg-gray-50 p-5 font-mono text-[13px] leading-relaxed text-gray-600">
+            No opportunity source has produced a verified reading yet. Register a collector in the
+            engine and the feed fills from the first agreed observation. Doorway does not seed
+            itself with examples.
+          </p>
+        ) : (
+          <>
+            <div className="mt-10 grid gap-px border border-gray-200 bg-gray-200 sm:grid-cols-4">
+              <Stat label="Opportunities" value={opportunities.length} />
+              <Stat label="Two sensors agree" value={counted('verified').length} />
+              <Stat label="Contract only" value={counted('partially_verified').length} />
+              <Stat label="Withheld" value={withheld} tone={withheld > 0 ? 'text-blocked' : ''} />
             </div>
-          </div>
-          <span>{diverged ? 'ACTION REQUIRED' : 'EVIDENCE ALIGNED'}</span>
-        </section>
 
-        <div data-reveal="scale" data-delay="2" className="mt-8 grid lg:grid-cols-2">
-          <DealPanel index="01" heading="Unguarded pipeline" caption="Takes the latest row at face value." tone="risk" pick={unguarded.pick} />
-          <DealPanel index="02" heading="NOTICE verified feed" caption="Serves only values backed by current evidence." tone="safe" pick={verified.pick} />
-        </div>
+            {GROUPS.map((group) => {
+              const rows = counted(group.key);
+              if (rows.length === 0) return null;
+              return (
+                <section key={group.key} className={`mt-10 border ${group.tone}`}>
+                  <div className="border-b border-inherit px-6 py-4">
+                    <h2 className="font-mondwest text-2xl leading-tight">{group.title}</h2>
+                    <p className="mt-1 max-w-[720px] font-mono text-[12px] leading-relaxed text-gray-600">
+                      {group.blurb}
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-gray-200">
+                    {rows.map((opportunity) => (
+                      <li key={opportunity.id}>
+                        <Link
+                          href={`/opportunities/${opportunity.id}`}
+                          className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors hover:bg-gray-50"
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-mono text-[13px] font-semibold">
+                              {opportunity.title}
+                            </span>
+                            <span className="block font-mono text-[11.5px] text-gray-500">
+                              {opportunity.provider} · {opportunity.type.replace('-', ' ')}
+                              {opportunity.deadlineRaw === null
+                                ? ''
+                                : ` · ${opportunity.deadlineRaw}`}
+                            </span>
+                          </span>
+                          <span className="font-mono text-[11.5px] text-gray-500">
+                            checked {opportunity.trust.lastVerifiedAt.replace('T', ' ').slice(0, 16)}
+                            {opportunity.trust.fieldsDegraded.length > 0
+                              ? ` · withheld: ${opportunity.trust.fieldsDegraded.join(', ')}`
+                              : ''}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </>
+        )}
 
-        <div className="verified-flow" data-reveal>
-          <div><Eye size={22} /><span>Same collector rows</span></div><ArrowRight size={20} />
-          <div><ShieldCheck size={22} /><span>Independent evidence</span></div><ArrowRight size={20} />
-          <div><span className="signal-square" /><span>Defensible decision</span></div>
-        </div>
-
-        <section data-reveal data-delay="3" className="mt-24">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><p className="eyebrow">Decision ledger</p><h2 className="mt-3 text-3xl font-medium tracking-tight text-ivory">Everything each pipeline considered</h2></div>
-          <p className="max-w-md text-sm leading-6 text-muted">Withheld is an honest answer. It is safer than turning a broken scrape into a confident recommendation.</p>
-        </div>
-        <div className="mt-8 overflow-x-auto border border-surface-border bg-surface-raised">
-          <table className="w-full min-w-[44rem] text-left text-sm">
-            <caption className="sr-only">Candidates seen by each pipeline</caption>
-            <thead className="border-b border-surface-border bg-surface-soft font-mono text-xs uppercase tracking-[0.16em] text-muted">
-              <tr><th scope="col" className="px-6 py-4 font-medium">Item</th><th scope="col" className="px-6 py-4 font-medium">Unguarded</th><th scope="col" className="px-6 py-4 font-medium">Verified</th><th scope="col" className="px-6 py-4 font-medium">Health</th></tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border">
-              {unguarded.considered.map((raw) => {
-                const safe = verified.considered.find((candidate) => candidate.url === raw.url);
-                const differs = safe?.price !== raw.price;
-                return (
-                  <tr key={raw.url} className="transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-surface-soft">
-                    <td className="px-6 py-4"><span className="text-ivory">{raw.title ?? raw.collectorName}</span><span className="mt-1 block break-all font-mono text-xs text-muted">{raw.url}</span></td>
-                    <td className={`px-6 py-4 font-mono text-xs ${differs ? 'text-blocked' : 'text-muted'}`}>{formatPrice(raw.price, raw.currency)}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-ivory">{safe?.price === undefined || safe.price === null ? 'withheld' : formatPrice(safe.price, safe.currency)}</td>
-                    <td className="px-6 py-4"><span className="status-chip border-surface-border bg-surface-soft text-muted">{safe?.health ?? 'unavailable'}{safe?.stale === true ? ', stale' : ''}</span></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <section className="mt-12 border border-black p-6">
+          <h2 className="font-mondwest text-2xl leading-tight">Check any of it yourself</h2>
+          <p className="mt-2 max-w-[760px] font-mono text-[12.5px] leading-relaxed text-gray-600">
+            Every verdict exports as a certificate carrying both readings, the line the witness read
+            them from, and a SHA-256 of the page body. The digest can be re-derived in your own
+            browser, so none of this requires trusting our server.
+          </p>
+          <Link
+            href="/verify"
+            className="mt-5 inline-block border border-black px-5 py-2.5 font-neuebit text-[11px] uppercase tracking-[0.12em] transition-colors hover:bg-black hover:text-white"
+          >
+            Verify a certificate →
+          </Link>
         </section>
       </div>
     </div>
   );
 }
 
-function DealPanel({ index, heading, caption, tone, pick }: { index: string; heading: string; caption: string; tone: 'risk' | 'safe'; pick: DealComparison['unguarded']['pick'] }) {
-  const safe = tone === 'safe';
+function Stat({ label, value, tone = '' }: { label: string; value: number; tone?: string }) {
   return (
-    <section className={`deal-panel ${safe ? 'is-safe' : 'is-risk'}`}>
-      <div className="deal-panel__bar"><span>{index} / {safe ? 'VERIFIED' : 'RAW'}</span><span>{safe ? 'PROOF GATED' : 'NO GATE'}</span></div>
-      <div className="flex items-center justify-between gap-4">
-        <span className="deal-panel__icon">{safe ? <ShieldCheck size={24} weight="duotone" /> : <WarningOctagon size={24} weight="duotone" />}</span>
-        <span className="font-mono text-xs">{safe ? 'TRUSTED' : 'SUSPECT'}</span>
+    <div className="bg-white p-5">
+      <div className={`font-mondwest text-4xl leading-none ${tone}`}>{value}</div>
+      <div className="mt-1.5 font-neuebit text-[10px] uppercase tracking-[0.14em] text-gray-500">
+        {label}
       </div>
-      <p className="eyebrow mt-8">{heading}</p><p className="mt-3 text-sm text-muted">{caption}</p>
-      {pick === null ? <p className="mt-12 max-w-md text-xl leading-8 text-ivory">No recommendation. Nothing can be trusted enough to answer.</p> : (
-        <div className="mt-12"><p className="font-mono text-5xl tracking-tight sm:text-6xl">{formatPrice(pick.price, pick.currency)}</p><p className="mt-4 text-base">{pick.title ?? pick.collectorName}</p>{pick.stale === true ? <p className="mt-4 text-sm">Last verified value, clearly marked stale.</p> : null}</div>
-      )}
-    </section>
+    </div>
   );
-}
-
-function formatPrice(price: number | null, currency: string | null | undefined) {
-  if (price === null) return 'no price';
-  if (currency === null || currency === undefined || currency.length !== 3) return String(price);
-  try {
-    // The locale controls digit grouping only. en-IN groups as 2,49,000, which
-    // reads as a typo next to the dollar amounts the fixture serves. The
-    // currency code still comes from the row, so any currency renders right.
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(price);
-  } catch {
-    return `${String(price)} ${currency}`;
-  }
 }

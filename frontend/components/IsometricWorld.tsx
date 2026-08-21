@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { DoorwayMatch } from '@/lib/types';
 
@@ -381,6 +382,14 @@ function SelectedPanel({ match }: { match: DoorwayMatch }) {
             {opportunity.sourceUrl}
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
+            {/* The panel carries enough to decide whether to look closer. The
+                full record, with every field's provenance, is a page. */}
+            <Link
+              href={`/opportunities/${opportunity.id}`}
+              className="border border-black px-4 py-2 font-neuebit text-[11px] uppercase tracking-[0.12em] transition-colors hover:bg-black hover:text-white"
+            >
+              Full record and evidence →
+            </Link>
             <a
               href={opportunity.sourceUrl}
               target="_blank"

@@ -133,4 +133,8 @@ export const api = {
 
   doorwayWorld: (profile: DoorwayProfile): Promise<DoorwayWorld> =>
     request('/api/doorway/world', { method: 'POST', body: JSON.stringify(profile) }),
+
+  /** One opportunity, with everything known about where its values came from. */
+  doorwayOpportunity: (id: string): Promise<DoorwayOpportunity> =>
+    request(`/api/doorway/opportunities/${encodeURIComponent(id)}`),
 };

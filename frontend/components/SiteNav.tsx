@@ -16,6 +16,7 @@ import { NoticeLogo } from '@/components/NoticeLogo';
 const links = [
   { href: '/#world', label: 'OPPORTUNITY WORLD', active: true },
   { href: '/#system', label: 'HOW IT LIVES' },
+  { href: '/verified', label: 'VERIFIED FEED' },
   { href: '/engine', label: 'TRUST ENGINE' },
   { href: '/verify', label: 'VERIFY' },
 ];
