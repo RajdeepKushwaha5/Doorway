@@ -14,7 +14,7 @@
     "driftmart"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace backend & npm run dev --workspace frontend",
+    "dev": "npm run build --workspace backend && concurrently --kill-others --names backend-types,backend,frontend,fixture \"npm run dev:types --workspace backend\" \"npm run dev:server --workspace backend\" \"npm run dev --workspace frontend\" \"npm run dev --workspace driftmart\"",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "concurrently": "^9.2.4",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

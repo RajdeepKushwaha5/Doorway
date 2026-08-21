@@ -8,7 +8,10 @@
  * The data mirrors the DriftMart `selector_drift` mode: a collector that reads
  * the refundable deposit as the purchase price, caught by the witness.
  *
- * Usage:  node dist/scripts/seed-demo.js [--reset]
+ * The seed is repeat-safe: the NOTICE incident is created once, while the
+ * controlled Doorway snapshot is refreshed in place.
+ *
+ * Usage:  node dist/scripts/seed-demo.js
  */
 
 import { randomUUID } from 'node:crypto';
@@ -30,6 +33,7 @@ import { FileStore, type CollectorRecord, type IncidentRecord, type RunRecord } 
 
 const LIVE_URL = 'https://driftmart.example/product/headphones';
 const FIXTURE_URL = 'https://driftmart.example/fixtures/baseline';
+const DOORWAY_COLLECTOR_ID = 'demo-doorway-fellowship';
 
 const HEALTHY = {
   title: 'Nova Headphones',
@@ -99,9 +103,7 @@ function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
-async function main(): Promise<void> {
-  const store = new FileStore(process.env['NOTICE_DATA_FILE']);
-
+async function seedNoticeIncident(store: FileStore): Promise<void> {
   const collector: CollectorRecord = {
     id: 'demo-driftmart',
     brightDataCollectorId: 'c_demoseed01',
@@ -122,6 +124,10 @@ async function main(): Promise<void> {
     acquisitionContext: {},
     createdAt: minutesAgo(600),
   };
+  if ((await store.getCollector(collector.id)) !== null) {
+    process.stdout.write('Kept the existing NOTICE drift demo unchanged.\n');
+    return;
+  }
   await store.saveCollector(collector);
 
   // Twelve accepted baseline runs, with a little natural price variation so
@@ -303,6 +309,126 @@ async function main(): Promise<void> {
   process.stdout.write(`  verdict:  ${classification.verdict}\n`);
   process.stdout.write(`  incident: ${incident.id}\n`);
   process.stdout.write(`  baseline: ${String(contract.sampleCount)} runs, confidence ${contract.confidence.toFixed(2)}\n`);
+}
+
+async function seedDoorwayOpportunity(store: FileStore): Promise<void> {
+  const fixtureBase = (process.env['DOORWAY_LAB_URL'] ?? 'http://localhost:3002').replace(/\/$/, '');
+  const sourceUrl = `${fixtureBase}/opportunity/ai-fellowship`;
+  const applicationUrl = `${sourceUrl}/apply`;
+  const observedAt = new Date().toISOString();
+  const data = {
+    title: 'Open AI Research Fellowship',
+    provider: 'Doorway Research Foundation (controlled fixture)',
+    opportunity_type: 'fellowship',
+    summary:
+      'A controlled, fully funded research fellowship for undergraduate students interested in trustworthy artificial intelligence.',
+    eligibility: ['Undergraduate students interested in artificial intelligence'],
+    interests: ['Artificial intelligence', 'Trustworthy AI', 'Data systems'],
+    funding_level: 'fully funded',
+    funding_coverage: ['tuition', 'travel', 'stipend'],
+    deadline: '2026-09-18',
+    deadline_raw: '18 September 2026',
+    locations: ['India'],
+    remote: false,
+    required_documents: ['CV', 'transcript', 'research statement'],
+    application_url: applicationUrl,
+  };
+  const invariants: Invariant[] = [
+    { kind: 'required', field: 'title' },
+    { kind: 'required', field: 'provider' },
+    { kind: 'required', field: 'deadline' },
+    { kind: 'required', field: 'application_url' },
+    { kind: 'enum', field: 'opportunity_type', allowed: ['fellowship'] },
+  ];
+  const specs: WitnessFieldSpec[] = [
+    {
+      path: 'deadline',
+      meaning: 'the final date on which an application can be submitted',
+      labels: ['application deadline', 'deadline'],
+      excludeLabels: ['notification', 'result'],
+      kind: 'text',
+      allowed: [],
+    },
+    {
+      path: 'funding_level',
+      meaning: 'whether the programme covers all, some, or none of the participant costs',
+      labels: ['funding', 'fully funded'],
+      excludeLabels: [],
+      kind: 'text',
+      allowed: [],
+    },
+    {
+      path: 'eligibility',
+      meaning: 'the requirements an applicant must satisfy',
+      labels: ['eligibility', 'who can apply'],
+      excludeLabels: [],
+      kind: 'text',
+      allowed: [],
+    },
+  ];
+  const collector: CollectorRecord = {
+    id: DOORWAY_COLLECTOR_ID,
+    brightDataCollectorId: 'c_doorwayseed01',
+    autoPromote: 'never',
+    freshnessMinutes: 24 * 60,
+    currency: null,
+    name: 'Doorway fellowship (controlled fixture)',
+    targetDomain: new URL(sourceUrl).host,
+    status: 'active',
+    schedule: '0 */6 * * *',
+    watchUrls: [sourceUrl],
+    witnessSpecs: specs,
+    invariants,
+    protectedFields: ['deadline', 'funding_level', 'eligibility', 'application_url'],
+    goldenCases: [
+      { url: sourceUrl, expected: { deadline: data.deadline }, label: 'baseline opportunity' },
+    ],
+    acquisitionContext: {},
+    createdAt: observedAt,
+  };
+  await store.saveCollector(collector);
+
+  const contract = learnContract(collector.id, [{ rows: [data], observedAt }], invariants);
+  await store.saveContract(contract);
+  await store.saveRun({
+    id: 'seed-run-doorway-fellowship',
+    collectorId: collector.id,
+    brightDataSnapshotId: null,
+    targetUrls: [sourceUrl],
+    version: 'production',
+    rows: [data],
+    checks: validateRun({ rows: [data], contract }),
+    durationMs: 0,
+    observedAt,
+  });
+
+  const markdown = [
+    '# Open AI Research Fellowship',
+    '',
+    'Provider: Doorway Research Foundation (controlled fixture)',
+    'Application deadline: 18 September 2026',
+    'Funding: Fully funded, including tuition, travel and a stipend',
+    'Eligibility: Undergraduate students interested in artificial intelligence',
+  ].join('\n');
+  await store.saveVerifiedSnapshot({
+    collectorId: collector.id,
+    url: sourceUrl,
+    data,
+    contractVersion: contract.version,
+    verifiedAt: observedAt,
+    contentHash: hashContent(markdown),
+    shape: pageShape(markdown),
+    confirmedBy: 'contract_only',
+  });
+
+  process.stdout.write('Seeded the controlled Doorway opportunity world.\n');
+  process.stdout.write(`  source: ${sourceUrl}\n`);
+}
+
+async function main(): Promise<void> {
+  const store = new FileStore(process.env['NOTICE_DATA_FILE']);
+  await seedNoticeIncident(store);
+  await seedDoorwayOpportunity(store);
   process.stdout.write('\nThis data is local only. No Bright Data calls were made.\n');
 }
 

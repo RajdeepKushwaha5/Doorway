@@ -28,26 +28,27 @@ NOTICE is the incident-to-verified-repair layer for Bright Data Scraper Studio. 
 
 ## For judges
 
-Everything below is live and takes about two minutes.
+The shortest product walkthrough takes about two minutes.
 
-1. **Wake the services first.** Both Render services are on the free plan and
-   sleep after fifteen minutes idle, so the first request takes around
-   30 seconds. Open [the fixture](https://driftmart-3ut8.onrender.com) and
-   [the API](https://notice-api-0vfo.onrender.com/api/health) and wait for each.
-2. **Open the dashboard**: https://notice-frontend-bay.vercel.app
-3. **Scroll to the control room and break the page yourself.** Press *Redesign
-   the page*. The embedded fixture changes; the price still reads correctly to a
-   human. Press *Run the collector* and watch the verdict.
-4. **Put it back.** Press *Baseline* and run again. The incident closes on its
-   own and the value returns to the verified feed.
+1. Describe a student profile on the home page. Doorway turns verified Scraper Studio rows into
+   an isometric world and ranks every visible opportunity with an explainable score.
+2. Open an opportunity. Its source, deadline, funding, eligibility and verification method remain
+   visible beside the application link.
+3. Open the Trust Engine at `/engine`. The controlled fixture demonstrates the failure that
+   ordinary schema checks miss: a plausible field can be structurally valid and semantically wrong.
+4. Run the collector. Scraper Studio supplies the structured row, Web Unlocker supplies an
+   independent selector-free reading, and NOTICE either records a genuine source change or
+   quarantines the broken field.
+5. Trigger Self-Healing. The proposed template is replayed against the incident and the regression
+   corpus before Doorway allows the opportunity back into the public world.
 
-No signup, no account, no key. Writes are open because there is nothing here
-worth protecting: the fixture is ours and it resets.
+Mutating routes require `NOTICE_ADMIN_TOKEN`. The controlled source identifies itself as a fixture
+on the page and in every seeded opportunity; it is never presented as a real institution.
 
 From a clone, with no Bright Data account and no credentials:
 
 ```bash
-npm install && npm test          # 331 tests, no network
+npm install && npm test          # 342 tests, no network
 ```
 
 With an API key, to reproduce the claims in this README:
@@ -1009,13 +1010,21 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 331 tests, no network required
+npm test                      # 342 tests, no network required
+npm run seed                  # repeat-safe local Doorway world and NOTICE incident
+npm run dev                   # API :4000, dashboard :3000, controlled source :3002
 
-npm run start  --workspace backend     # API on :4000
-npm run worker --workspace backend     # monitoring loop
-npm run dev    --workspace frontend    # dashboard on :3000
-npm run dev    --workspace driftmart   # controlled target on :3002
+# Or run each process separately:
+npm run start  --workspace backend
+npm run worker --workspace backend
+npm run dev    --workspace frontend
+npm run dev    --workspace driftmart
 ```
+
+The local seed never calls Bright Data or spends credits. It gives the public Doorway world one
+clearly labeled, contract-only controlled opportunity and preserves the NOTICE drift incident so a
+fresh clone has a complete walkthrough. It deliberately does not claim live two-sensor confirmation.
+Replace it with live Scraper Studio collectors for the submission run.
 
 The test suite runs the entire loop offline against a scripted Bright Data, including the case where a green preview hides a broken candidate.
 
@@ -1066,7 +1075,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 331 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 342 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

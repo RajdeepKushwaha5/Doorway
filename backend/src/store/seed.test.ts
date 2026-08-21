@@ -129,3 +129,32 @@ describe('seeding an empty store', () => {
     expect(seeded?.freshnessMinutes).toBeNull();
   });
 });
+
+describe('repeat-safe runtime records', () => {
+  it('updates a run with the same identity instead of duplicating it', async () => {
+    const original = {
+      id: 'stable-run',
+      collectorId: 'collector',
+      brightDataSnapshotId: null,
+      targetUrls: ['https://example.com/original'],
+      version: 'production' as const,
+      rows: [{ title: 'Original' }],
+      checks: [],
+      durationMs: 0,
+      observedAt: '2026-08-21T00:00:00.000Z',
+    };
+
+    await store.saveRun(original);
+    await store.saveRun({
+      ...original,
+      targetUrls: ['https://example.com/corrected'],
+      rows: [{ title: 'Corrected' }],
+    });
+
+    expect(await store.listRuns('collector')).toHaveLength(1);
+    expect(await store.getRun('stable-run')).toMatchObject({
+      targetUrls: ['https://example.com/corrected'],
+      rows: [{ title: 'Corrected' }],
+    });
+  });
+});

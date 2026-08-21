@@ -138,7 +138,12 @@ export class FileStore implements Store {
 
   async saveRun(run: RunRecord): Promise<void> {
     const snapshot = await this.#load();
-    snapshot.runs.push(run);
+    const existingIndex = snapshot.runs.findIndex((candidate) => candidate.id === run.id);
+    if (existingIndex === -1) {
+      snapshot.runs.push(run);
+    } else {
+      snapshot.runs[existingIndex] = run;
+    }
     if (snapshot.runs.length > MAX_RUNS) {
       snapshot.runs = snapshot.runs.slice(-MAX_RUNS);
     }

@@ -25,7 +25,8 @@ export default async function FellowshipPage() {
       <article data-opportunity="ai-research-fellowship">
         <h1 className="opportunity-title">Open AI Research Fellowship</h1>
         <p>
-          <strong>Provider:</strong> <span className="provider">Doorway Research Foundation</span>
+          <strong>Provider:</strong>{' '}
+          <span className="provider">Doorway Research Foundation (controlled fixture)</span>
         </p>
         <p>
           A controlled, fully funded research fellowship for undergraduate students interested in
