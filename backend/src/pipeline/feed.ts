@@ -41,6 +41,7 @@ export async function buildFeed(
         stale: false,
         fieldsDegraded: open.affectedFields,
         incidentId: open.id,
+        confirmedBy: 'none',
         reason: `${open.classification}: no previously verified data to fall back on`,
       },
     };
@@ -55,6 +56,9 @@ export async function buildFeed(
       confidence: Math.max(0, 1 - open.confidence),
       lastVerified: snapshot.verifiedAt,
       stale: true,
+      // The payload served here is the older snapshot, so it carries that
+      // reading's provenance and not the current run's.
+      confirmedBy: snapshot.confirmedBy ?? 'contract_only',
       fieldsDegraded: open.affectedFields,
       incidentId: open.id,
       reason: reasonFor(open),
@@ -107,20 +111,46 @@ function verified(snapshot: VerifiedSnapshot, maxAgeMs: number, now: number): He
   const expired = Number.isFinite(ageMs) && ageMs > maxAgeMs;
   const ageHours = Math.floor(ageMs / (60 * 60 * 1000));
 
+  /*
+   * Two sensors, or only the contracts?
+   *
+   * The witness is skipped when a baseline exists and every contract check
+   * passes, which is a deliberate saving of a Web Unlocker read on a run that
+   * looks ordinary. The snapshot was still published at 0.95 carrying the claim
+   * that two independent sensors had confirmed it, which was simply not true
+   * for those values: a plausible wrong number sitting inside the learned
+   * distribution could be published without any second sensor ever looking.
+   *
+   * Snapshots written before this field existed are read as the weaker claim.
+   * Assuming the stronger one for unlabelled history is how a system starts
+   * overstating its own evidence.
+   */
+  const confirmedBy = snapshot.confirmedBy ?? 'contract_only';
+  const dual = confirmedBy === 'two_sensors';
+
+  // A contract-only reading is a real state and a weaker one, so it is scored
+  // below the 0.7 bar that authorises an automatic promotion.
+  const fresh = dual ? 0.95 : 0.6;
+
+  const provenanceNote = dual
+    ? null
+    : 'confirmed against this source\u2019s learned contract only; the independent witness was not consulted on this reading';
+
   return {
     data: snapshot.data,
     health: {
       status: expired ? 'stale' : 'verified',
       // Age is not a fault, so confidence decays rather than collapsing. The
-      // value was confirmed by two sensors; the only question is when.
-      confidence: expired ? 0.5 : 0.95,
+      // only question for an agreed value is when it was agreed.
+      confidence: expired ? fresh / 2 : fresh,
       lastVerified: snapshot.verifiedAt,
       stale: expired,
       fieldsDegraded: [],
       incidentId: null,
+      confirmedBy,
       reason: expired
         ? `last confirmed ${String(ageHours)}h ago, beyond the ${String(Math.round(maxAgeMs / 3_600_000))}h freshness window`
-        : null,
+        : provenanceNote,
     },
   };
 }
@@ -131,6 +161,7 @@ function unavailable(): HealthEnvelope {
     health: {
       status: 'unavailable',
       confidence: 0,
+      confirmedBy: 'none',
       lastVerified: null,
       stale: false,
       fieldsDegraded: [],

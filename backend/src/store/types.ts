@@ -171,6 +171,14 @@ export interface VerifiedSnapshot {
    * snapshots written before this existed.
    */
   shape: PageShape | null;
+  /**
+   * Whether a witness actually read this value, or only the contracts passed.
+   *
+   * Written so the feed can stop claiming two-sensor confirmation for a value
+   * no second sensor ever saw. Absent on snapshots stored before this existed,
+   * which are treated as the weaker claim rather than the stronger one.
+   */
+  confirmedBy?: 'two_sensors' | 'contract_only';
 }
 
 /**

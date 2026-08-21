@@ -103,29 +103,46 @@ async function main() {
   const rows = [];
   let blocked = 0;
 
+  let contractOnly = 0;
+
   for (const collector of collectors) {
-    const url = URL_INPUT === '' ? undefined : URL_INPUT;
-    const query = url === undefined ? '' : `?url=${encodeURIComponent(url)}`;
-    const feed = await api(`/api/feed/${collector.id}${query}`);
-    const { status, reason, incidentId, fieldsDegraded, lastVerified } = feed.health;
+    /*
+     * Every watched page, not just the first.
+     *
+     * This asked for `/api/feed/{id}` with no URL, which the API answers for
+     * `watchUrls[0]`. A collector watching five pages was therefore judged on
+     * one of them, while the summary told the build that every source was
+     * verified. A gate that checks a fifth of what it claims to check is worse
+     * than no gate, because it is trusted.
+     */
+    const urls = URL_INPUT === '' ? (collector.watchUrls ?? []) : [URL_INPUT];
+    const targets = urls.length === 0 ? [undefined] : urls;
 
-    // Stale is a deliberate middle state: two sensors agreed on this value at
-    // some point, but not now. Whether that is acceptable depends on what the
-    // build does with it, so the caller decides rather than this script.
-    const acceptable = status === 'verified' || (status === 'stale' && ALLOW_STALE);
-    if (!acceptable) blocked += 1;
+    for (const url of targets) {
+      const query = url === undefined ? '' : `?url=${encodeURIComponent(url)}`;
+      const feed = await api(`/api/feed/${collector.id}${query}`);
+      const { status, reason, incidentId, fieldsDegraded, lastVerified, confirmedBy } = feed.health;
 
-    rows.push({ name: collector.name, status, reason, incidentId, fieldsDegraded, lastVerified });
+      // Stale is a deliberate middle state: two sensors agreed on this value at
+      // some point, but not now. Whether that is acceptable depends on what the
+      // build does with it, so the caller decides rather than this script.
+      const acceptable = status === 'verified' || (status === 'stale' && ALLOW_STALE);
+      if (!acceptable) blocked += 1;
+      if (acceptable && confirmedBy === 'contract_only') contractOnly += 1;
 
-    const line = `${collector.name}: ${status}${reason ? ` (${reason})` : ''}`;
-    if (acceptable) log(`  ok    ${line}`);
-    else log(`::error::${line}`);
+      const label = url === undefined ? collector.name : `${collector.name} ${new URL(url).pathname}`;
+      rows.push({ name: label, status, reason, incidentId, fieldsDegraded, lastVerified, confirmedBy });
 
-    // Single-collector runs expose their result, so a later step can branch.
-    if (collectors.length === 1) {
-      emit('status', status);
-      emit('reason', reason ?? '');
-      emit('incident', incidentId ?? '');
+      const line = `${label}: ${status}${reason ? ` (${reason})` : ''}`;
+      if (acceptable) log(`  ok    ${line}`);
+      else log(`::error::${line}`);
+
+      // Single-page runs expose their result, so a later step can branch.
+      if (collectors.length === 1 && targets.length === 1) {
+        emit('status', status);
+        emit('reason', reason ?? '');
+        emit('incident', incidentId ?? '');
+      }
     }
   }
 
@@ -133,24 +150,37 @@ async function main() {
     [
       '## NOTICE data verification',
       '',
-      '| Source | Status | Withheld | Last verified |',
-      '|---|---|---|---|',
+      '| Page | Status | Confirmed by | Withheld | Last verified |',
+      '|---|---|---|---|---|',
       ...rows.map(
         (row) =>
-          `| ${row.name} | ${row.status} | ${
+          `| ${row.name} | ${row.status} | ${row.confirmedBy ?? 'unknown'} | ${
             row.fieldsDegraded?.length > 0 ? row.fieldsDegraded.join(', ') : 'none'
           } | ${row.lastVerified ?? 'never'} |`,
       ),
       '',
-      blocked === 0
-        ? 'Every source is currently confirmed by two independent Bright Data sensors.'
-        : `${blocked} source(s) could not be verified. Shipping against them means shipping data nobody checked.`,
+      /*
+       * The summary used to state that every source was confirmed by two
+       * independent sensors whenever nothing was blocked. That is only true of
+       * pages the witness actually read: a reading can pass on the learned
+       * contract alone, and saying otherwise overstates the evidence in the one
+       * place a build is deciding whether to trust it.
+       */
+      blocked === 0 && contractOnly === 0
+        ? `All ${rows.length} page(s) confirmed by two independent Bright Data sensors.`
+        : blocked === 0
+          ? `All ${rows.length} page(s) passed, but ${contractOnly} of them were confirmed against the learned contract only, with no independent witness reading.`
+          : `${blocked} page(s) could not be verified. Shipping against them means shipping data nobody checked.`,
     ].join('\n'),
   );
 
   if (blocked === 0) {
     log('');
-    log('All sources verified by two independent sensors.');
+    log(
+      contractOnly === 0
+        ? `All ${rows.length} page(s) verified by two independent sensors.`
+        : `All ${rows.length} page(s) passed. ${contractOnly} were contract-only, with no witness reading.`,
+    );
     return;
   }
 

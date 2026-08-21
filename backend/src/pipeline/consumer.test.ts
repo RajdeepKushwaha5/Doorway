@@ -52,16 +52,20 @@ async function record(
   // A bare number when the row states no currency, which is what a collector
   // described as returning "the price as a number" actually produces.
   const row = { title, price: currency === null ? price : { value: price, currency } };
+  // A valid RunRecord. This fixture predated a refactor and still carried
+  // `url`, `startedAt`, `status` and `error`, none of which are fields of the
+  // record any more. It passed only because nothing read `targetUrls`, which is
+  // exactly the field the per-URL pairing now depends on.
   await store.saveRun({
     id: `run-${id}`,
     collectorId: id,
-    url,
-    startedAt: new Date().toISOString(),
-    finishedAt: new Date().toISOString(),
-    status: 'succeeded',
+    brightDataSnapshotId: null,
+    targetUrls: [url],
+    version: 'production',
     rows: [row],
     checks: [],
-    error: null,
+    durationMs: 10,
+    observedAt: new Date().toISOString(),
   });
   await store.saveVerifiedSnapshot({
     collectorId: id,
@@ -163,5 +167,128 @@ describe('ranking candidates for a downstream decision', () => {
 
     expect(result.verified.pick?.price).toBe(249);
     expect(result.verified.pick?.currency).toBeNull();
+  });
+});
+
+describe('a collector that watches several pages', () => {
+  /**
+   * The comparison loaded `listRuns(collector.id, 1)` inside the per-URL loop,
+   * which returns the single newest run for the whole collector. A collector
+   * watching three pages therefore showed the newest page's row against all
+   * three, so the product page and both fixtures displayed the same number
+   * while their verified snapshots correctly differed. The screen built to
+   * demonstrate the value of verification was itself built on a wrong pairing.
+   */
+  it('pairs each URL with the run that actually read it', async () => {
+    await store.saveCollector({
+      id: 'multi',
+      brightDataCollectorId: 'c_multi',
+      name: 'Multi page',
+      targetDomain: 'example.test',
+      status: 'active',
+      schedule: null,
+      watchUrls: ['https://example.test/a', 'https://example.test/b'],
+      witnessSpecs: [
+        {
+          path: 'price',
+          meaning: 'The purchase price.',
+          labels: ['price'],
+          excludeLabels: [],
+          kind: 'money',
+          allowed: [],
+        },
+      ],
+      invariants: [],
+      protectedFields: [],
+      goldenCases: [],
+      acquisitionContext: {},
+      autoPromote: 'never',
+      freshnessMinutes: null,
+      currency: 'USD',
+      createdAt: new Date().toISOString(),
+    });
+
+    const saveRun = async (id: string, url: string, price: number, at: string): Promise<void> => {
+      await store.saveRun({
+        id,
+        collectorId: 'multi',
+        brightDataSnapshotId: null,
+        targetUrls: [url],
+        version: 'production',
+        rows: [{ title: 'Thing', price: { value: price, currency: 'USD' } }],
+        checks: [],
+        durationMs: 5,
+        observedAt: at,
+      });
+    };
+
+    await saveRun('run-a', 'https://example.test/a', 100, '2026-08-20T10:00:00.000Z');
+    // Newer, and for a different page. This is the row that used to be shown
+    // against both URLs.
+    await saveRun('run-b', 'https://example.test/b', 200, '2026-08-20T11:00:00.000Z');
+
+    const comparison = await compareBestDeal(store);
+    const byUrl = new Map(comparison.unguarded.considered.map((c) => [c.url, c.price]));
+
+    expect(byUrl.get('https://example.test/a')).toBe(100);
+    expect(byUrl.get('https://example.test/b')).toBe(200);
+  });
+
+  it('reads the price and title a collector actually declares, not hardcoded names', async () => {
+    await store.saveCollector({
+      id: 'books',
+      brightDataCollectorId: 'c_books',
+      name: 'Books',
+      targetDomain: 'books.test',
+      status: 'active',
+      schedule: null,
+      watchUrls: ['https://books.test/one'],
+      witnessSpecs: [
+        {
+          path: 'price_excl_tax',
+          meaning: 'The price excluding tax.',
+          labels: ['price excl tax'],
+          excludeLabels: [],
+          kind: 'money',
+          allowed: [],
+        },
+        {
+          path: 'book_title',
+          meaning: 'The title of the book.',
+          labels: ['title'],
+          excludeLabels: [],
+          kind: 'text',
+          allowed: [],
+        },
+      ],
+      invariants: [],
+      protectedFields: [],
+      goldenCases: [],
+      acquisitionContext: {},
+      autoPromote: 'never',
+      freshnessMinutes: null,
+      currency: 'GBP',
+      createdAt: new Date().toISOString(),
+    });
+
+    await store.saveRun({
+      id: 'run-books',
+      collectorId: 'books',
+      brightDataSnapshotId: null,
+      targetUrls: ['https://books.test/one'],
+      version: 'production',
+      rows: [{ book_title: 'A Light in the Attic', price_excl_tax: 51.77 }],
+      checks: [],
+      durationMs: 5,
+      observedAt: new Date().toISOString(),
+    });
+
+    const comparison = await compareBestDeal(store);
+    const book = comparison.unguarded.considered.find((c) => c.collectorId === 'books');
+
+    // Previously both of these were null, because the fields were hardcoded to
+    // `price` and `title`, and this source publishes neither.
+    expect(book?.price).toBe(51.77);
+    expect(book?.title).toBe('A Light in the Attic');
   });
 });

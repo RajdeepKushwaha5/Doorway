@@ -1,7 +1,7 @@
 import { normalizeMoney } from '../shared/index.js';
 import { getPath } from '../contracts/paths.js';
 import { buildFeed } from './feed.js';
-import type { Store } from '../store/index.js';
+import type { CollectorRecord, RunRecord, Store } from '../store/index.js';
 
 /**
  * A downstream consumer of the verified feed.
@@ -42,28 +42,62 @@ export interface DealComparison {
   explanation: string[];
 }
 
-const priceField = 'price';
-const titleField = 'title';
+/**
+ * Which field carries the price, and which carries the name.
+ *
+ * These were hardcoded to `price` and `title`, so a collector whose fields are
+ * named anything else rendered as two nulls. Books to Scrape publishes
+ * `price_excl_tax` and `book_title`, and appeared on the comparison as a
+ * source with no price and no name at all.
+ *
+ * Resolved from the collector's own declared witness specs, which are the only
+ * place anybody has said what these fields mean. The names are a fallback for
+ * a collector that declared nothing.
+ */
+function fieldsFor(collector: CollectorRecord): { price: string; title: string } {
+  const paths = collector.witnessSpecs.map((spec) => spec.path);
+
+  const price =
+    collector.witnessSpecs.find((spec) => spec.kind === 'money')?.path ??
+    paths.find((path) => /price|cost|amount/i.test(path)) ??
+    'price';
+
+  const title =
+    paths.find((path) => /title|name|product/i.test(path)) ?? 'title';
+
+  return { price, title };
+}
+
+/** The newest run that actually read this URL. */
+function newestRowFor(runs: readonly RunRecord[], url: string): unknown {
+  // A run that does not record which page it read cannot be attributed to one.
+  // Skipped rather than matched loosely, because matching loosely is how every
+  // URL ended up showing the same row.
+  const match = runs.find((run) => run.targetUrls?.includes(url) === true);
+  return match?.rows[0] ?? null;
+}
 
 function toCandidate(
-  collectorId: string,
-  collectorName: string,
+  collector: CollectorRecord,
   url: string,
   row: unknown,
-  /** The collector's declared currency, used only when the row does not say. */
-  currencyHint?: string | null,
 ): DealCandidate | null {
   if (row === null || typeof row !== 'object') return null;
 
-  const priceLookup = getPath(row, priceField);
+  // Resolved per collector rather than assumed, so a source that names its
+  // fields anything other than `price` and `title` is not rendered as a pair
+  // of nulls.
+  const fields = fieldsFor(collector);
+
+  const priceLookup = getPath(row, fields.price);
   const money = priceLookup.found
-    ? normalizeMoney(priceLookup.value, currencyHint ?? undefined)
+    ? normalizeMoney(priceLookup.value, collector.currency ?? undefined)
     : null;
-  const titleLookup = getPath(row, titleField);
+  const titleLookup = getPath(row, fields.title);
 
   return {
-    collectorId,
-    collectorName,
+    collectorId: collector.id,
+    collectorName: collector.name,
     url,
     title: titleLookup.found && typeof titleLookup.value === 'string' ? titleLookup.value : null,
     price: money?.value ?? null,
@@ -128,18 +162,28 @@ export async function compareBestDeal(store: Store): Promise<DealComparison> {
   const verified: DealCandidate[] = [];
 
   for (const collector of collectors) {
+    // Fetched once per collector, then matched per URL below.
+    //
+    // This used to call `listRuns(collector.id, 1)` inside the URL loop, which
+    // returns the single newest run for the whole collector. A collector
+    // watching three pages therefore showed the newest page's row against all
+    // three, so the product page and both fixtures all displayed the same
+    // number while their verified snapshots correctly differed. The comparison
+    // that is supposed to demonstrate the value of verification was itself
+    // built on a wrong pairing.
+    const recentRuns = await store.listRuns(collector.id, 100);
+
     for (const url of collector.watchUrls) {
-      // The unguarded view: whatever the collector last returned, taken at
-      // face value. This is what a normal pipeline stores and queries.
-      const runs = await store.listRuns(collector.id, 1);
-      const latestRow = runs[0]?.rows[0] ?? null;
-      const raw = toCandidate(collector.id, collector.name, url, latestRow, collector.currency);
+      // The unguarded view: whatever the collector last returned *for this
+      // page*, taken at face value. This is what a normal pipeline stores.
+      const latestRow = newestRowFor(recentRuns, url);
+      const raw = toCandidate(collector, url, latestRow);
       if (raw !== null) unguarded.push(raw);
 
       // The verified view: only data NOTICE is willing to stand behind, with
       // its health state attached.
       const envelope = await buildFeed(store, collector.id, url);
-      const safe = toCandidate(collector.id, collector.name, url, envelope.data, collector.currency);
+      const safe = toCandidate(collector, url, envelope.data);
       if (safe !== null) {
         verified.push({
           ...safe,

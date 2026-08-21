@@ -10,7 +10,7 @@ correct and be wrong.
 npm install
 cp .env.example .env      # only BRIGHTDATA_API_KEY is required
 npm run build
-npm test                  # 258 tests, no network and no credentials needed
+npm test                  # 331 tests, no network and no credentials needed
 ```
 
 The whole detection-to-blocked-repair loop runs offline against a scripted
@@ -92,3 +92,19 @@ Bright Data builds and repairs the collector. This project decides whether a
 repair is needed and proves it worked. A change that moves us toward
 re-implementing extraction, proxying or unblocking is out of scope — that is the
 platform's job and it does it better.
+
+## On linting
+
+There is no ESLint configuration in this repository, and the `lint` script has
+been removed rather than left pointing at `next lint`, which had no config to
+read and launched an interactive setup wizard instead of checking anything. A
+script that claims to lint and does not is worse than no script, because CI and
+contributors both believe it.
+
+The quality gates that do run are TypeScript in strict mode across all three
+workspaces, and the test suite:
+
+```bash
+npm run typecheck
+npm test
+```

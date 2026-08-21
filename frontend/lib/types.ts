@@ -208,6 +208,15 @@ export interface HealthEnvelope {
     fieldsDegraded: string[];
     incidentId: string | null;
     reason: string | null;
+    /**
+     * How this value was actually confirmed.
+     *
+     * `two_sensors` is the project's headline claim. `contract_only` means the
+     * witness was skipped because a baseline existed and every contract check
+     * passed, which is a real but weaker statement and must not be displayed as
+     * the stronger one.
+     */
+    confirmedBy: 'two_sensors' | 'contract_only' | 'none';
   };
 }
 

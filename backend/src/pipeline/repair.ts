@@ -134,11 +134,67 @@ export async function attemptRepair(
     }),
   );
 
-  // Replay the candidate ourselves. This is the step that catches a repair
-  // whose preview passed while the incident still fails.
+  /*
+   * Replay the candidate ourselves, and prove it was the candidate.
+   *
+   * The gate asks Bright Data for `version: 'dev'` and treats the answer as the
+   * proposed repair. Finding 2 in the README records that `bdata scraper run
+   * --version=dev` returned production's output rather than the pending
+   * candidate, and nothing has demonstrated that the HTTP path behaves any
+   * differently. So the gate may be replaying production while calling it the
+   * candidate.
+   *
+   * While the candidate is broken that mistake is harmless: the replay fails
+   * and the repair is rejected, which is the right outcome by luck. The
+   * dangerous case is the other one. If production recovers for any unrelated
+   * reason, a candidate nobody ever executed passes the gate and, on a
+   * collector set to promote automatically, ships.
+   *
+   * So run production too and compare. Byte-identical output on the page that
+   * failed means the two versions are indistinguishable through this path, and
+   * an indistinguishable candidate has not been tested. Recorded, surfaced, and
+   * on the automatic path, refused.
+   */
   const candidateRowsByUrl = new Map<string, unknown[]>();
   const urlsToReplay = [incidentUrl, ...regressionUrls];
-  for (const url of urlsToReplay) {
+  let candidateIndistinguishable = false;
+
+  try {
+    const [candidateOnIncident, productionOnIncident] = await Promise.all([
+      deps.runCandidate(collector.brightDataCollectorId, incidentUrl),
+      deps.client.runCollector(collector.brightDataCollectorId, [incidentUrl], {
+        version: 'production',
+        timeoutMs: 600_000,
+      }),
+    ]);
+
+    candidateIndistinguishable =
+      JSON.stringify(candidateOnIncident) === JSON.stringify(productionOnIncident.rows);
+
+    candidateRowsByUrl.set(incidentUrl, candidateOnIncident);
+
+    await deps.store.appendAudit({
+      id: randomUUID(),
+      actor: 'system',
+      eventType: candidateIndistinguishable
+        ? 'candidate.indistinguishable_from_production'
+        : 'candidate.distinct_from_production',
+      entityId: incident.id,
+      payload: { url: incidentUrl, indistinguishable: candidateIndistinguishable },
+      at: now().toISOString(),
+    });
+  } catch (caught) {
+    await deps.store.appendAudit({
+      id: randomUUID(),
+      actor: 'system',
+      eventType: 'candidate.execution_failed',
+      entityId: incident.id,
+      payload: { url: incidentUrl, error: caught instanceof Error ? caught.message : String(caught) },
+      at: now().toISOString(),
+    });
+  }
+
+  for (const url of regressionUrls) {
     try {
       candidateRowsByUrl.set(url, await deps.runCandidate(collector.brightDataCollectorId, url));
     } catch (caught) {
@@ -159,13 +215,40 @@ export async function attemptRepair(
     (incident.witness?.values ?? []).map((value) => [value.path, value.value]),
   );
 
-  const decision = evaluateGate({
+  const rawDecision = evaluateGate({
     incident: { url: incidentUrl, expected: incidentExpected },
     regression: collector.goldenCases,
     candidateRowsByUrl,
     protectedFields: collector.protectedFields,
     contract,
   });
+
+  /*
+   * A pass we cannot attribute to the candidate is not a pass.
+   *
+   * When the dev and production runs are byte-identical on the page that
+   * failed, this path cannot tell the two versions apart, so a green result
+   * says nothing about the proposed repair. It might be a working candidate. It
+   * might be production that recovered on its own while the candidate was never
+   * executed at all. Promoting on that evidence would ship an untested template
+   * on the strength of a coincidence.
+   *
+   * Downgraded rather than thrown: the operator still sees the full matrix and
+   * can approve by hand having read it. What is withdrawn is the automatic
+   * path's licence to act unattended.
+   */
+  const decision =
+    rawDecision.approved && candidateIndistinguishable
+      ? {
+          approved: false as const,
+          results: rawDecision.results,
+          reasons: [
+            'Every case passed, but the candidate run and the production run returned identical output on the incident page, so this path cannot demonstrate that the candidate was the thing executed.',
+            'A pass that cannot be attributed to the candidate is not evidence the candidate works. Approve by hand only after confirming the proposed template differs from production.',
+            ...rawDecision.reasons,
+          ],
+        }
+      : rawDecision;
 
   if (!decision.approved) {
     // Tell Bright Data too. A candidate we blocked but never answered sits at

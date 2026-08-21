@@ -29,8 +29,13 @@ export async function SiteFooter() {
               Clone it, add one key, run it.
             </h3>
             <p className="font-mono text-[12px] text-gray-400 mt-1">
-              MIT licensed and self-hosted. Only BRIGHTDATA_API_KEY is required; everything else has
-              a working default.
+              {/* "Only BRIGHTDATA_API_KEY is required" was true of reading and
+                  false of everything else: mutations need NOTICE_ADMIN_TOKEN,
+                  and a deployed witness needs an Unlocker zone or it silently
+                  falls back to a CLI no server has. */}
+              MIT licensed and self-hosted. Reading needs only BRIGHTDATA_API_KEY. Running or
+              repairing a collector also needs NOTICE_ADMIN_TOKEN, and a deployed witness needs
+              BRIGHTDATA_UNLOCKER_ZONE.
             </p>
           </div>
 

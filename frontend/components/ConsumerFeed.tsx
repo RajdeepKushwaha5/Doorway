@@ -21,7 +21,7 @@ export async function ConsumerFeed({ collectorId, url }: { collectorId: string; 
     return null;
   }
 
-  const { status, confidence, lastVerified, stale, fieldsDegraded, reason, incidentId } =
+  const { status, confidence, lastVerified, stale, fieldsDegraded, reason, incidentId, confirmedBy } =
     feed.health;
 
   const tone =
@@ -49,6 +49,20 @@ export async function ConsumerFeed({ collectorId, url }: { collectorId: string; 
       <div className="grid gap-3 sm:grid-cols-3">
         <Cell label="Confidence" value={confidence.toFixed(2)} />
         <Cell label="Last verified" value={lastVerified ?? 'never'} />
+        {/* The strong claim and the weaker one are different facts, and this
+            panel is where a downstream reader decides how far to trust the
+            payload. Saying "two sensors" for a value the witness never read
+            would be the same overstatement this project exists to refuse. */}
+        <Cell
+          label="Confirmed by"
+          value={
+            confirmedBy === 'two_sensors'
+              ? 'two independent sensors'
+              : confirmedBy === 'contract_only'
+                ? 'learned contract only'
+                : 'nothing yet'
+          }
+        />
         <Cell label="Stale" value={stale ? 'yes' : 'no'} />
       </div>
 

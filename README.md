@@ -27,7 +27,7 @@ worth protecting: the fixture is ours and it resets.
 From a clone, with no Bright Data account and no credentials:
 
 ```bash
-npm install && npm test          # 258 tests, no network
+npm install && npm test          # 331 tests, no network
 ```
 
 With an API key, to reproduce the claims in this README:
@@ -867,6 +867,39 @@ Recorded because it is worth knowing before you plan a target list, and because 
 
 ---
 
+## Known issues
+
+Recorded rather than hidden, because a project arguing for honest reporting of
+data quality should report its own.
+
+**Three high-severity advisories reach us through Next.js.** `npm audit
+--omit=dev` reports `postcss` and `sharp` (libvips CVEs) as transitive
+dependencies of `next@15`. `sharp` is Next's image optimiser and this dashboard
+never invokes it: `next/image` appears nowhere in the source, and the one image
+served, a PNG from the API, is rendered through a plain `<img>` precisely
+because the optimiser has nothing to optimise on an arbitrary remote capture.
+The fix is a Next major bump, which is not something to do the day before a
+demo, so it is named here instead of being quietly carried.
+
+**The free-tier store does not survive a restart.** Render's free plan has no
+persistent disk, so a redeploy or a spin-down after fifteen minutes idle clears
+runs, incidents, accepted baselines and verified snapshots. Seeding restores
+collector definitions only. Everything reappears after one `npm run live --
+observe-all`, and the fix is a paid disk or Postgres behind the existing `Store`
+interface.
+
+**The worker's own orchestration has no dedicated tests.** Ticking, job
+claiming, scheduling and automatic promotion are exercised incidentally by the
+pipeline suites rather than directly. The 331 tests cover detection,
+classification, gating and the API well; they cover worker restart mid-repair
+and duplicate job claims not at all.
+
+**Per-collector schedules are not parsed.** Any non-null `schedule` string
+enables the global interval rather than the cadence it names, and registration
+sets it to null with no way to change it from the interface.
+
+---
+
 ## Contributing
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md) covers how to run it, the conventions this
@@ -956,7 +989,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 258 tests, no network required
+npm test                      # 331 tests, no network required
 
 npm run start  --workspace backend     # API on :4000
 npm run worker --workspace backend     # monitoring loop
@@ -1013,7 +1046,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 258 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 331 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 

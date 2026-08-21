@@ -100,6 +100,21 @@ export const healthEnvelopeSchema = z.object({
     incidentId: z.string().nullable(),
     /** Machine-readable cause, such as `collector_witness_disagreement`. */
     reason: z.string().nullable(),
+    /**
+     * How this value was actually confirmed.
+     *
+     * The project's headline claim is that two independent Bright Data sensors
+     * agree. That is true when the witness ran, and it was being asserted even
+     * when it did not: once a baseline exists and every contract check passes,
+     * the witness is deliberately skipped to save a Web Unlocker read, and the
+     * resulting snapshot was still published at 0.95 with the words "confirmed
+     * by two sensors" attached.
+     *
+     * `contract_only` is a real and useful state, it just is not the same
+     * claim, and a system built on refusing to overstate evidence cannot
+     * overstate its own.
+     */
+    confirmedBy: z.enum(['two_sensors', 'contract_only', 'none']),
   }),
 });
 

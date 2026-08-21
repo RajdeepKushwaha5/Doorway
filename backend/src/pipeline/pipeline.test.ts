@@ -493,3 +493,77 @@ describe('a verified value ages out', () => {
     expect(feed.health.reason).toContain('50h ago');
   });
 });
+
+
+describe('the feed does not claim a witness that never ran', () => {
+  /**
+   * The headline claim is that two independent Bright Data sensors agree. That
+   * was asserted even when the witness was skipped: once a baseline exists and
+   * every contract check passes, no Web Unlocker read happens, and the snapshot
+   * was still published at 0.95 with two-sensor confirmation attached. A
+   * plausible wrong value sitting inside the learned distribution could be
+   * published with no second sensor ever looking at it.
+   */
+  it('reports contract_only when no witness read the value', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'notice-prov-'));
+    const store = new FileStore(join(directory, 'store.json'));
+
+    await store.saveVerifiedSnapshot({
+      collectorId: 'col-1',
+      url: 'https://example.test/p',
+      data: { price: 249 },
+      contractVersion: 1,
+      verifiedAt: new Date().toISOString(),
+      contentHash: '',
+      shape: null,
+      confirmedBy: 'contract_only',
+    });
+
+    const feed = await buildFeed(store, 'col-1', 'https://example.test/p');
+
+    expect(feed.health.confirmedBy).toBe('contract_only');
+    expect(feed.health.confidence).toBeLessThan(0.7);
+    expect(feed.health.reason).toContain('witness was not consulted');
+  });
+
+  it('reports two_sensors, and scores it higher, when the witness did read it', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'notice-prov2-'));
+    const store = new FileStore(join(directory, 'store.json'));
+
+    await store.saveVerifiedSnapshot({
+      collectorId: 'col-1',
+      url: 'https://example.test/p',
+      data: { price: 249 },
+      contractVersion: 1,
+      verifiedAt: new Date().toISOString(),
+      contentHash: 'abc123',
+      shape: null,
+      confirmedBy: 'two_sensors',
+    });
+
+    const feed = await buildFeed(store, 'col-1', 'https://example.test/p');
+
+    expect(feed.health.confirmedBy).toBe('two_sensors');
+    expect(feed.health.confidence).toBe(0.95);
+    expect(feed.health.reason).toBeNull();
+  });
+
+  it('reads unlabelled history as the weaker claim, never the stronger one', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'notice-prov3-'));
+    const store = new FileStore(join(directory, 'store.json'));
+
+    await store.saveVerifiedSnapshot({
+      collectorId: 'col-1',
+      url: 'https://example.test/p',
+      data: { price: 249 },
+      contractVersion: 1,
+      verifiedAt: new Date().toISOString(),
+      contentHash: '',
+      shape: null,
+    });
+
+    expect((await buildFeed(store, 'col-1', 'https://example.test/p')).health.confirmedBy).toBe(
+      'contract_only',
+    );
+  });
+});

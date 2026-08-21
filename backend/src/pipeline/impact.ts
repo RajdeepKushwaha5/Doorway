@@ -42,6 +42,15 @@ export interface WithheldValue {
 export interface ImpactStats {
   /** Observations made. The denominator for everything else. */
   runs: number;
+  /**
+   * Investigations that reached a non-healthy verdict.
+   *
+   * A healthy observation is stored as an incident record too, so counting
+   * every record made the fault total look many times larger than the number
+   * of things that actually went wrong. On a page arguing that a plausible
+   * number can be wrong, an inflated count of our own is the worst possible
+   * error to make.
+   */
   incidents: number;
   /** Values not published because two sensors disagreed. */
   withheld: number;
@@ -151,7 +160,7 @@ export function computeImpact(
 
   return {
     runs: runs.length,
-    incidents: incidents.length,
+    incidents: incidents.filter((incident) => incident.classification !== 'healthy').length,
     withheld: withheldCount,
     silent: withheld.filter((value) => value.silent).length,
     restrained,

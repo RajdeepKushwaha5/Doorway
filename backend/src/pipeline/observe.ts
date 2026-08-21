@@ -276,6 +276,9 @@ export async function observeOnce(
         // happened, so there is no structure to remember.
         contentHash: '',
         shape: null,
+        // No witness ran. Recorded honestly so the feed reports what this
+        // actually is rather than inheriting the stronger claim.
+        confirmedBy: 'contract_only',
       });
     }
     const closed = await closeRecoveredIncidents(deps, collector.id, url, run.id, startedAt);
@@ -640,6 +643,7 @@ export async function observeOnce(
       // reading two sensors agreed about. A shape taken from a run nobody
       // trusted would let a consent wall become the definition of the page.
       shape: observation.shape,
+      confirmedBy: 'two_sensors',
     });
   }
 
