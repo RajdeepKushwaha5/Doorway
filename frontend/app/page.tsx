@@ -12,6 +12,7 @@ import { ImpactBand } from '@/components/ImpactBand';
 import { FleetTable } from '@/components/FleetTable';
 import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { api } from '@/lib/api';
+import type { DoorwayWorld } from '@/lib/types';
 import { getConsoleCapabilitiesAction, getFixtureModeAction } from '@/app/actions';
 import type { CollectorSummary, Incident } from '@/lib/types';
 import { DoorwayHome } from '@/components/DoorwayHome';
@@ -73,8 +74,30 @@ const FAQS = [
   },
 ];
 
-export default function HomePage() {
-  return <DoorwayHome />;
+export default async function HomePage() {
+  /*
+   * The default world, rendered on the server.
+   *
+   * Failure is quiet on purpose: an unreachable API should leave the page
+   * showing its empty state and its explanation, not an error screen. The
+   * client rebuilds this the moment the visitor changes anything.
+   */
+  let initialWorld: DoorwayWorld | null = null;
+  try {
+    initialWorld = await api.doorwayWorld({
+      country: 'India',
+      educationLevel: 'Undergraduate',
+      interests: ['Artificial intelligence'],
+      skills: [],
+      opportunityTypes: ['scholarship', 'fellowship', 'internship', 'research-program'],
+      fundingRequirement: 'full',
+      locations: [],
+    });
+  } catch {
+    initialWorld = null;
+  }
+
+  return <DoorwayHome initialWorld={initialWorld} />;
 }
 
 export async function NoticeEnginePage() {

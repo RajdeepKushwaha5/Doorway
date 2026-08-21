@@ -85,6 +85,7 @@ function parseOpportunity(
   ]);
   const fundingLevel = inferFundingLevel(
     `${text(value, ['funding_level']) ?? ''} ${coverage.join(' ')} ${text(value, ['summary']) ?? ''}`,
+    coverage,
   );
 
   const deadlineRaw = text(value, ['deadline_raw', 'application_deadline', 'deadline']);
@@ -149,10 +150,38 @@ function inferType(textValue: string): OpportunityType | null {
   return null;
 }
 
-function inferFundingLevel(textValue: string): Opportunity['funding']['level'] {
+/**
+ * What the source actually says about how much of the cost is covered.
+ *
+ * This looked only for the literal phrases "fully funded" and "full funding",
+ * so a page that published `coverage: ["tuition", "travel"]` alongside a
+ * concrete amount was recorded as `unspecified`. A student who requires full
+ * funding then saw "the source does not clearly state the funding level" on an
+ * opportunity that plainly states it, which both lowers the match and adds an
+ * uncertainty that is not real.
+ *
+ * Coverage of tuition together with any living cost is full funding by any
+ * ordinary reading, and is treated as such. Coverage that names something
+ * narrower is partial. An amount on its own stays `unspecified`, because a
+ * number without a scope genuinely does not say whether it covers everything,
+ * and guessing there would be exactly the overreach this project refuses.
+ */
+function inferFundingLevel(
+  textValue: string,
+  coverage: readonly string[],
+): Opportunity['funding']['level'] {
   const lower = textValue.toLowerCase();
   if (lower.includes('fully funded') || lower.includes('full funding')) return 'full';
   if (lower.includes('partial')) return 'partial';
+
+  const covered = coverage.map((entry) => entry.toLowerCase());
+  const tuition = covered.some((entry) => /tuition|fees|course/.test(entry));
+  const living = covered.some((entry) =>
+    /living|stipend|travel|accommodation|housing|allowance/.test(entry),
+  );
+
+  if (tuition && living) return 'full';
+  if (covered.length > 0) return 'partial';
   return 'unspecified';
 }
 

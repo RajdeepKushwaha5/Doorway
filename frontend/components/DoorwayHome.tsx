@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { IsometricWorld } from '@/components/IsometricWorld';
 import Link from 'next/link';
 import { buildDoorwayWorldAction } from '@/app/actions';
 import type {
@@ -29,10 +30,20 @@ const DEFAULT_PROFILE: DoorwayProfile = {
   locations: [],
 };
 
-export function DoorwayHome() {
+export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWorld | null }) {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [interest, setInterest] = useState('Artificial intelligence');
-  const [world, setWorld] = useState<DoorwayWorld | null>(null);
+  /*
+   * Built on the server for the default profile, so the city is standing when
+   * the page opens.
+   *
+   * This started empty and only filled after the form was submitted, which
+   * meant anybody arriving at the site, a judge included, met an empty state
+   * and had to work out that a button would populate it. The transformation is
+   * the entire argument of this product; it should not be behind an
+   * interaction. Changing the profile still rebuilds it live.
+   */
+  const [world, setWorld] = useState<DoorwayWorld | null>(initialWorld);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -223,12 +234,18 @@ function WorldSection({ world, pending }: { world: DoorwayWorld | null; pending:
         {pending ? <WorldSkeleton /> : null}
         {!pending && world === null ? <EmptyWorld initial /> : null}
         {!pending && world !== null && world.matches.length === 0 ? <EmptyWorld initial={false} /> : null}
+        {/* The world first, because the transformation is the point: a pile of
+            unrelated websites became a place you can read at a glance. The
+            cards stay underneath for the detail the geometry cannot carry. */}
         {!pending && world !== null && world.matches.length > 0 ? (
-          <div className="doorway-city mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {world.matches.map((match, index) => (
-              <OpportunityBuilding key={match.opportunity.id} match={match} index={index} />
-            ))}
-          </div>
+          <>
+            <IsometricWorld matches={world.matches} />
+            <div className="doorway-city mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {world.matches.map((match, index) => (
+                <OpportunityBuilding key={match.opportunity.id} match={match} index={index} />
+              ))}
+            </div>
+          </>
         ) : null}
       </div>
     </section>

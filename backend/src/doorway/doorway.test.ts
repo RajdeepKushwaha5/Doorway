@@ -122,3 +122,107 @@ describe('Doorway opportunity projection', () => {
     expect(world.stats).toMatchObject({ opportunities: 1, verified: 1, closingSoon: 1 });
   });
 });
+
+
+describe('reading what a source actually said', () => {
+  /**
+   * Both of these produced a demonstrably wrong answer on the flagship
+   * opportunity. It scored 70% and "eligible: unknown" against a page that
+   * states everything needed to answer both questions.
+   */
+  const at = Date.parse('2026-08-20T01:00:00.000Z');
+
+  /** The same source, with one field swapped. */
+  function withData(data: Record<string, unknown>): VerifiedSnapshot {
+    return { ...snapshot, data: { ...(snapshot.data as Record<string, unknown>), ...data } };
+  }
+
+  const profile = {
+    country: 'India',
+    educationLevel: 'undergraduate',
+    interests: ['Artificial intelligence'],
+    skills: [],
+    opportunityTypes: ['fellowship' as const],
+    fundingRequirement: 'full' as const,
+    locations: ['India'],
+  };
+
+  it('reads full funding from coverage, not only from the words "fully funded"', () => {
+    const [opportunity] = opportunitiesFromSnapshots(
+      [
+        withData({
+          funding_level: '',
+          summary: 'A research programme.',
+          funding: { amount: 250_000, currency: 'INR', coverage: ['tuition', 'travel'] },
+        }),
+      ],
+      [collector],
+      [],
+      at,
+    );
+
+    expect(opportunity?.funding.level).toBe('full');
+  });
+
+  it('calls a narrower coverage partial rather than full', () => {
+    const [opportunity] = opportunitiesFromSnapshots(
+      [
+        withData({
+          funding_level: '',
+          summary: 'A research programme.',
+          funding: { amount: 50_000, currency: 'INR', coverage: ['tuition'] },
+        }),
+      ],
+      [collector],
+      [],
+      at,
+    );
+
+    expect(opportunity?.funding.level).toBe('partial');
+  });
+
+  it('leaves an amount with no stated scope unspecified rather than guessing', () => {
+    const [opportunity] = opportunitiesFromSnapshots(
+      [withData({ funding_level: '', summary: 'A research programme.', funding: { amount: 250_000, currency: 'INR', coverage: [] } })],
+      [collector],
+      [],
+      at,
+    );
+
+    expect(opportunity?.funding.level).toBe('unspecified');
+  });
+
+  it('finds the subject when the page only uses the short form', () => {
+    // "AI Research Fellowship" does not contain "artificial intelligence",
+    // which is how a real page writes it.
+    const world = buildWorld(
+      profile,
+      opportunitiesFromSnapshots(
+        [withData({ title: 'AI Research Fellowship', interests: [], summary: 'A funded AI research programme.' })],
+        [collector],
+        [],
+        at,
+      ),
+      new Date(at),
+    );
+
+    const match = world.matches[0];
+    expect(match?.explanation.join(' ')).toContain('Artificial intelligence');
+    expect(match?.unknownRequirements.join(' ')).not.toContain('subject areas');
+  });
+
+  it('says the page did not mention it, rather than blaming the source for our parsing', () => {
+    const world = buildWorld(
+      { ...profile, interests: ['Marine biology'] },
+      opportunitiesFromSnapshots(
+        [withData({ interests: [], summary: 'A funded AI research programme.' })],
+        [collector],
+        [],
+        at,
+      ),
+      new Date(at),
+    );
+
+    expect(world.matches[0]?.unknownRequirements.join(' ')).toContain('does not mention Marine biology');
+  });
+});

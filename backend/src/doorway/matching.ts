@@ -29,6 +29,35 @@ export function buildWorld(
   };
 }
 
+/**
+ * Forms of the same subject that a page might use.
+ *
+ * Deliberately tiny and one-directional. This exists so an abbreviation on the
+ * page can be found from the full term a student typed, and it is not a
+ * taxonomy, a classifier, or an opinion about what an opportunity is for.
+ */
+const ALIASES: Record<string, string[]> = {
+  'artificial intelligence': ['ai', 'machine learning', 'ml', 'deep learning'],
+  'machine learning': ['ml', 'ai', 'artificial intelligence'],
+  'computer science': ['cs', 'computing', 'software'],
+  'data science': ['data', 'analytics'],
+  robotics: ['robot'],
+  biotechnology: ['biotech'],
+  'renewable energy': ['clean energy', 'solar', 'wind'],
+};
+
+/** Whether the page text mentions this interest, in any form we know of. */
+function mentions(haystack: string, interest: string): boolean {
+  const term = interest.toLowerCase().trim();
+  if (term === '') return false;
+  if (haystack.includes(term)) return true;
+
+  return (ALIASES[term] ?? []).some((alias) =>
+    // Whole-word only, so "ai" does not match "chair" or "available".
+    new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(haystack),
+  );
+}
+
 export function matchOpportunity(
   profile: DoorwayProfile,
   opportunity: Opportunity,
@@ -46,15 +75,42 @@ export function matchOpportunity(
     score -= 20;
   }
 
-  const interestText = [...opportunity.interests, opportunity.title, opportunity.summary].join(' ').toLowerCase();
+  /*
+   * Does this page mention what the student asked for?
+   *
+   * Plain substring matching missed the most ordinary case there is. A student
+   * interested in "Artificial intelligence" looking at a page titled "AI
+   * Research Fellowship" matched nothing, because that string does not contain
+   * that string. Every real source writes the short form somewhere.
+   *
+   * So the eligibility text is searched as well, and a small table of forms
+   * that mean the same thing is consulted. That table is knowledge about
+   * language, not an inference about the opportunity: it lets "AI" find
+   * "artificial intelligence" and nothing more. Where a term genuinely is not
+   * on the page, that is reported as the page not mentioning it, rather than
+   * as the source having published no subject areas, which was describing our
+   * own parsing as though it were a fact about the source.
+   */
+  const interestText = [
+    ...opportunity.interests,
+    opportunity.title,
+    opportunity.summary,
+    ...opportunity.eligibility,
+  ]
+    .join(' ')
+    .toLowerCase();
+
   const interestMatches = profile.interests.filter((interest) =>
-    interestText.includes(interest.toLowerCase()),
+    mentions(interestText, interest),
   );
+
   if (interestMatches.length > 0) {
     score += Math.min(25, interestMatches.length * 10);
     matched.push(`Matches ${interestMatches.join(', ')}`);
-  } else if (opportunity.interests.length === 0) {
-    unknown.push('The source did not publish structured subject areas');
+  } else if (profile.interests.length > 0) {
+    unknown.push(
+      `This page does not mention ${profile.interests.join(' or ')}, so the subject fit could not be confirmed`,
+    );
   }
 
   const locationText = opportunity.locations.join(' ').toLowerCase();
