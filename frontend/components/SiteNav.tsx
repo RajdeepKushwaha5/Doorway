@@ -82,7 +82,7 @@ export function SiteNav() {
 
         <Link
           href="/#world"
-          className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] px-4 py-1.5 bg-black text-white rounded-[6px] hover:bg-neutral-800 transition-colors whitespace-nowrap"
+          className="hidden sm:inline-flex font-mono text-[11px] font-semibold uppercase tracking-[0.08em] px-4 py-1.5 bg-black text-white rounded-[6px] hover:bg-neutral-800 transition-colors whitespace-nowrap"
         >
           Build my world
         </Link>

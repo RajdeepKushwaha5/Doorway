@@ -175,6 +175,22 @@ describe('transport behaviour', () => {
     expect(response.headers.get('access-control-allow-origin')).toBe('*');
   });
 
+  it('strips a trailing slash so the header can actually match', async () => {
+    /*
+     * Origin is a serialized origin and never carries a path, so a browser
+     * sends https://site.example with no slash and the comparison is exact.
+     * Seen in production: the value was pasted from a hosting dashboard as
+     * https://site.example/, the header went out with the slash, and every
+     * browser request from that exact site was blocked while curl kept
+     * working.
+     */
+    process.env['NOTICE_CORS_ORIGIN'] = 'https://dashboard.example.com/';
+    const response = await fetch(`${base}/api/health`);
+    expect(response.headers.get('access-control-allow-origin')).toBe(
+      'https://dashboard.example.com',
+    );
+  });
+
   it('answers a preflight without running a handler', async () => {
     const response = await fetch(`${base}/api/collectors`, { method: 'OPTIONS' });
     expect(response.status).toBe(204);

@@ -119,7 +119,24 @@ export class Router {
     // value. Every browser request then fails while curl keeps working, which
     // is the worst way to discover a misconfiguration.
     const configured = process.env['NOTICE_CORS_ORIGIN']?.trim();
-    const origin = configured === undefined || configured === '' ? '*' : configured;
+    /*
+     * A trailing slash makes this header match nothing.
+     *
+     * `Origin` is a serialized origin: scheme, host, port, and never a path,
+     * so a browser sends `https://site.vercel.app` with no slash. The
+     * comparison is exact, which means a value pasted as
+     * `https://site.vercel.app/`, the form every hosting dashboard shows you
+     * and every copy button gives you, blocks every request from the very site
+     * it was meant to allow.
+     *
+     * Seen in production: the header went out with the slash and the discovery
+     * stream stopped working from the browser while curl kept succeeding,
+     * which is the same failure mode the blank-versus-unset handling above
+     * exists to prevent. Same fix: normalise what a dashboard is likely to
+     * give you rather than requiring the operator to know this.
+     */
+    const normalized = configured?.replace(/\/+$/, '');
+    const origin = normalized === undefined || normalized === '' ? '*' : normalized;
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('access-control-allow-headers', 'content-type');
     response.setHeader('access-control-allow-methods', 'GET,POST,PUT,OPTIONS');

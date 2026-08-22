@@ -274,3 +274,21 @@ describe('tidying what the page gave us', () => {
     ).toBe('Fellowships');
   });
 });
+
+describe('titles from production pages', () => {
+  /*
+   * research.google came back from a production run titled "Explore our many
+   * areas of focus", the first heading on the page and pure marketing
+   * furniture. A student scanning results cannot tell what that one is.
+   */
+  it('skips an instruction to the reader and keeps looking', () => {
+    const markdown = '# Explore our many areas of focus\n\n## Google PhD Fellowship\n\nbody';
+    expect(titleFrom(markdown, 'fallback')).toBe('Google PhD Fellowship');
+  });
+
+  it('still takes a real heading', () => {
+    expect(titleFrom('# Oxford Schmidt AI in Science Fellowship\n\nbody', 'x')).toBe(
+      'Oxford Schmidt AI in Science Fellowship',
+    );
+  });
+});

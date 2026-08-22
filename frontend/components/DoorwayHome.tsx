@@ -113,15 +113,22 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
             </div>
           </div>
 
-          <div className="doorway-grid relative flex items-center justify-center overflow-hidden bg-[#f6f4ef] p-6 lg:p-12">
-            <div className="doorway-orbit doorway-orbit-one" />
-            <div className="doorway-orbit doorway-orbit-two" />
-            <div className="relative z-10 w-full max-w-[610px] border border-black bg-white shadow-[18px_18px_0_#0c0c0a]">
-              <div className="flex items-center justify-between border-b border-black px-5 py-3 font-neuebit text-[11px] uppercase tracking-[0.15em]">
-                <span>Build my opportunity world</span>
-                <span className="text-emerald-600 font-bold flex items-center gap-1.5">
+          <div className="doorway-form-stage relative flex min-w-0 items-center justify-center overflow-hidden p-6 sm:p-10 lg:p-12">
+            <div aria-hidden="true" className="doorway-form-dots" />
+            <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-coral" />
+            <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-emerald" />
+            <div aria-hidden="true" className="doorway-form-arc doorway-form-arc-one" />
+            <div aria-hidden="true" className="doorway-form-arc doorway-form-arc-two" />
+            <div className="doorway-builder-card relative z-10 min-w-0 w-full max-w-[620px] border border-black bg-white">
+              <div className="flex items-center justify-between gap-3 border-b border-black px-4 py-3 font-neuebit text-[11px] uppercase tracking-[0.15em] sm:px-5">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 bg-[#f06449]" />
+                  <span className="truncate">Build my opportunity world</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1.5 font-bold text-emerald-700">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Bright Data live
+                  <span className="sm:hidden">Bright Data</span>
+                  <span className="hidden sm:inline">Bright Data pipeline</span>
                 </span>
               </div>
               <div className="space-y-6 p-5 sm:p-7">

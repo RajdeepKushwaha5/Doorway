@@ -216,6 +216,17 @@ export function titleFrom(markdown: string, fallback: string): string {
     if (GENERIC.test(found)) continue;
     // A heading that is a question belongs to an FAQ further down the page.
     if (found.endsWith('?')) continue;
+    /*
+     * An instruction to the reader is not the name of anything.
+     *
+     * research.google came back from a production run titled "Explore our many
+     * areas of focus", which is the first heading on the page and is marketing
+     * furniture. A student scanning a list of results cannot tell what that
+     * one is.
+     */
+    if (/^(explore|discover|learn|see|browse|find|meet|read|join|start|get)\b/i.test(found)) {
+      continue;
+    }
     return found;
   }
   /*
