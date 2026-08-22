@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { extractField } from './extract.js';
 import { findCrossFieldMatch, observeMarkdown, reconcile } from './compare.js';
-import type { WitnessFieldSpec } from './spec.js';
+import type { WitnessFieldSpec, WitnessObservation } from './spec.js';
 
 /**
  * The DriftMart product page, as Bright Data's markdown path renders it.
@@ -338,5 +338,59 @@ describe('a label inside a sentence', () => {
   it('still reads downward when the line is only the label', () => {
     const page = ['Application deadline', '', '18 September 2026', '', 'Location: India'].join('\n');
     expect(extractField(page, deadlineSpec)?.value).toBe('18 September 2026');
+  });
+});
+
+/**
+ * Two spellings of one date are one date.
+ *
+ * Text was compared as text, which is right for a title and wrong for a closing
+ * date. A collector reading "18 September 2026" and a witness reading
+ * "2026-09-18" are agreeing, and comparing the strings called that drift. It
+ * would have quarantined correct records on the strength of two publishers
+ * formatting a date differently, which is most of them.
+ *
+ * Found by routing discovery through this reconciler instead of its own copy:
+ * the bug was latent for watched sources the whole time, and nothing had put
+ * two differently formatted dates in front of it.
+ */
+describe('comparing dates by the day they mean', () => {
+  const dateSpec: WitnessFieldSpec = {
+    path: 'deadline_raw',
+    meaning: 'the date applications close',
+    labels: ['deadline'],
+    excludeLabels: [],
+    kind: 'text',
+    allowed: [],
+    shape: 'date',
+  };
+
+  const observed = (value: string): WitnessObservation => ({
+    url: 'https://a.test/x',
+    fetchedAt: new Date().toISOString(),
+    contentHash: 'x',
+    excerpt: value,
+    values: [
+      { path: 'deadline_raw', value, confidence: 0.9, evidence: { line: value, lineNumber: 1, strategy: 'json-ld' } },
+    ],
+    notFound: [],
+    shape: { headings: [], labels: [], lines: 0, links: 0, tables: 0, images: 0, words: 0 },
+  });
+
+  it('agrees across formats', () => {
+    const summary = reconcile({ deadline_raw: '18 September 2026' }, observed('2026-09-18'), [dateSpec]);
+    expect(summary.agreed).toContain('deadline_raw');
+  });
+
+  it('still disagrees on genuinely different days', () => {
+    const summary = reconcile({ deadline_raw: '18 September 2026' }, observed('2026-10-30'), [dateSpec]);
+    expect(summary.disagreed).toContain('deadline_raw');
+  });
+
+  /* A spec that did not declare itself a date compares exactly as before. */
+  it('leaves ordinary text comparison alone', () => {
+    const plain: WitnessFieldSpec = { ...dateSpec, shape: undefined };
+    const summary = reconcile({ deadline_raw: '18 September 2026' }, observed('2026-09-18'), [plain]);
+    expect(summary.agreed).not.toContain('deadline_raw');
   });
 });

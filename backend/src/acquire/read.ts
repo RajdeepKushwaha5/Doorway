@@ -15,6 +15,7 @@ import {
 import { deadlineHasPassed, parseDeadline } from './dates.js';
 import { decideLifecycle } from '../doorway/lifecycle.js';
 import { hasStructuredFacts, readStructured, type StructuredFacts } from './structured.js';
+import { adjudicateStructured } from './adjudicate.js';
 
 /**
  * Read one discovered page and try to make an opportunity out of it.
@@ -137,6 +138,16 @@ export interface OpportunityDraft {
   corroboration: DraftCorroboration;
   /** The date the page declared in machine-readable form, when it declared one. */
   structuredDeadline: string | null;
+  /**
+   * The engine's verdict on the two readings, when there were two.
+   *
+   * One of the same six a watched source can receive, produced by the same
+   * classifier, so "the two sensors disagreed" means one thing across the
+   * product rather than two similar-sounding things.
+   */
+  verdict?: string;
+  /** The engine's evidence sentences, in the words a watched incident uses. */
+  verdictEvidence?: string[];
   /** Whether somebody can still submit, kept separate from date confidence. */
   applicationStatus?: ApplicationStatus;
   /** Plain-language evidence for the lifecycle classification. */
@@ -666,21 +677,36 @@ export function reconcileStructured(
   }
 
   /*
-   * Do the two readings mean the same day?
+   * The engine decides, not a second opinion about the engine.
    *
-   * Compared as dates rather than as strings, because "15th July 2026" and
-   * "2026-07-15" are the same fact written by two different authors for two
-   * different audiences. Comparing the text would call every agreement a
-   * conflict.
+   * This compared the two readings itself, which worked and meant the product
+   * held two verification systems wearing the same words: a watched source
+   * saying "two sensors" had been through reconciliation and a six-way
+   * classification, a discovered one saying it had been through a few lines
+   * written separately. Nobody reading either sentence could tell which they
+   * were being told, and that distinction is the entire product.
+   *
+   * `adjudicateStructured` hands both readings to the same `reconcile` and
+   * `classify` a watched collector goes through, so agreement means one thing
+   * everywhere.
    */
-  const fromText = parseDeadline(draft.deadlineRaw);
-  const fromData = parseDeadline(facts.deadline);
-  const agree = fromText !== null && fromData !== null && fromText === fromData;
+  const adjudication = adjudicateStructured(
+    { deadlineRaw: draft.deadlineRaw },
+    facts,
+    draft.sourceUrl,
+    draft.readAt,
+  );
+
+  if (adjudication === null) return { ...draft, structuredDeadline: facts.deadline };
 
   return {
     ...draft,
     structuredDeadline: facts.deadline,
-    corroboration: agree ? 'confirmed' : 'conflicting',
-    sensorCount: agree ? 2 : 1,
+    corroboration: adjudication.corroborated ? 'confirmed' : 'conflicting',
+    sensorCount: adjudication.corroborated ? 2 : 1,
+    // The engine's own verdict and sentences, so a discovered record can be
+    // shown the same evidence a watched incident shows.
+    verdict: adjudication.verdict,
+    verdictEvidence: adjudication.evidence,
   };
 }

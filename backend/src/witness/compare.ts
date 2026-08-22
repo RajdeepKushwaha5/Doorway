@@ -4,6 +4,7 @@ import { getPath } from '../contracts/paths.js';
 import { extractFields } from './extract.js';
 import type { EvidenceSpan, WitnessFieldSpec, WitnessObservation } from './spec.js';
 import { pageShape } from './shape.js';
+import { parseDeadline } from '../acquire/dates.js';
 
 /** How the collector and the witness compared on a single field. */
 export interface FieldComparison {
@@ -76,6 +77,28 @@ export function observeMarkdown(
  * wrong line is the classifier's decision, and it needs the acquisition
  * context to make it.
  */
+/**
+ * Compare two dates on the day they mean, not the way they are written.
+ *
+ * Falls back to ordinary comparison when either side cannot be parsed, so a
+ * value that is not a date is still judged rather than waved through.
+ */
+function compareDates(collectorValue: unknown, witnessValue: unknown): ValueAgreement {
+  if (typeof collectorValue === 'string' && typeof witnessValue === 'string') {
+    const left = parseDeadline(collectorValue);
+    const right = parseDeadline(witnessValue);
+    if (left !== null && right !== null) {
+      return left === right
+        ? { kind: 'agree', note: 'both readings name the same day' }
+        : {
+            kind: 'disagree',
+            note: `the readings name different days: ${collectorValue} against ${witnessValue}`,
+          };
+    }
+  }
+  return compareValues(collectorValue, witnessValue);
+}
+
 export function reconcile(
   collectorRow: unknown,
   observation: WitnessObservation,
@@ -91,7 +114,22 @@ export function reconcile(
     // Money is compared on magnitude and currency together. Handing the whole
     // object to compareValues lets it catch a correct number in the wrong
     // currency, which is invisible if only magnitudes are compared.
-    const agreement = compareValues(collectorValue, witnessValue?.value ?? null);
+    /*
+     * Two spellings of one date are one date.
+     *
+     * Text is compared as text, which is right for a title and wrong for a
+     * closing date: a collector reading "18 September 2026" and a witness
+     * reading "2026-09-18" are agreeing, and comparing the strings calls that
+     * drift. It would have quarantined a correct record on the strength of two
+     * publishers formatting a date differently, which is most of them.
+     *
+     * Only for specs that declared themselves dates. Everything else compares
+     * exactly as before.
+     */
+    const agreement =
+      spec.shape === 'date'
+        ? compareDates(collectorValue, witnessValue?.value ?? null)
+        : compareValues(collectorValue, witnessValue?.value ?? null);
 
     comparisons.push({
       path: spec.path,
