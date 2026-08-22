@@ -1,11 +1,37 @@
-import { isModeId, MODE_IDS } from '@/lib/modes';
+import { isModeId, MODE_IDS, OPPORTUNITY_MODE_IDS } from '@/lib/modes';
+import { OPPORTUNITY_MODES } from '@/lib/opportunity-modes';
 import { getCurrentMode, isAuthorized, setCurrentMode } from '@/lib/state';
 
 export const dynamic = 'force-dynamic';
 
-/** Report the current mode. Unauthenticated: it reveals nothing sensitive. */
+/**
+ * Report the current mode, and what can be demonstrated.
+ *
+ * The scenario list is served from here rather than restated in the dashboard
+ * so the two cannot disagree. A UI carrying its own copy of the list will
+ * eventually offer a fault this fixture cannot serve, and the button will fail
+ * in front of whoever is being shown the demonstration.
+ *
+ * Unauthenticated: none of this is sensitive, and a visitor being able to read
+ * what is on offer before they touch anything is the point.
+ */
 export async function GET(): Promise<Response> {
-  return Response.json({ mode: await getCurrentMode(), available: MODE_IDS });
+  return Response.json({
+    mode: await getCurrentMode(),
+    available: MODE_IDS,
+    opportunityScenarios: OPPORTUNITY_MODE_IDS.map((id) => {
+      const mode = OPPORTUNITY_MODES[id];
+      return {
+        id: mode.id,
+        label: mode.label,
+        plain: mode.plain,
+        decision: mode.decision,
+        verdicts: mode.verdicts,
+        consequence: mode.consequence,
+        semanticChange: mode.semanticChange,
+      };
+    }),
+  });
 }
 
 /**

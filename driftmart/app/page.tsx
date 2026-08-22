@@ -1,4 +1,5 @@
-import { MODES, MODE_IDS } from '@/lib/modes';
+import { MODES, MODE_IDS, isOpportunityModeId } from '@/lib/modes';
+import { getOpportunityMode } from '@/lib/opportunity-modes';
 import { getCurrentMode } from '@/lib/state';
 
 /**
@@ -43,7 +44,10 @@ export default async function DriftMartIndex() {
       </p>
       <ul style={{ fontSize: 14, lineHeight: 1.9 }}>
         {MODE_IDS.map((id) => {
-          const mode = MODES[id];
+          // Opportunity faults describe the opportunity page and live in their
+          // own corpus. Reading them out of the retail map returned undefined
+          // and crashed this index the moment they were added.
+          const mode = isOpportunityModeId(id) ? getOpportunityMode(id) : MODES[id];
           return (
             <li key={id}>
               <a href={`/fixtures/${id}`}>/fixtures/{id}</a>

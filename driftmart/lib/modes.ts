@@ -21,9 +21,41 @@ export const MODE_IDS = [
   'sponsored_insertion',
   'pagination_collapse',
   'search_drift',
+  // Opportunity faults. The retail modes above were the original corpus and
+  // stay exactly as they were, because the regression gate replays against
+  // them. These four say the same things in the vocabulary Doorway actually
+  // serves, so a student looking at the demonstration sees a deadline they
+  // would have planned around rather than a headphone price.
+  'deadline_drift',
+  'deadline_extended',
+  'sponsored_opportunity',
+  'application_link_removed',
 ] as const;
 
+/** The opportunity faults, separated so a page can ask for only those. */
+export const OPPORTUNITY_MODE_IDS = [
+  'deadline_drift',
+  'deadline_extended',
+  'sponsored_opportunity',
+  'application_link_removed',
+] as const;
+
+export type OpportunityModeId = (typeof OPPORTUNITY_MODE_IDS)[number];
+
+export function isOpportunityModeId(value: string): value is OpportunityModeId {
+  return (OPPORTUNITY_MODE_IDS as readonly string[]).includes(value);
+}
+
 export type ModeId = (typeof MODE_IDS)[number];
+
+/**
+ * The retail corpus only.
+ *
+ * `MODES` below is keyed by this rather than by `ModeId`, so adding an
+ * opportunity fault cannot silently oblige somebody to invent headphone markup
+ * for it. The two corpora describe different pages and are kept apart.
+ */
+export type RetailModeId = Exclude<ModeId, OpportunityModeId>;
 
 export function isModeId(value: string): value is ModeId {
   return (MODE_IDS as readonly string[]).includes(value);
@@ -66,7 +98,7 @@ const BASELINE_EXPECTED: ExpectedRecord = {
   availability: 'in_stock',
 };
 
-export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
+export const MODES: Readonly<Record<RetailModeId, ModeDefinition>> = {
   baseline: {
     id: 'baseline',
     label: 'Baseline. Correct extraction, stable layout.',
@@ -207,6 +239,14 @@ export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
   },
 };
 
+/**
+ * The retail page for a given mode.
+ *
+ * An opportunity fault leaves the product page at baseline, mirroring the way
+ * a retail fault leaves the opportunity page alone. One process serves both
+ * fixtures, and a demonstration should not change underneath a visitor because
+ * somebody switched the other page in another tab.
+ */
 export function getMode(id: ModeId): ModeDefinition {
-  return MODES[id];
+  return isOpportunityModeId(id) ? MODES.baseline : MODES[id];
 }

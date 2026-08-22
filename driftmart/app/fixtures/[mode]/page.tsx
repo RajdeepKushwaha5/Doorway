@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getMode, isModeId, MODE_IDS } from '@/lib/modes';
+import { getMode, isModeId, isOpportunityModeId, MODE_IDS } from '@/lib/modes';
+import { getOpportunityMode } from '@/lib/opportunity-modes';
 
 /**
  * Permanent, immutable fixtures.
@@ -20,11 +21,18 @@ export default async function FixturePage({ params }: { params: Promise<{ mode: 
   const { mode: modeParam } = await params;
   if (!isModeId(modeParam)) notFound();
 
-  const mode = getMode(modeParam);
+  // The opportunity faults describe an opportunity page, so their fixture is
+  // the opportunity body. Reading them out of the retail map returned
+  // undefined and rendered a blank fixture, which the gate would have replayed
+  // against and scored as a pass.
+  const opportunity = isOpportunityModeId(modeParam);
+  const mode = opportunity ? getOpportunityMode(modeParam) : getMode(modeParam);
 
   return (
     <>
-      <h1 style={{ fontSize: 20, marginBottom: '0.5rem' }}>DriftMart fixture</h1>
+      <h1 style={{ fontSize: 20, marginBottom: '0.5rem' }}>
+        {opportunity ? 'Doorway Lab fixture' : 'DriftMart fixture'}
+      </h1>
       <p style={{ color: '#555', fontSize: 14, marginTop: 0 }}>
         <code>{mode.id}</code> · {mode.label}
       </p>
