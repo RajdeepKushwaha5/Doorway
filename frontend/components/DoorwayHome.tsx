@@ -233,16 +233,6 @@ export function DoorwayHome({
             <div aria-hidden="true" className="doorway-form-arc doorway-form-arc-one" />
             <div aria-hidden="true" className="doorway-form-arc doorway-form-arc-two" />
 
-            {/* Ambient Floating Orbit Sensors */}
-            <div className="pointer-events-none absolute top-7 right-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/90 px-3 py-1 font-mono text-[10px] text-emerald-800 shadow-sm backdrop-blur-sm animate-float-slow">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Second reading · checks the first</span>
-            </div>
-            <div className="pointer-events-none absolute top-14 left-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-3 py-1 font-mono text-[10px] text-gray-700 shadow-sm backdrop-blur-sm animate-float-reverse">
-              <span className="h-1.5 w-1.5 rounded-full bg-black" />
-              <span>First reading · pulls the details</span>
-            </div>
-
             {/*
               One strip, and every number on it is real.
 
