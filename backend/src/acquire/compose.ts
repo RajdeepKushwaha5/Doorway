@@ -20,15 +20,29 @@ import { parseDeadline } from './dates.js';
  * and every observation it reports can be checked against the page it read.
  */
 
-/** Labels that mean the date applications close. */
+/**
+ * Labels that mean the date applications close.
+ *
+ * Taken from what real pages say rather than from what they ought to. A
+ * Devpost hackathon writes a bare "Deadline:", a university writes "Closing
+ * date", a foundation writes "Applications close on".
+ */
 const CLOSING = [
   'application deadline',
   'applications close',
-  'closing date',
-  'apply by',
-  'deadline to apply',
-  'last date to apply',
+  'submissions close',
+  'submissions due',
   'submission deadline',
+  'registration closes',
+  'entries close',
+  'closing date',
+  'last date to apply',
+  'deadline to apply',
+  'apply by',
+  'register by',
+  // Bare, and last, because it is a substring of several labels above and of
+  // "early interest deadline" below. Longest-match is what keeps it safe.
+  'deadline',
 ];
 
 /** Labels that carry a date which is emphatically not the closing date. */
@@ -75,7 +89,17 @@ function sightings(markdown: string): DateSighting[] {
 
   for (const [index, line] of lines.entries()) {
     const lower = line.toLowerCase();
-    const label = [...CLOSING, ...NOT_CLOSING].find((candidate) => lower.includes(candidate));
+    /*
+     * The longest label that appears wins, not the first one found.
+     *
+     * "Early interest deadline" contains both "early interest" and the bare
+     * "deadline". Taking the first match in list order would classify the
+     * decoy as the closing date, which is the precise error this whole file
+     * exists to prevent, introduced by the fix that made it read real pages.
+     */
+    const label = [...CLOSING, ...NOT_CLOSING]
+      .filter((candidate) => lower.includes(candidate))
+      .sort((a, b) => b.length - a.length)[0];
     if (label === undefined) continue;
 
     /*

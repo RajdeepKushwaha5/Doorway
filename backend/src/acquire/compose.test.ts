@@ -88,3 +88,49 @@ describe('composing a brief', () => {
     expect(composeBrief(TWO_DATES, PAGE)).toEqual(composeBrief(TWO_DATES, PAGE));
   });
 });
+
+describe('labels as real pages write them', () => {
+  /*
+   * Every string below was read off a live page by the reconstruction run.
+   * The narrow label list found nothing on three of six real sources, which
+   * would have produced a brief that never told the scraper which date to
+   * take.
+   */
+  it('reads a bare "Deadline:" as the closing date', () => {
+    // Devpost, verbatim.
+    const brief = composeBrief('Deadline: Sep 3, 2026 @ 10:00am PDT', PAGE);
+    expect(brief.dates).toHaveLength(1);
+    expect(brief.dates[0]?.closing).toBe(true);
+  });
+
+  it('still refuses an early-interest date that ends in the word deadline', () => {
+    /*
+     * The trap the bare label opens. "Early interest deadline" contains both
+     * "early interest" and "deadline", and taking the first match in list
+     * order would classify the decoy as the closing date, reintroducing the
+     * exact error this file exists to prevent.
+     */
+    const brief = composeBrief(TWO_DATES, PAGE);
+    const early = brief.dates.find((d) => d.value === '1 September 2026');
+    expect(early?.closing).toBe(false);
+    expect(early?.label).toBe('early interest');
+    expect(brief.description).toContain('Never take it from "early interest"');
+  });
+
+  it('reads a university closing date', () => {
+    const brief = composeBrief(['Closing date', '', '01/07/2027'].join('\n'), PAGE);
+    expect(brief.dates[0]?.closing).toBe(true);
+  });
+
+  it('reads a hackathon submissions line', () => {
+    const brief = composeBrief('Submissions close 30 August 2026', PAGE);
+    expect(brief.dates[0]?.closing).toBe(true);
+  });
+
+  it('reports nothing rather than guess when a date carries no label', () => {
+    // WeMakeDevs writes "August 24-30, 2026" with no label at all. Inventing
+    // one would put a claim in the brief the page never made.
+    const brief = composeBrief('August 24-30, 2026. Monday 8 AM to Sunday 8 PM, London', PAGE);
+    expect(brief.dates).toHaveLength(0);
+  });
+});
