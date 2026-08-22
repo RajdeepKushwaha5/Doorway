@@ -679,13 +679,22 @@ export function buildRouter(deps: ApiDeps): Router {
    * It never reads raw runs, so a quarantined value cannot accidentally enter
    * the student-facing world through a second code path.
    */
-  router.get('/api/doorway/opportunities', async () => {
+  router.get('/api/doorway/opportunities', async ({ query }) => {
     const [collectors, snapshots, incidents] = await Promise.all([
       store.listCollectors(),
       store.listVerifiedSnapshots(),
       store.listIncidents(),
     ]);
-    const opportunities = opportunitiesFromSnapshots(snapshots, collectors, incidents);
+    // The proof walkthrough asks for the fixture by name, because breaking it
+    // is the whole point of that page. Nothing a student sees passes this.
+    const includeLab = query.get('includeLab') === '1';
+    const opportunities = opportunitiesFromSnapshots(
+      snapshots,
+      collectors,
+      incidents,
+      Date.now(),
+      includeLab,
+    );
     return {
       opportunities,
       generatedAt: new Date().toISOString(),

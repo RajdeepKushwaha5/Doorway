@@ -391,8 +391,38 @@ export async function getProofOpportunityAction(): Promise<{
   lastVerifiedAt: string;
 } | null> {
   try {
-    const { opportunities } = await api.doorwayOpportunities();
-    const first = opportunities[0];
+    /*
+     * The walkthrough needs the fixture specifically, not whatever is first.
+     *
+     * It asks for the lab to be included, and the list then holds real
+     * fellowships too. Taking the first would hand the fault switch a page at
+     * research.adobe.com, which we cannot break and should not try to: the
+     * switch would fail and the demonstration would look broken rather than
+     * honest.
+     */
+    const { opportunities } = await api.doorwayOpportunities({ includeLab: true });
+
+    const fixture = (process.env['DRIFTMART_URL'] ?? '').replace(/\/+$/, '');
+    let fixtureHost = '';
+    try {
+      fixtureHost = fixture === '' ? '' : new URL(fixture).host;
+    } catch {
+      fixtureHost = '';
+    }
+
+    const hostOf = (url: string): string => {
+      try {
+        return new URL(url).host;
+      } catch {
+        return '';
+      }
+    };
+
+    const first =
+      (fixtureHost === ''
+        ? undefined
+        : opportunities.find((entry) => hostOf(entry.sourceUrl) === fixtureHost)) ??
+      opportunities[0];
     if (first === undefined) return null;
     return {
       // The walkthrough runs the collector behind the record it is showing.

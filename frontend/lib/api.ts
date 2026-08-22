@@ -125,11 +125,25 @@ export const api = {
       `/api/feed/${encodeURIComponent(collectorId)}${url === undefined ? '' : `?url=${encodeURIComponent(url)}`}`,
     ),
 
-  doorwayOpportunities: (): Promise<{
+  /**
+   * What is being served.
+   *
+   * `includeLab` opts into the controlled fixture, which is otherwise kept out
+   * of everything a student sees. Only the proof walkthrough passes it, because
+   * breaking that page is the whole subject of it.
+   */
+  doorwayOpportunities: (
+    options: { includeLab?: boolean } = {},
+  ): Promise<{
     opportunities: DoorwayOpportunity[];
     generatedAt: string;
     sources: number;
-  }> => request('/api/doorway/opportunities'),
+  }> =>
+    request(
+      options.includeLab === true
+        ? '/api/doorway/opportunities?includeLab=1'
+        : '/api/doorway/opportunities',
+    ),
 
   doorwayWorld: (profile: DoorwayProfile): Promise<DoorwayWorld> =>
     request('/api/doorway/world', { method: 'POST', body: JSON.stringify(profile) }),

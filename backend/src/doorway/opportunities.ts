@@ -16,6 +16,15 @@ export function opportunitiesFromSnapshots(
   collectors: CollectorRecord[],
   incidents: IncidentRecord[],
   now = Date.now(),
+  /**
+   * Include the controlled fixture.
+   *
+   * Off everywhere a student can see, and on for the proof walkthrough, whose
+   * entire subject is that page. Opt-in rather than opt-out: the default has to
+   * be the one that cannot put a demo door in front of somebody looking for
+   * funding.
+   */
+  includeLab = false,
 ): Opportunity[] {
   const byCollector = new Map(collectors.map((collector) => [collector.id, collector]));
   const records: Opportunity[] = [];
@@ -39,7 +48,9 @@ export function opportunitiesFromSnapshots(
   for (const snapshot of snapshots) {
     const collector = byCollector.get(snapshot.collectorId);
     if (collector === undefined) continue;
-    if (labHost !== '' && collector.targetDomain.trim().toLowerCase() === labHost) continue;
+    if (!includeLab && labHost !== '' && collector.targetDomain.trim().toLowerCase() === labHost) {
+      continue;
+    }
     const rows = Array.isArray(snapshot.data) ? snapshot.data : [snapshot.data];
     for (const row of rows) {
       const parsed = parseOpportunity(row, collector, snapshot, incidents, now);
