@@ -40,6 +40,16 @@ export interface BudgetStatus {
   remaining: number;
   /** True when the scheduler should stop observing until the month rolls. */
   exhausted: boolean;
+  /**
+   * What this number covers, said out loud.
+   *
+   * It counts monitored observations, the recurring automatic spend this
+   * ceiling exists to bound. Crawls and live searches are bounded separately
+   * and are not in it. One number labelled "spent" while a crawl quietly used
+   * a hundred page loads beside it is a plausible, well-formed understatement,
+   * which is the failure this project is about.
+   */
+  covers: string;
 }
 
 /** Runs recorded in the same calendar month, in UTC, as `now`. */
@@ -83,5 +93,19 @@ export async function monitoringSpend(
     budget,
     remaining: Math.max(budget - spent, 0),
     exhausted: spent >= budget,
+    /*
+     * Name what this number is, because it is not the whole bill.
+     *
+     * It counts monitored observations, which are the recurring, automatic
+     * spend this ceiling exists to bound. It does not count crawls or live
+     * searches, which are bounded separately: a crawl is admin-only and capped
+     * per run, a search is capped per caller and by its own hourly ceiling.
+     *
+     * Reporting one number labelled "spent" while a crawl quietly spent a
+     * hundred page loads beside it is a plausible, well-formed understatement,
+     * which is the failure this whole project is about. So the number says
+     * what it covers.
+     */
+    covers: 'monitored observations only; crawls and live searches are metered separately',
   };
 }

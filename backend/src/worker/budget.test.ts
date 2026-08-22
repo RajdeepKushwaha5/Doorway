@@ -109,3 +109,17 @@ describe('monitoring budget', () => {
     expect((await monitoringSpend(store, 2, NOW)).remaining).toBe(0);
   });
 });
+
+describe('what the reported budget covers', () => {
+  /*
+   * A crawl spent a hundred page loads while this endpoint reported 24, and
+   * nothing on the number said it only counted monitoring. One figure labelled
+   * "spent" that quietly excludes the largest spender is a plausible,
+   * well-formed understatement, which is the failure this project is about.
+   */
+  it('says what it counts, so the number cannot be read as the whole bill', async () => {
+    const status = await monitoringSpend(store, 4000);
+    expect(status.covers).toContain('monitored observations only');
+    expect(status.covers).toContain('crawls');
+  });
+});
