@@ -17,18 +17,14 @@ const SYMBOLS = [
 ];
 
 const THEME_COLORS = [
-  { bg: '#0c0c0a', textColor: '#10b981' }, // Obsidian black with emerald glyph
-  { bg: '#10b981', textColor: '#ffffff' }, // Vibrant emerald green with white glyph
-  { bg: '#064e3b', textColor: '#86efac' }, // Deep forest emerald with mint glyph
-  { bg: '#18181b', textColor: '#34d399' }, // Dark slate with bright green glyph
-  { bg: '#047857', textColor: '#ffffff' }, // Classic emerald with white glyph
-  { bg: '#022c22', textColor: '#10b981' }, // Deep obsidian-green with emerald glyph
-  { bg: '#86efac', textColor: '#064e3b' }, // Bright mint green with deep emerald glyph
-  { bg: '#059669', textColor: '#ffffff' }, // Jade green with white glyph
-  { bg: '#14532d', textColor: '#86efac' }, // Pine green with mint glyph
-  { bg: '#27272a', textColor: '#a7f3d0' }, // Charcoal with soft mint glyph
-  { bg: '#34d399', textColor: '#064e3b' }, // Neon mint with dark green glyph
-  { bg: '#052e16', textColor: '#4ade80' }, // Emerald black with bright lime-green glyph
+  { bg: '#09090b', textColor: '#22c55e44' }, // Deep pitch black with faint emerald glyph
+  { bg: '#0c0c0e', textColor: '#10b98133' }, // Obsidian with muted green glyph
+  { bg: '#051b14', textColor: '#34d39944' }, // Very deep muted dark forest
+  { bg: '#021510', textColor: '#10b98133' }, // Dark jade-black
+  { bg: '#101715', textColor: '#6ee7b733' }, // Charcoal pine
+  { bg: '#042017', textColor: '#22c55e44' }, // Dark moss
+  { bg: '#091512', textColor: '#34d39933' }, // Muted slate green
+  { bg: '#06261c', textColor: '#10b98144' }, // Subdued dark emerald
 ];
 
 // Deterministic pseudorandom generator for stable layout across renders
@@ -185,7 +181,7 @@ export function FooterGlyphGrid() {
 
         // Subtle scale / highlight when hovered
         if (tile.hoverIntensity > 0.05) {
-          const scale = 1 + tile.hoverIntensity * 0.08;
+          const scale = 1 + tile.hoverIntensity * 0.05;
           ctx.translate(x + w / 2, y + h / 2);
           ctx.scale(scale, scale);
           ctx.translate(-(x + w / 2), -(y + h / 2));
@@ -195,14 +191,14 @@ export function FooterGlyphGrid() {
         ctx.fillStyle = tile.baseBg;
         ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
 
-        // Draw symbol
+        // Draw symbol with subtle opacity
         ctx.fillStyle = tile.textColor;
         ctx.fillText(tile.symbol, x + w / 2, y + h / 2 + 1);
 
-        // Bright outline on hover
+        // Subtle muted emerald outline on hover
         if (tile.hoverIntensity > 0.1) {
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = '#10b98166';
+          ctx.lineWidth = 1;
           ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
         }
 
@@ -226,7 +222,7 @@ export function FooterGlyphGrid() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none z-0"
+      className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-80"
       style={{ display: 'block' }}
     />
   );

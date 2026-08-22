@@ -1119,13 +1119,13 @@ h6,
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
   font-smooth: auto !important;
-  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 3px rgba(255, 255, 255, 1)) contrast(1.25) saturate(1.25) brightness(1.05);
+  filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6)) contrast(1.2) saturate(1.25) brightness(1.1);
   transition: filter 500ms ease, transform 500ms ease;
 }
 
 .doorway-footer-brand-container:hover .doorway-footer-brand-mask {
   animation-duration: 14s;
-  filter: drop-shadow(0 0 22px rgba(255, 255, 255, 1)) drop-shadow(0 0 4px rgba(255, 255, 255, 1)) contrast(1.35) saturate(1.35) brightness(1.15);
+  filter: drop-shadow(0 6px 28px rgba(16, 185, 129, 0.35)) contrast(1.3) saturate(1.35) brightness(1.15);
   transform: scale(1.01);
 }
 
