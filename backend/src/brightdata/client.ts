@@ -275,6 +275,85 @@ export class BrightDataClient {
   }
 
   /** Read the current state of a Self-Healing job. */
+  /**
+   * Create an empty scraper template, and get back the `c_*` id.
+   *
+   * Two calls make a scraper. This one reserves the collector and returns its
+   * id; the AI generation that follows is what fills it in. They are separate
+   * because generation runs to minutes, and a template that exists before it
+   * starts is what lets the id be recorded, streamed and recovered if the
+   * generation fails half way.
+   *
+   * The delivery webhook is a stub, exactly as the CLI leaves it. Nothing here
+   * consumes deliveries: the collector is triggered directly and the rows are
+   * read from the response, so a real endpoint would receive traffic nobody
+   * reads.
+   *
+   * Shapes taken from the CLI's own request builders rather than guessed, for
+   * the same reason the approval payload was: an invented field is rejected
+   * with a validation error that names everything except the actual problem.
+   */
+  async createScraperTemplate(name: string, signal?: AbortSignal): Promise<string> {
+    const raw = await this.#request({
+      method: 'POST',
+      path: '/dca/collector',
+      body: {
+        name,
+        deliver: {
+          type: 'webhook',
+          endpoint: 'https://example.com/webhook',
+          filename: { template: 'data', extension: 'json' },
+        },
+      },
+      ...(signal === undefined ? {} : { signal }),
+    });
+
+    const id = (raw as { id?: unknown } | null)?.id;
+    if (typeof id !== 'string' || id === '') {
+      // A template with no id is not a scraper, and returning silently would
+      // leave the caller polling progress for a collector that does not exist.
+      throw new BrightDataRequestError(
+        'Bright Data created a scraper template without returning an id',
+        502,
+        JSON.stringify(raw).slice(0, 300),
+      );
+    }
+    return id;
+  }
+
+  /**
+   * Ask the AI to write the scraper, from a page and a description.
+   *
+   * Returns as soon as the job is accepted. Generation itself takes minutes,
+   * which is why nothing here waits on it: the caller polls progress and is
+   * free to do something else, and a UI built on this has to be a job with a
+   * stream rather than a button that blocks.
+   */
+  async generateScraper(
+    collectorId: string,
+    url: string,
+    description: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await this.#request({
+      method: 'POST',
+      path: `/dca/collectors/${encodeURIComponent(collectorId)}/automate_template`,
+      body: { description, urls: [url] },
+      ...(signal === undefined ? {} : { signal }),
+    });
+  }
+
+  /** How far the AI has got, in the same shape the heal flow reports. */
+  async getGenerationProgress(collectorId: string, signal?: AbortSignal): Promise<HealProgress> {
+    const raw = await this.#request({
+      method: 'GET',
+      path: `/dca/collectors/${encodeURIComponent(collectorId)}/automate_template/progress`,
+      ...(signal === undefined ? {} : { signal }),
+    });
+
+    return normalizeHealProgress(raw);
+  }
+
   async getHealProgress(collectorId: string, signal?: AbortSignal): Promise<HealProgress> {
     const raw = await this.#request({
       method: 'GET',

@@ -2,35 +2,45 @@
 
 import React, { useEffect, useRef } from 'react';
 
-interface Block {
+interface GridTile {
   col: number;
   row: number;
   widthCols: number;
   symbol: string;
-  bg: string;
+  baseBg: string;
   textColor: string;
-  born: number;
-  duration: number;
+  hoverIntensity: number; // 0 to 1
 }
 
-const SYMBOLS = ['-', '=', '+', ')', '/', '(', '>', '<', '_', '*', '~', '[', ']', '01', '::'];
+const SYMBOLS = [
+  '-', '=', '+', ')', '/', '(', '>', '<', '_', '*', '~', '[', ']', '01', '::', '✦', '{', '}'
+];
 
-// Palette matching GitHub Universe & Doorway theme (mint, lavender, rose, emerald, cobalt, ochre, obsidian)
 const THEME_COLORS = [
-  { bg: '#86efac', textColor: '#064e3b' }, // Bright mint green
+  { bg: '#86efac', textColor: '#064e3b' }, // Mint green
   { bg: '#a78bfa', textColor: '#2e1065' }, // Lavender purple
   { bg: '#fb7185', textColor: '#881337' }, // Rose pink
   { bg: '#10b981', textColor: '#ffffff' }, // Emerald green
   { bg: '#3b82f6', textColor: '#ffffff' }, // Cobalt blue
   { bg: '#b45309', textColor: '#ffffff' }, // Warm ochre
-  { bg: '#0c0c0a', textColor: '#34d399' }, // Obsidian with emerald glyph
+  { bg: '#1e293b', textColor: '#34d399' }, // Dark slate with emerald text
   { bg: '#6ee7b7', textColor: '#064e3b' }, // Soft green
+  { bg: '#93c5fd', textColor: '#1e3a8a' }, // Light blue
+  { bg: '#f472b6', textColor: '#831843' }, // Pink
+  { bg: '#fde047', textColor: '#713f12' }, // Soft amber
+  { bg: '#34d399', textColor: '#064e3b' }, // Jade
 ];
+
+// Deterministic pseudorandom generator for stable layout across renders
+function pseudoRandom(seed: number) {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
 
 export function FooterGlyphGrid() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const blocksRef = useRef<Map<string, Block>>(new Map());
-  const lastSpawnRef = useRef<{ col: number; row: number }>({ col: -999, row: -999 });
+  const tilesRef = useRef<GridTile[]>([]);
+  const hoverCoordRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,7 +50,57 @@ export function FooterGlyphGrid() {
     if (!ctx) return;
 
     let animationFrameId: number;
-    const CELL_SIZE = 28;
+    const CELL_SIZE = 32;
+
+    function buildGrid() {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const numCols = Math.ceil(rect.width / CELL_SIZE) + 1;
+      const numRows = Math.ceil(rect.height / CELL_SIZE) + 1;
+
+      const newTiles: GridTile[] = [];
+      const occupied: boolean[][] = Array.from({ length: numRows }, () =>
+        Array(numCols).fill(false)
+      );
+
+      let seed = 42;
+
+      for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
+          if (occupied[r]?.[c]) continue;
+
+          seed++;
+          const randW = pseudoRandom(seed);
+          const isWide = randW > 0.6 && c + 1 < numCols && !occupied[r]?.[c + 1];
+          const widthCols = isWide ? 2 : 1;
+
+          occupied[r]![c] = true;
+          if (isWide && occupied[r]) {
+            occupied[r]![c + 1] = true;
+          }
+
+          seed += 2;
+          const colorIdx = Math.floor(pseudoRandom(seed) * THEME_COLORS.length);
+          const colorPair = THEME_COLORS[colorIdx] || { bg: '#86efac', textColor: '#064e3b' };
+
+          seed += 3;
+          const symbolIdx = Math.floor(pseudoRandom(seed) * SYMBOLS.length);
+          const symbol = SYMBOLS[symbolIdx] || '+';
+
+          newTiles.push({
+            col: c,
+            row: r,
+            widthCols,
+            symbol,
+            baseBg: colorPair.bg,
+            textColor: colorPair.textColor,
+            hoverIntensity: 0,
+          });
+        }
+      }
+
+      tilesRef.current = newTiles;
+    }
 
     function resize() {
       if (!canvas || !ctx) return;
@@ -50,112 +110,104 @@ export function FooterGlyphGrid() {
       canvas.height = rect.height * dpr;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
+      buildGrid();
     }
 
     resize();
     window.addEventListener('resize', resize);
 
-    function spawnAt(clientX: number, clientY: number) {
+    function onMouseMove(e: MouseEvent) {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      if (x < 0 || x > rect.width || y < 0 || y > rect.height) return;
-
-      const col = Math.floor(x / CELL_SIZE);
-      const row = Math.floor(y / CELL_SIZE);
-
-      if (col === lastSpawnRef.current.col && row === lastSpawnRef.current.row) {
-        return;
-      }
-      lastSpawnRef.current = { col, row };
-
-      const now = performance.now();
-      // Spawn a small cluster of 1-3 colorful glyph rectangles like GitHub Universe
-      const count = Math.random() > 0.3 ? 2 : 1;
-      
-      for (let i = 0; i < count; i++) {
-        const offsetCol = i === 0 ? col : (Math.random() > 0.5 ? col + 1 : col - 1);
-        const offsetRow = row;
-        const key = `${offsetCol},${offsetRow}`;
-
-        const isWide = Math.random() > 0.6;
-        const colorPair = THEME_COLORS[Math.floor(Math.random() * THEME_COLORS.length)] || {
-          bg: '#86efac',
-          textColor: '#064e3b',
-        };
-        const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)] || '+';
-
-        blocksRef.current.set(key, {
-          col: offsetCol,
-          row: offsetRow,
-          widthCols: isWide ? 2 : 1,
-          symbol,
-          bg: colorPair.bg,
-          textColor: colorPair.textColor,
-          born: now,
-          duration: 1400 + Math.random() * 600, // 1.4s - 2.0s fade
-        });
-      }
+      hoverCoordRef.current = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
     }
 
-    function onMouseMove(e: MouseEvent) {
-      spawnAt(e.clientX, e.clientY);
+    function onMouseLeave() {
+      hoverCoordRef.current = null;
     }
 
     function onTouchMove(e: TouchEvent) {
+      if (!canvas) return;
       const touch = e.touches[0];
       if (touch) {
-        spawnAt(touch.clientX, touch.clientY);
+        const rect = canvas.getBoundingClientRect();
+        hoverCoordRef.current = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top,
+        };
       }
     }
 
     const container = canvas.parentElement;
     container?.addEventListener('mousemove', onMouseMove);
+    container?.addEventListener('mouseleave', onMouseLeave);
     container?.addEventListener('touchmove', onTouchMove);
 
-    function render(time: number) {
+    function render() {
       if (!canvas || !ctx) return;
       const rect = canvas.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
 
-      ctx.font = '600 12px monospace';
+      ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      const toDelete: string[] = [];
+      const hover = hoverCoordRef.current;
+      const decay = 0.05;
 
-      blocksRef.current.forEach((block, key) => {
-        const age = time - block.born;
-        if (age >= block.duration) {
-          toDelete.push(key);
-          return;
-        }
-
-        const progress = age / block.duration;
-        const alpha = progress < 0.15 ? progress / 0.15 : Math.max(0, 1 - (progress - 0.15) / 0.85);
-
-        const x = block.col * CELL_SIZE;
-        const y = block.row * CELL_SIZE;
-        const w = block.widthCols * CELL_SIZE;
+      for (const tile of tilesRef.current) {
+        const x = tile.col * CELL_SIZE;
+        const y = tile.row * CELL_SIZE;
+        const w = tile.widthCols * CELL_SIZE;
         const h = CELL_SIZE;
 
-        ctx.save();
-        ctx.globalAlpha = alpha;
+        // Check if mouse is hovering over or near this tile
+        let targetIntensity = 0;
+        if (hover) {
+          const centerX = x + w / 2;
+          const centerY = y + h / 2;
+          const dist = Math.hypot(hover.x - centerX, hover.y - centerY);
+          if (dist < 60) {
+            targetIntensity = Math.max(0, 1 - dist / 60);
+          }
+        }
 
-        // Draw colored block rectangle
-        ctx.fillStyle = block.bg;
+        if (targetIntensity > tile.hoverIntensity) {
+          tile.hoverIntensity = targetIntensity;
+        } else {
+          tile.hoverIntensity = Math.max(0, tile.hoverIntensity - decay);
+        }
+
+        ctx.save();
+
+        // Subtle scale / highlight when hovered
+        if (tile.hoverIntensity > 0.05) {
+          const scale = 1 + tile.hoverIntensity * 0.08;
+          ctx.translate(x + w / 2, y + h / 2);
+          ctx.scale(scale, scale);
+          ctx.translate(-(x + w / 2), -(y + h / 2));
+        }
+
+        // Draw tile background with 1px border gap
+        ctx.fillStyle = tile.baseBg;
         ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
 
         // Draw symbol
-        ctx.fillStyle = block.textColor;
-        ctx.fillText(block.symbol, x + w / 2, y + h / 2 + 1);
+        ctx.fillStyle = tile.textColor;
+        ctx.fillText(tile.symbol, x + w / 2, y + h / 2 + 1);
+
+        // Bright outline on hover
+        if (tile.hoverIntensity > 0.1) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+        }
 
         ctx.restore();
-      });
-
-      toDelete.forEach((k) => blocksRef.current.delete(k));
+      }
 
       animationFrameId = requestAnimationFrame(render);
     }
@@ -165,6 +217,7 @@ export function FooterGlyphGrid() {
     return () => {
       window.removeEventListener('resize', resize);
       container?.removeEventListener('mousemove', onMouseMove);
+      container?.removeEventListener('mouseleave', onMouseLeave);
       container?.removeEventListener('touchmove', onTouchMove);
       cancelAnimationFrame(animationFrameId);
     };

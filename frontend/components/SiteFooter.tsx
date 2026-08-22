@@ -284,10 +284,10 @@ export async function SiteFooter() {
           </div>
         </div>
 
-        {/* Giant Animated Brand Wordmark with Interactive Glyph Hover Matrix */}
-        <div className="doorway-footer-brand-container relative">
+        {/* Giant Animated Brand Wordmark with Full Permanent Glyph Mosaic Grid */}
+        <div className="doorway-footer-brand-container relative my-10 rounded-2xl overflow-hidden border border-gray-200/90 min-h-[160px] sm:min-h-[240px] flex items-center justify-center">
           <FooterGlyphGrid />
-          <div className="doorway-footer-brand-mask select-none relative z-10" aria-label="doorway">
+          <div className="doorway-footer-brand-mask select-none relative z-10 py-4" aria-label="doorway">
             doorway
           </div>
         </div>
