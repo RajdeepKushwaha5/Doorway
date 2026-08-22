@@ -100,3 +100,32 @@ describe('a link the page no longer offers', () => {
     expect(summary.disagreed).toHaveLength(0);
   });
 });
+
+describe('why the url shape is not optional here', () => {
+  /*
+   * Measured, not assumed.
+   *
+   * "application" appears in "Application deadline", so an apply-link spec
+   * without a shape reads the closing date as the URL, disagrees with the
+   * collector's correct link and reports drift on a page where nothing is
+   * wrong. Adding the spec without the gate is worse than not adding it.
+   */
+  const unshaped: WitnessFieldSpec = {
+    path: 'application_url',
+    meaning: 'where a student goes to apply',
+    labels: ['apply', 'application'],
+    excludeLabels: [],
+    kind: 'text',
+    allowed: [],
+  };
+
+  it('reads the deadline as the apply link when nothing holds it to a shape', () => {
+    expect(extractField(WITH_LINK, unshaped)?.value).toBe('18 September 2026');
+  });
+
+  it('reads the link once the shape is declared', () => {
+    expect(extractField(WITH_LINK, { ...unshaped, shape: 'url' })?.value).toBe(
+      'https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply',
+    );
+  });
+});

@@ -1,3 +1,4 @@
+import { repairMojibake } from '../shared/mojibake.js';
 import { createHash } from 'node:crypto';
 import { deadlineHasPassed } from '../acquire/dates.js';
 import type { CollectorRecord, IncidentRecord, VerifiedSnapshot } from '../store/index.js';
@@ -256,10 +257,17 @@ function record(value: unknown): Record<string, unknown> | null {
   return isRecord(value) ? value : null;
 }
 
+/**
+ * Every string a collector reports passes through here, so the repair does too.
+ *
+ * Text that was decoded with the wrong alphabet upstream is not a display
+ * problem: it is stored, indexed and searched in its damaged form, so fixing
+ * it in a template would leave the matching broken and only hide it.
+ */
 function text(row: Record<string, unknown>, keys: string[]): string | null {
   for (const key of keys) {
     const value = row[key];
-    if (typeof value === 'string' && value.trim() !== '') return value.trim();
+    if (typeof value === 'string' && value.trim() !== '') return repairMojibake(value.trim());
   }
   return null;
 }

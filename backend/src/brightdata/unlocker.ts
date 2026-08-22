@@ -1,3 +1,4 @@
+import { repairMojibake } from '../shared/mojibake.js';
 import { brightDataRequest, type RetryPolicy } from './http.js';
 import { BrightDataRequestError, BrightDataServerError } from './errors.js';
 
@@ -233,7 +234,16 @@ export async function fetchWitnessMarkdown(
   }
 
   return {
-    markdown,
+    /*
+     * Repaired here, before anything reads it.
+     *
+     * The witness compares this text against the collector's, and the crawler
+     * builds index entries from it. Text that arrived decoded with the wrong
+     * alphabet would make a sensor disagree with itself over an apostrophe,
+     * and would be stored and searched in its damaged form. The repair is a
+     * no-op on text that is already correct.
+     */
+    markdown: repairMojibake(markdown),
     fetchedAt: new Date().toISOString(),
     url,
     deviceType: config.device ?? 'desktop',
