@@ -159,6 +159,54 @@ describe('NOTICE end-to-end', () => {
     fetchedAt: new Date().toISOString(),
   });
 
+  /*
+   * The badge has to mean what it says.
+   *
+   * `confirmedBy` was hardcoded to `two_sensors` on every publish, so a run
+   * where the witness read nothing still produced a record badged "confirmed
+   * by two independent sensors". Found on a freshly manufactured collector
+   * whose field names did not match its witness specs: the run's own evidence
+   * said the witness could not read either field, and the published record
+   * claimed both were confirmed.
+   */
+  it('does not claim two sensors when the witness read nothing', async () => {
+    // A young collector, so the witness actually runs. With a confident
+    // contract the second sensor is skipped and that path already records
+    // `contract_only`; the bug lived on the path where the witness ran.
+    await store.saveContract(learnContract(collector.id, [], INVARIANTS));
+    fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+    const blind = async (): Promise<{ markdown: string; fetchedAt: string }> => ({
+      // A page with none of the watched fields on it, which is what a schema
+      // mismatch looks like from the witness's side.
+      markdown: '# Something else entirely\n\nNothing here is watched.',
+      fetchedAt: new Date().toISOString(),
+    });
+
+    await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: blind,
+    });
+
+    const snapshots = await store.listVerifiedSnapshots();
+    const latest = snapshots[snapshots.length - 1];
+    expect(latest?.confirmedBy).toBe('contract_only');
+  });
+
+  it('claims two sensors when the witness actually agreed', async () => {
+    await store.saveContract(learnContract(collector.id, [], INVARIANTS));
+    fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+    await observeOnce(collector, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+
+    const snapshots = await store.listVerifiedSnapshots();
+    const latest = snapshots[snapshots.length - 1];
+    expect(latest?.confirmedBy).toBe('two_sensors');
+  });
+
   it('publishes healthy output without opening an incident', async () => {
     fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
     const result = await observeOnce(collector, INCIDENT_URL, {
