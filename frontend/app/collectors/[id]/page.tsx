@@ -112,6 +112,76 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
         </section>
       ) : null}
 
+      {/*
+        * Where this scraper came from.
+        *
+        * Shown before anything about how it behaves, because whether to trust
+        * a collector starts with what it was asked to do and what its author
+        * looked at before deciding. Absence is printed as absence: a collector
+        * built before anybody recorded this has no birth certificate, and
+        * writing a plausible one afterwards would be manufacturing the exact
+        * kind of confident, unverified claim this system exists to catch.
+        */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          How this scraper was built
+        </h2>
+        {collector.provenance === undefined ? (
+          <p className="border border-dashed border-muted/40 p-4 font-mono text-xs leading-relaxed text-muted">
+            No record of how this collector was created. It predates provenance being kept, and
+            nothing here will guess at a brief that was not written down.
+          </p>
+        ) : (
+          <div className="space-y-4 border border-muted/30 p-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted">
+                The brief given to Scraper Studio
+              </div>
+              <p className="mt-1 font-mono text-xs leading-relaxed">
+                {collector.provenance.description}
+              </p>
+            </div>
+
+            {collector.provenance.observations.length > 0 ? (
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted">
+                  What the agent saw before choosing
+                </div>
+                <ul className="mt-1 space-y-0.5 font-mono text-xs leading-relaxed text-muted">
+                  {collector.provenance.observations.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {Object.keys(collector.provenance.protectedBecause).length > 0 ? (
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted">
+                  Protected, and why
+                </div>
+                <ul className="mt-1 space-y-0.5 font-mono text-xs leading-relaxed text-muted">
+                  {Object.entries(collector.provenance.protectedBecause).map(([field, why]) => (
+                    <li key={field}>
+                      <span className="text-ivory">{field}</span> {why}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="font-mono text-[11px] text-muted">
+              created by {collector.provenance.createdBy.replace(/_/g, ' ')}
+              {collector.provenance.generationSeconds === undefined
+                ? null
+                : `, generated in ${String(
+                    Math.round(collector.provenance.generationSeconds / 60),
+                  )} minutes`}
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Observe</h2>
         <RunNowButton collectorId={collector.id} {...(collector.watchUrls[0] === undefined ? {} : { url: collector.watchUrls[0] })} />

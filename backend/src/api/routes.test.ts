@@ -783,3 +783,83 @@ describe('the mission route', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('a collector birth certificate', () => {
+  /*
+   * The `c_*` id is a receipt. The brief a coding agent turned into a working
+   * scraper is the design, and nothing was recording it, so every collector
+   * already running has an empty history and no honest way to fill it.
+   */
+  const spec = {
+    path: 'deadline_raw',
+    meaning: 'The date applications close.',
+    labels: ['applications close'],
+    excludeLabels: [],
+    kind: 'text' as const,
+    allowed: [],
+  };
+
+  const provenance = {
+    sourceUrl: 'https://research.example.org/fellowship',
+    description:
+      'Extract the date applications close, not the interview or result date, and the stipend as a number with its currency.',
+    observations: [
+      'four dates on the page',
+      '"1 September" is labelled Early interest',
+      '"18 September" is labelled Applications close',
+    ],
+    protectedBecause: {
+      deadline_raw: 'a wrong closing date costs a student the opportunity silently',
+    },
+    createdBy: 'coding_agent' as const,
+    createdAt: new Date().toISOString(),
+    generationSeconds: 412,
+  };
+
+  const collector = {
+    name: 'Provenance fixture',
+    targetDomain: 'research.example.org',
+    watchUrls: ['https://research.example.org/fellowship'],
+    witnessSpecs: [spec],
+  };
+
+  it('is stored and returned with the collector', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ ...collector, brightDataCollectorId: 'c_prov1', provenance }),
+    });
+    expect(created.status).toBe(200);
+
+    const record = (await created.json()) as { provenance?: typeof provenance };
+    expect(record.provenance?.description).toBe(provenance.description);
+    expect(record.provenance?.observations).toHaveLength(3);
+    expect(record.provenance?.createdBy).toBe('coding_agent');
+    expect(record.provenance?.generationSeconds).toBe(412);
+  });
+
+  it('is absent rather than invented when nobody recorded one', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ ...collector, brightDataCollectorId: 'c_prov2' }),
+    });
+    expect(created.status).toBe(200);
+    expect((await created.json()) as { provenance?: unknown }).not.toHaveProperty('provenance');
+  });
+
+  it('refuses a brief longer than the CLI will accept', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...collector,
+        brightDataCollectorId: 'c_prov3',
+        provenance: { ...provenance, description: 'x'.repeat(501) },
+      }),
+    });
+    // Storing a brief the CLI could never have been given would mean the
+    // record does not describe what actually happened.
+    expect(created.status).toBe(400);
+  });
+});

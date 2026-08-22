@@ -1,3 +1,4 @@
+import type { CollectorProvenance } from './provenance.js';
 import type {
   AcquisitionContext,
   ContextAlignment,
@@ -35,6 +36,14 @@ export interface CollectorRecord {
   /** Pinned correct outputs, used as the regression corpus. */
   goldenCases: GoldenCase[];
   acquisitionContext: Partial<AcquisitionContext>;
+  /**
+   * How this collector came to exist, when anybody recorded it.
+   *
+   * Optional because most of these predate it, and a collector without a
+   * birth certificate is shown as having none rather than being given a
+   * plausible one after the fact.
+   */
+  provenance?: CollectorProvenance | undefined;
   /**
    * Whether a repair that passed the gate may be promoted without a human.
    *

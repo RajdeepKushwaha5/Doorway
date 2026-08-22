@@ -184,6 +184,8 @@ export interface CollectorSummary {
    * because the fleet listing is the same type and does not need it.
    */
   witnessSpecs?: WitnessFieldSpec[];
+  /** How this collector came to exist, when anybody recorded it. */
+  provenance?: CollectorProvenance;
   /**
    * Whether a repair that passed the gate may promote itself.
    *
@@ -438,4 +440,20 @@ export interface Mission {
   disputed: string[];
   confirmedBy: string;
   lastVerifiedAt: string;
+}
+
+/**
+ * How a collector came to exist.
+ *
+ * The `c_*` id is a receipt. The brief a coding agent turned into a working
+ * scraper is the design, and until now nothing kept it.
+ */
+export interface CollectorProvenance {
+  sourceUrl: string;
+  description: string;
+  observations: string[];
+  protectedBecause: Record<string, string>;
+  createdBy: 'coding_agent' | 'operator';
+  createdAt: string;
+  generationSeconds?: number;
 }

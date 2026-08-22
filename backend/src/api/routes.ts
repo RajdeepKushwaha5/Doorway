@@ -23,6 +23,7 @@ import type {
 } from '../store/index.js';
 import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
+import { collectorProvenanceSchema } from '../store/index.js';
 import { assertAdmin, binary, HttpError, Router, stream } from './http.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
 import {
@@ -57,6 +58,14 @@ const collectorFieldsSchema = z
   witnessSpecs: z.array(witnessFieldSpecSchema).min(1),
   invariants: z.array(invariantSchema).default([]),
   protectedFields: z.array(z.string()).default([]),
+  /**
+   * How this collector came to exist.
+   *
+   * Optional, because a collector can be registered by hand and because the
+   * ones already running predate it. What is not optional is honesty about
+   * the difference: a collector with no provenance is shown as having none.
+   */
+  provenance: collectorProvenanceSchema.optional(),
   goldenCases: z
     .array(z.object({ url: z.string().url(), expected: z.record(z.unknown()), label: z.string() }))
     .default([]),
@@ -287,6 +296,7 @@ export function buildRouter(deps: ApiDeps): Router {
       ...parsed.data,
       status: 'active',
       acquisitionContext: {},
+      ...(parsed.data.provenance === undefined ? {} : { provenance: parsed.data.provenance }),
       createdAt: new Date().toISOString(),
     };
     await store.saveCollector(collector);

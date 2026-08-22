@@ -12,3 +12,5 @@ export type {
   Store,
   VerifiedSnapshot,
 } from './types.js';
+export { collectorProvenanceSchema } from './provenance.js';
+export type { CollectorProvenance } from './provenance.js';
