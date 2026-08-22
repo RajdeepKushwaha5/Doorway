@@ -1,3 +1,4 @@
+import { ApplicationMission } from '@/components/ApplicationMission';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
@@ -161,6 +162,24 @@ export default async function OpportunityPage({
                 : 'learned contract only'}
           </Fact>
         </section>
+
+        {/*
+          * The plan, on the page somebody lands on from the evidence link.
+          *
+          * The card on the home page can open one, and that is the shortest
+          * path for a student already scanning results. Somebody who followed
+          * a link into a single opportunity arrived at a full account of how
+          * the facts were established and no way to act on them.
+          */}
+        {opportunity.applicationStatus === 'closed' ||
+        opportunity.trust.status === 'quarantined' ? null : (
+          <section className="mt-10 border border-black">
+            <div className="border-b border-black px-4 py-3 font-neuebit text-[10px] uppercase tracking-[0.12em]">
+              Your application plan
+            </div>
+            <ApplicationMission opportunityId={opportunity.id} />
+          </section>
+        )}
 
         <section className="mt-10 grid gap-px border border-gray-200 bg-gray-200 md:grid-cols-2">
           <Panel title="Eligibility, as the page states it">
