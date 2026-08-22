@@ -226,3 +226,74 @@ describe('reading what a source actually said', () => {
     expect(world.matches[0]?.unknownRequirements.join(' ')).toContain('does not mention Marine biology');
   });
 });
+
+/**
+ * The fault fixture is not somebody's opportunity.
+ *
+ * A controlled page we host exists so the proof walkthrough can break it on
+ * demand. It verifies cleanly, so it arrived in a student's results alongside
+ * genuine fellowships, offering a door that leads to a page we wrote. Labelling
+ * it "controlled fixture" in the provider name was not enough: a student
+ * scanning a list reads titles and deadlines, and by the time they notice the
+ * label they have already clicked.
+ */
+describe('keeping the fixture out of a student\'s results', () => {
+  const collector = (id: string, domain: string): CollectorRecord => ({
+    id,
+    brightDataCollectorId: `c_${id}`,
+    name: id,
+    targetDomain: domain,
+    status: 'active',
+    schedule: null,
+    watchUrls: [`https://${domain}/x`],
+    witnessSpecs: [],
+    invariants: [],
+    protectedFields: [],
+    goldenCases: [],
+    acquisitionContext: {},
+    autoPromote: 'never',
+    freshnessMinutes: null,
+    currency: null,
+    createdAt: new Date().toISOString(),
+  });
+
+  const snapshot = (collectorId: string, domain: string): VerifiedSnapshot => ({
+    collectorId,
+    url: `https://${domain}/x`,
+    data: {
+      title: 'A Fellowship',
+      provider: 'Someone',
+      opportunity_type: 'fellowship',
+      application_url: `https://${domain}/apply`,
+    },
+    contractVersion: 1,
+    verifiedAt: new Date().toISOString(),
+    contentHash: '',
+    shape: null,
+    confirmedBy: 'two_sensors',
+  });
+
+  it('drops records whose source is the lab, and keeps the rest', () => {
+    process.env['DOORWAY_LAB_HOST'] = 'doorway-lab.onrender.com';
+    try {
+      const found = opportunitiesFromSnapshots(
+        [snapshot('lab', 'doorway-lab.onrender.com'), snapshot('real', 'research.adobe.com')],
+        [collector('lab', 'doorway-lab.onrender.com'), collector('real', 'research.adobe.com')],
+        [],
+      );
+      expect(found.map((o) => o.sourceUrl)).toEqual(['https://research.adobe.com/x']);
+    } finally {
+      delete process.env['DOORWAY_LAB_HOST'];
+    }
+  });
+
+  it('keeps everything when no lab host is configured', () => {
+    delete process.env['DOORWAY_LAB_HOST'];
+    const found = opportunitiesFromSnapshots(
+      [snapshot('lab', 'doorway-lab.onrender.com')],
+      [collector('lab', 'doorway-lab.onrender.com')],
+      [],
+    );
+    expect(found).toHaveLength(1);
+  });
+});

@@ -1,51 +1,214 @@
 [
   {
-    "brightDataCollectorId": "c_mt36mo6tj37dmjgqh",
-    "name": "Doorway Lab, AI Research Fellowship",
-    "targetDomain": "${DOORWAY_LAB_HOST}",
+    "brightDataCollectorId": "c_mt3uuz5c3gmgatqsn",
+    "name": "CPRG India, Transforming Society through AI Fellowship",
+    "targetDomain": "www.cprgindia.org",
     "schedule": "every 6 hours",
-    "watchUrls": ["${DOORWAY_LAB_URL}/opportunity/ai-fellowship"],
+    "watchUrls": [
+      "https://www.cprgindia.org/transforming-society-through-ai-fellowship/"
+    ],
     "witnessSpecs": [
       {
         "path": "deadline_raw",
-        "meaning": "The date applications close, not an early-interest date, a notification date or a results date.",
-        "labels": ["application deadline", "deadline", "applications close", "closing date"],
-        "excludeLabels": ["early interest", "notification", "posted", "announced", "result"],
+        "meaning": "The date applications close, not a notification, results or interview date.",
+        "labels": [
+          "application deadline",
+          "applications close",
+          "last date to apply",
+          "closing date",
+          "deadline",
+          "apply by"
+        ],
+        "excludeLabels": [
+          "notification",
+          "announced",
+          "result",
+          "interview",
+          "posted"
+        ],
         "kind": "text",
         "allowed": []
       },
       {
         "path": "funding_level",
         "meaning": "How much of the cost the award covers.",
-        "labels": ["funding", "award", "stipend"],
-        "excludeLabels": ["sponsored", "advertisement"],
+        "labels": [
+          "stipend",
+          "funding",
+          "award",
+          "scholarship amount",
+          "fellowship amount"
+        ],
+        "excludeLabels": [
+          "sponsored",
+          "advertisement"
+        ],
+        "kind": "text",
+        "allowed": []
+      }
+    ],
+    "invariants": [
+      {
+        "kind": "required",
+        "field": "title"
+      }
+    ],
+    "protectedFields": [
+      "deadline_raw"
+    ],
+    "goldenCases": [],
+    "autoPromote": "never",
+    "freshnessMinutes": 1440,
+    "currency": "INR"
+  },
+  {
+    "brightDataCollectorId": "c_mt3s9p6m112ldkx8mh",
+    "name": "Adobe India AI Research Fellowship",
+    "targetDomain": "research.adobe.com",
+    "schedule": "every 6 hours",
+    "watchUrls": [
+      "https://research.adobe.com/india-ai-research-fellowship/"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "deadline_raw",
+        "meaning": "The date applications close, not a notification, results or interview date.",
+        "labels": [
+          "application deadline",
+          "applications close",
+          "last date to apply",
+          "closing date",
+          "deadline",
+          "apply by",
+          "applications are closed"
+        ],
+        "excludeLabels": [
+          "notification",
+          "announced",
+          "result",
+          "interview",
+          "posted"
+        ],
+        "kind": "text",
+        "allowed": []
+      },
+      {
+        "path": "funding_coverage",
+        "meaning": "How much of the cost the award covers.",
+        "labels": [
+          "stipend",
+          "funding",
+          "award",
+          "fellowship includes"
+        ],
+        "excludeLabels": [
+          "sponsored"
+        ],
+        "kind": "text",
+        "allowed": []
+      }
+    ],
+    "invariants": [
+      {
+        "kind": "required",
+        "field": "title"
+      }
+    ],
+    "protectedFields": [
+      "deadline_raw"
+    ],
+    "goldenCases": [],
+    "autoPromote": "never",
+    "freshnessMinutes": 1440,
+    "currency": "INR"
+  },
+  {
+    "brightDataCollectorId": "c_mt36mo6tj37dmjgqh",
+    "name": "Doorway Lab, AI Research Fellowship",
+    "targetDomain": "${DOORWAY_LAB_HOST}",
+    "schedule": "every 6 hours",
+    "watchUrls": [
+      "${DOORWAY_LAB_URL}/opportunity/ai-fellowship"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "deadline_raw",
+        "meaning": "The date applications close, not an early-interest date, a notification date or a results date.",
+        "labels": [
+          "application deadline",
+          "deadline",
+          "applications close",
+          "closing date"
+        ],
+        "excludeLabels": [
+          "early interest",
+          "notification",
+          "posted",
+          "announced",
+          "result"
+        ],
+        "kind": "text",
+        "allowed": []
+      },
+      {
+        "path": "funding_level",
+        "meaning": "How much of the cost the award covers.",
+        "labels": [
+          "funding",
+          "award",
+          "stipend"
+        ],
+        "excludeLabels": [
+          "sponsored",
+          "advertisement"
+        ],
         "kind": "text",
         "allowed": []
       },
       {
         "path": "title",
         "meaning": "The name of the opportunity being offered.",
-        "labels": ["fellowship", "scholarship", "programme", "program"],
-        "excludeLabels": ["sponsored"],
+        "labels": [
+          "fellowship",
+          "scholarship",
+          "programme",
+          "program"
+        ],
+        "excludeLabels": [
+          "sponsored"
+        ],
         "kind": "text",
         "allowed": []
       }
     ],
     "invariants": [
-      { "kind": "required", "field": "title" },
-      { "kind": "required", "field": "application_url" }
+      {
+        "kind": "required",
+        "field": "title"
+      },
+      {
+        "kind": "required",
+        "field": "application_url"
+      }
     ],
-    "protectedFields": ["deadline_raw", "application_url"],
+    "protectedFields": [
+      "deadline_raw",
+      "application_url"
+    ],
     "goldenCases": [
       {
         "label": "baseline",
         "url": "${DOORWAY_LAB_URL}/fixtures/baseline",
-        "expected": { "deadline_raw": "18 September 2026" }
+        "expected": {
+          "deadline_raw": "18 September 2026"
+        }
       },
       {
         "label": "deadline extended, genuinely",
         "url": "${DOORWAY_LAB_URL}/fixtures/deadline_extended",
-        "expected": { "deadline_raw": "30 September 2026" }
+        "expected": {
+          "deadline_raw": "30 September 2026"
+        }
       }
     ],
     "autoPromote": "never",

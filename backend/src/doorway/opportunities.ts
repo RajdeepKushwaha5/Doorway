@@ -20,9 +20,26 @@ export function opportunitiesFromSnapshots(
   const byCollector = new Map(collectors.map((collector) => [collector.id, collector]));
   const records: Opportunity[] = [];
 
+  /*
+   * The fault fixture is not somebody's opportunity.
+   *
+   * A controlled page we host exists so the proof walkthrough can break it on
+   * demand. It is a real Scraper Studio collector reading a real page, so it
+   * belongs in the engine and on /proof, and it verified cleanly enough that it
+   * arrived in a student's results alongside genuine fellowships, offering a
+   * door that leads to a page we wrote.
+   *
+   * Labelling it "controlled fixture" in the provider name was not enough. A
+   * student scanning a list reads titles and deadlines, and by the time they
+   * notice the label they have already clicked. So it is kept out of the world
+   * entirely and stays where it is useful.
+   */
+  const labHost = (process.env['DOORWAY_LAB_HOST'] ?? '').trim().toLowerCase();
+
   for (const snapshot of snapshots) {
     const collector = byCollector.get(snapshot.collectorId);
     if (collector === undefined) continue;
+    if (labHost !== '' && collector.targetDomain.trim().toLowerCase() === labHost) continue;
     const rows = Array.isArray(snapshot.data) ? snapshot.data : [snapshot.data];
     for (const row of rows) {
       const parsed = parseOpportunity(row, collector, snapshot, incidents, now);
