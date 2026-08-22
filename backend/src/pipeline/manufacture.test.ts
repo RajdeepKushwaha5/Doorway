@@ -41,11 +41,20 @@ function stubClient(
     apply_url: 'https://lab.test/opportunity/fellowship/apply',
     input: { url: PAGE },
   },
+  emptyFirstRuns = 0,
 ): BrightDataClient {
   let call = 0;
+  let emptyRuns = emptyFirstRuns;
   return {
     createScraperTemplate: vi.fn(async () => 'c_manufactured1'),
-    runCollector: vi.fn(async () => (row === null ? [] : [row])),
+    runCollector: vi.fn(async () => {
+      if (row === null) return [];
+      if (emptyRuns > 0) {
+        emptyRuns -= 1;
+        return [];
+      }
+      return [row];
+    }),
     generateScraper: vi.fn(async () => undefined),
     getGenerationProgress: vi.fn(async () => {
       const step = steps[Math.min(call++, steps.length - 1)] ?? 'done';
@@ -61,12 +70,19 @@ function stubClient(
   } as unknown as BrightDataClient;
 }
 
-async function run(steps: string[] = ['planner', 'code_fixer', 'done'], row?: unknown) {
+async function run(
+  steps: string[] = ['planner', 'code_fixer', 'done'],
+  row?: unknown,
+  emptyFirstRuns = 0,
+) {
   const store = new FileStore(join(await mkdtemp(join(tmpdir(), 'mf-')), 'store.json'));
   const events: ObserveEvent[] = [];
   const result = await manufactureCollector({
     url: PAGE,
-    client: row === undefined ? stubClient(steps) : stubClient(steps, row),
+    client:
+      row === undefined
+        ? stubClient(steps, undefined, emptyFirstRuns)
+        : stubClient(steps, row, emptyFirstRuns),
     store,
     readPage: async () => ({ markdown: MARKDOWN }),
     emit: (event) => events.push({ at: new Date().toISOString(), ...event } as ObserveEvent),
@@ -169,6 +185,33 @@ describe('specs against the schema that exists', () => {
   it('still registers a scraper that will not run, with no invented specs', async () => {
     const { result } = await run(['done'], null);
     expect(result.collector.brightDataCollectorId).toBe('c_manufactured1');
+    expect(result.collector.witnessSpecs).toHaveLength(0);
+  });
+});
+
+describe('a scraper that is not runnable the instant it exists', () => {
+  /*
+   * Measured against the real API: the run issued immediately after
+   * `collector_mainatiner` returned no rows, and the same collector answered
+   * normally a minute later. Taking that first empty answer as the schema
+   * registered a collector with no witness specs and no second sensor, which
+   * is honest and is not what anybody wanted.
+   */
+  it('asks again rather than concluding it has no schema', async () => {
+    const { result } = await run(['done'], undefined, 2);
+    expect(result.collector.witnessSpecs.map((s) => s.path)).toEqual([
+      'application_deadline',
+      'apply_url',
+    ]);
+  });
+
+  it('says it is waiting, so the stream does not look stalled', async () => {
+    const { events } = await run(['done'], undefined, 1);
+    expect(events.some((e) => e.line.includes('no rows yet'))).toBe(true);
+  });
+
+  it('gives up after the attempts and registers honestly', async () => {
+    const { result } = await run(['done'], undefined, 99);
     expect(result.collector.witnessSpecs).toHaveLength(0);
   });
 });

@@ -49,6 +49,10 @@ export interface ManufactureResult {
 const DEFAULT_TIMEOUT_MS = 25 * 60 * 1000;
 const DEFAULT_POLL_MS = 10_000;
 
+/** How many times to ask a fresh scraper what its output looks like. */
+const SCHEMA_ATTEMPTS = 3;
+const SCHEMA_RETRY_MS = 20_000;
+
 /**
  * Witness specs derived from what the page showed.
  *
@@ -271,16 +275,42 @@ export async function manufactureCollector(
   input.emit({ step: 'generating', line: 'running it once to learn its schema', detail: {} });
   let firstRow: unknown = null;
   try {
-    const rows = await input.client.runCollector(brightDataCollectorId, [input.url], {
-      timeoutMs: 180_000,
-      ...(input.signal === undefined ? {} : { signal: input.signal }),
-    });
-    firstRow = Array.isArray(rows) ? rows[0] : null;
-    input.emit({
-      step: 'generated',
-      line: `schema  ${Object.keys((firstRow ?? {}) as Record<string, unknown>).filter((k) => k !== 'input').join(', ')}`,
-      detail: { fields: Object.keys((firstRow ?? {}) as Record<string, unknown>) },
-    });
+    /*
+     * Retry, because a scraper is not runnable the instant it is generated.
+     *
+     * Measured: the run issued immediately after `collector_mainatiner`
+     * returned no rows, and the same collector answered normally a minute
+     * later. Taking the first empty answer as the schema meant registering a
+     * collector with no witness specs and no second sensor, which is honest
+     * and is not what anybody wanted.
+     */
+    for (let attempt = 1; attempt <= SCHEMA_ATTEMPTS; attempt += 1) {
+      const rows = await input.client.runCollector(brightDataCollectorId, [input.url], {
+        timeoutMs: 180_000,
+        ...(input.signal === undefined ? {} : { signal: input.signal }),
+      });
+      const candidate = Array.isArray(rows) ? rows[0] : null;
+      const fields = Object.keys((candidate ?? {}) as Record<string, unknown>).filter(
+        (key) => key !== 'input',
+      );
+      if (fields.length > 0) {
+        firstRow = candidate;
+        input.emit({
+          step: 'generated',
+          line: `schema  ${fields.join(', ')}`,
+          detail: { fields },
+        });
+        break;
+      }
+      if (attempt < SCHEMA_ATTEMPTS) {
+        input.emit({
+          step: 'generating',
+          line: `no rows yet, waiting before asking again (${String(attempt)}/${String(SCHEMA_ATTEMPTS)})`,
+          detail: { attempt },
+        });
+        await sleep(SCHEMA_RETRY_MS);
+      }
+    }
   } catch (error) {
     /*
      * A scraper that will not run is still worth registering.
