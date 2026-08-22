@@ -123,16 +123,44 @@ export async function discover(
     ),
   );
 
+  /*
+   * The host hackathon is a source, not seeded opportunity data.
+   *
+   * Search rankings vary between identical calls and occasionally omit the
+   * very WeMakeDevs page whose live data demonstrates this integration. Keep
+   * its official URL in the source catalogue, then fetch and parse it through
+   * the exact same Bright Data path as every other candidate. No title, date,
+   * prize or status is supplied here; a failed read produces no opportunity.
+   */
+  const sponsorSources: SerpResult[] = profile.opportunityTypes.includes('hackathon')
+    ? [
+        {
+          url: 'https://www.wemakedevs.org/hackathons/scrape-verse',
+          title: 'WeMakeDevs hackathon',
+          description: '',
+          host: 'wemakedevs.org',
+          official: true,
+          query: 'official WeMakeDevs hackathon source',
+        },
+      ]
+    : [];
+
   // Remember which query produced which result, so a draft can say where it
   // came from and so the type guess has somewhere to start.
   const typeByUrl = new Map<string, (typeof queries)[number]>();
+  for (const result of sponsorSources) {
+    typeByUrl.set(result.url, { text: result.query, type: 'hackathon', officialOnly: true });
+  }
   batches.forEach((batch, index) => {
     const query = queries[index];
     if (query === undefined) return;
     for (const result of batch) if (!typeByUrl.has(result.url)) typeByUrl.set(result.url, query);
   });
 
-  const candidates: SerpResult[] = mergeResults(batches, { limit: maxPages, perHost: 2 });
+  const candidates: SerpResult[] = mergeResults([sponsorSources, ...batches], {
+    limit: maxPages,
+    perHost: 2,
+  });
 
   emit({
     step: 'searched',

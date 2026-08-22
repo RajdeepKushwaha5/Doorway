@@ -134,6 +134,12 @@ export class ObservationBroker {
     return this.#observations.has(id);
   }
 
+  /** Whether work can still emit events, as distinct from buffered history. */
+  isRunning(id: string): boolean {
+    const observation = this.#observations.get(id);
+    return observation !== undefined && !observation.done;
+  }
+
   /**
    * Replay what has happened, then follow along.
    *

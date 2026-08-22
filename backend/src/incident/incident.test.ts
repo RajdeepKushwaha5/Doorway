@@ -98,6 +98,32 @@ describe('classify', () => {
     expect(result.verdict).toBe('genuine_source_change');
   });
 
+  it('does not use agreement on one field to explain a failure on another', () => {
+    const row = {
+      provider: 'wrong section label',
+      price: { value: 249, currency: 'USD' },
+      deposit: { value: 25, currency: 'USD' },
+    };
+    const result = classify({
+      checks: [
+        {
+          checkId: 'invariant:enum:provider',
+          field: 'provider',
+          status: 'fail',
+          severity: 1,
+          confidence: 1,
+          explanation: 'provider is outside the allowed set',
+        },
+      ],
+      reconciliation: reconcile(row, OBSERVATION, SPECS),
+      departsFromBaseline: true,
+    });
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.affectedFields).toContain('provider');
+    expect(result.evidence.join(' ')).toContain('did not observe');
+  });
+
   it('blames access rather than the extractor when the sensors saw different pages', () => {
     const drifted = {
       price: { value: 25, currency: 'USD' },

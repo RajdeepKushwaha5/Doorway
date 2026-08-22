@@ -27,6 +27,7 @@ import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
 import {
   buildWorld,
   draftToOpportunity,
+  isPublishableDraft,
   opportunitiesFromSnapshots,
   profileSchema,
   type DoorwayWorld,
@@ -758,7 +759,7 @@ export function buildRouter(deps: ApiDeps): Router {
     ]);
     const opportunity = [
       ...opportunitiesFromSnapshots(snapshots, collectors, incidents),
-      ...indexed.map(draftToOpportunity),
+      ...indexed.filter(isPublishableDraft).map(draftToOpportunity),
     ].find((candidate) => candidate.id === params['id']);
     if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
     return opportunity;
@@ -1005,7 +1006,7 @@ export function buildRouter(deps: ApiDeps): Router {
      * index up rather than the thing that produces results.
      */
     const indexed = await index.search(profile.interests, profile.opportunityTypes, 80);
-    const fromIndex = indexed.map(draftToOpportunity);
+    const fromIndex = indexed.filter(isPublishableDraft).map(draftToOpportunity);
 
     const id = randomUUID();
 
@@ -1127,7 +1128,7 @@ export function buildRouter(deps: ApiDeps): Router {
    */
   router.get('/api/doorway/find/:id', async ({ params }) => {
     const id = params['id'] ?? '';
-    if (broker.has(id)) return { status: 'running' as const };
+    if (broker.isRunning(id)) return { status: 'running' as const };
     const world = finds.get(id);
     if (world !== undefined) return { status: 'done' as const, world };
     throw new HttpError(404, 'no such search');
@@ -1139,12 +1140,16 @@ export function buildRouter(deps: ApiDeps): Router {
       const issue = parsed.error.issues[0];
       throw new HttpError(400, issue?.message ?? 'invalid student profile');
     }
-    const [collectors, snapshots, incidents] = await Promise.all([
+    const [collectors, snapshots, incidents, indexed] = await Promise.all([
       store.listCollectors(),
       store.listVerifiedSnapshots(),
       store.listIncidents(),
+      index.search(parsed.data.interests, parsed.data.opportunityTypes, 80),
     ]);
-    const opportunities = opportunitiesFromSnapshots(snapshots, collectors, incidents);
+    const opportunities = [
+      ...opportunitiesFromSnapshots(snapshots, collectors, incidents),
+      ...indexed.filter(isPublishableDraft).map(draftToOpportunity),
+    ];
     return buildWorld(parsed.data, opportunities);
   });
 

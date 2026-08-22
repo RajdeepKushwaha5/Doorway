@@ -194,6 +194,8 @@ const INDEX_SHAPES = [
   // The count is often written with separators: "2,431 AI internships".
   /^\s*\d[\d,.]{1,8}\s+\S+.*\b(?:jobs?|internships?|vacancies|openings|opportunities|results?)\b/i,
   /\b(?:current|latest|all)\s+(?:vacancies|openings|jobs|opportunities)\b/i,
+  /^\s*register for an upcoming hackathon\b/i,
+  /^\s*upcoming hackathons?\b/i,
 ];
 
 /**
@@ -270,6 +272,15 @@ function publisherName(host: string, markdown: string): string {
   if (lower.includes('hackindia.org')) return 'HackIndia';
   if (lower.includes('devpost.com')) return 'Devpost';
   return host;
+}
+
+/** Platform chrome is never the organiser of a listing hosted on the platform. */
+function platformPublisher(host: string, markdown: string): string | null {
+  const lower = host.toLowerCase();
+  if (lower.includes('wemakedevs.org')) return publisherName(host, markdown);
+  if (lower.includes('hackindia.org')) return 'HackIndia';
+  if (lower.includes('devpost.com')) return 'Devpost';
+  return null;
 }
 
 /**
@@ -557,7 +568,7 @@ export function readMarkdown(
     sourceUrl: candidate.url,
     host: candidate.host,
     title,
-    provider: provider ?? publisherName(candidate.host, markdown),
+    provider: platformPublisher(candidate.host, markdown) ?? provider ?? publisherName(candidate.host, markdown),
     type: inferType(title, type, candidate.url),
     summary: candidate.description,
     deadlineRaw,

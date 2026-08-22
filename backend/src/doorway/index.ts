@@ -1,6 +1,6 @@
 export { buildWorld, matchOpportunity } from './matching.js';
 export { opportunitiesFromSnapshots } from './opportunities.js';
-export { draftToOpportunity } from './discovered.js';
+export { draftToOpportunity, isPublishableDraft } from './discovered.js';
 export { profileSchema, opportunityTypeSchema } from './types.js';
 export type {
   DoorwayProfile,

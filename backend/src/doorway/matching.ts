@@ -62,11 +62,33 @@ function deduplicate(opportunities: Opportunity[]): Opportunity[] {
     const normalizedProvider = opportunity.provider.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const key = `${normalizedTitle}::${normalizedProvider}`;
     const existing = byKey.get(key);
-    if (existing === undefined || trustWeight(opportunity) > trustWeight(existing)) {
+    if (existing === undefined || prefer(opportunity, existing)) {
       byKey.set(key, opportunity);
     }
   }
   return [...byKey.values()];
+}
+
+function prefer(candidate: Opportunity, existing: Opportunity): boolean {
+  const candidateTrust = trustWeight(candidate);
+  const existingTrust = trustWeight(existing);
+  if (candidateTrust !== existingTrust) return candidateTrust > existingTrust;
+
+  const candidateQuality = informationWeight(candidate);
+  const existingQuality = informationWeight(existing);
+  if (candidateQuality !== existingQuality) return candidateQuality > existingQuality;
+
+  return Date.parse(candidate.trust.lastVerifiedAt) > Date.parse(existing.trust.lastVerifiedAt);
+}
+
+function informationWeight(opportunity: Opportunity): number {
+  return (
+    (opportunity.deadline === null ? 0 : 5) +
+    (opportunity.deadlineRaw === null ? 0 : 2) +
+    (opportunity.applicationStatus === 'unknown' ? 0 : 2) +
+    (opportunity.funding.amount === null ? 0 : 1) +
+    (opportunity.eligibility.length === 0 ? 0 : 1)
+  );
 }
 
 function trustWeight(opportunity: Opportunity): number {

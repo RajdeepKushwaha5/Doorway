@@ -493,6 +493,7 @@ describe('searching for hackathons', () => {
     expect(looksLikeIndex('AI Agents Hackathon', '', 'https://devpost.com/ai-agents-2026')).toBe(
       false,
     );
+    expect(looksLikeIndex('Register for an upcoming hackathon', '')).toBe(true);
   });
 });
 
@@ -684,6 +685,12 @@ describe('dates written the way people write them', () => {
 });
 
 describe('the date under the heading', () => {
+  it('reads the event range under a plain When label', () => {
+    expect(scanForDeadline('When\n\nAugust 17-23, 2026\n\nWhere\nOnline')).toBe(
+      'August 17-23, 2026',
+    );
+  });
+
   /*
    * A line scanner structurally cannot see this shape, and a great many funding
    * pages use it. The word and the date are both present and never share a

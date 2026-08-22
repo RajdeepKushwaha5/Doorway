@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { OpportunityDraft } from '../acquire/index.js';
 import { deadlineHasPassed, parseDeadline } from '../acquire/dates.js';
+import { scanForDeadline } from '../acquire/plausible.js';
+import { looksLikeIndex } from '../acquire/read.js';
 import type { Opportunity, OpportunityType } from './types.js';
 
 /**
@@ -92,13 +94,17 @@ function isoDeadline(raw: string | null): string | null {
 export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
   const type = TYPES.has(draft.type) ? draft.type : 'scholarship';
   const { amount, currency } = money(draft.fundingLevel);
+  const deadlineRaw = draft.deadlineRaw ?? scanForDeadline(draft.summary);
+  const applicationStatus = deadlineHasPassed(deadlineRaw)
+    ? 'closed'
+    : draft.applicationStatus ?? (deadlineRaw === null ? 'unknown' : 'open');
 
   return {
     id: createHash('sha256').update(`discovered:${draft.sourceUrl}`).digest('hex').slice(0, 18),
     collectorId: `discovered:${draft.host}`,
     sourceUrl: draft.sourceUrl,
-    title: draft.title,
-    provider: draft.provider,
+    title: cleanTitle(draft.title),
+    provider: platformProvider(draft.host, draft.provider),
     type,
     summary: draft.summary,
     eligibility: draft.eligibility === null ? [] : [draft.eligibility],
@@ -109,15 +115,16 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
       coverage: [],
       level: fundingLevel(draft.fundingLevel),
     },
-    deadline: isoDeadline(draft.deadlineRaw),
-    deadlineRaw: draft.deadlineRaw,
-    applicationStatus:
-      draft.applicationStatus ?? (deadlineHasPassed(draft.deadlineRaw) ? 'closed' : 'unknown'),
+    deadline: isoDeadline(deadlineRaw),
+    deadlineRaw,
+    applicationStatus,
     statusReason:
-      draft.statusReason ??
-      (deadlineHasPassed(draft.deadlineRaw)
+      deadlineHasPassed(deadlineRaw)
         ? 'The published application deadline has passed.'
-        : 'The official page did not publish a reliable closing date.'),
+        : draft.statusReason ??
+          (deadlineRaw === null
+            ? 'The official page did not publish a reliable closing date.'
+            : 'The published deadline has not passed.'),
     locations: [],
     remote: null,
     requiredDocuments: [],
@@ -156,4 +163,21 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
           : draft.missing,
     },
   };
+}
+
+/** Apply current page-quality rules to records written by an older parser. */
+export function isPublishableDraft(draft: OpportunityDraft): boolean {
+  return !looksLikeIndex(draft.title, '', draft.sourceUrl);
+}
+
+function platformProvider(host: string, extracted: string): string {
+  const lower = host.toLowerCase();
+  if (lower.includes('wemakedevs.org')) return 'WeMakeDevs';
+  if (lower.includes('hackindia.org')) return 'HackIndia';
+  if (lower.includes('devpost.com')) return 'Devpost';
+  return extracted;
+}
+
+function cleanTitle(value: string): string {
+  return value.replace(/^\\?#+\s*/, '').replace(/\s+/g, ' ').trim();
 }

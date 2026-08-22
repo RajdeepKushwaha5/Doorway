@@ -3,6 +3,8 @@ import type { CollectorRecord, IncidentRecord, VerifiedSnapshot } from '../store
 import { buildWorld } from './matching.js';
 import type { DoorwayProfile, Opportunity } from './types.js';
 import { opportunitiesFromSnapshots } from './opportunities.js';
+import { draftToOpportunity, isPublishableDraft } from './discovered.js';
+import type { OpportunityDraft } from '../acquire/read.js';
 
 const collector: CollectorRecord = {
   id: 'col-doorway',
@@ -360,5 +362,87 @@ describe('the type toggles', () => {
       opportunity('fellowship', 'b'),
     ]);
     expect(world.matches).toHaveLength(2);
+  });
+});
+
+describe('live platform records', () => {
+  const draft = (over: Partial<OpportunityDraft>): OpportunityDraft => ({
+    sourceUrl: 'https://example.test/hackathon',
+    host: 'example.test',
+    title: 'AI Hackathon',
+    provider: 'Example',
+    type: 'hackathon',
+    summary: '',
+    deadlineRaw: null,
+    fundingLevel: null,
+    eligibility: null,
+    official: true,
+    foundVia: 'test',
+    missing: [],
+    sensorCount: 1,
+    corroboration: 'text_only',
+    structuredDeadline: null,
+    applicationStatus: 'unknown',
+    statusReason: null,
+    readAt: '2026-08-22T00:00:00.000Z',
+    ...over,
+  });
+
+  it('does not mistake Devpost navigation copy for the organiser', () => {
+    const result = draftToOpportunity(
+      draft({
+        host: 'summer.devpost.com',
+        provider: 'Drive innovation, collaboration, and retention within your organization',
+      }),
+    );
+    expect(result.provider).toBe('Devpost');
+  });
+
+  it('reclassifies an older indexed record when its explicit deadline has passed', () => {
+    const result = draftToOpportunity(
+      draft({
+        summary: 'Registration Deadline: 15th July 2026',
+        applicationStatus: 'unknown',
+      }),
+    );
+    expect(result.deadline).toBe('2026-07-15');
+    expect(result.applicationStatus).toBe('closed');
+  });
+
+  it('cleans escaped markdown out of a live title', () => {
+    expect(draftToOpportunity(draft({ title: '\\# Register now' })).title).toBe('Register now');
+  });
+
+  it('keeps legacy listing pages out after parser rules improve', () => {
+    expect(isPublishableDraft(draft({ title: 'Register for an upcoming hackathon' }))).toBe(false);
+  });
+
+  it('prefers a fresher complete reading over an equal-trust cached copy', () => {
+    const cached = draftToOpportunity(
+      draft({ title: 'Into the Scrape-Verse', provider: 'WeMakeDevs', readAt: '2026-08-20T00:00:00.000Z' }),
+    );
+    const fresh = draftToOpportunity(
+      draft({
+        title: 'Into the Scrape-Verse',
+        provider: 'WeMakeDevs',
+        deadlineRaw: 'August 17-23, 2026',
+        applicationStatus: 'open',
+        readAt: '2026-08-22T00:00:00.000Z',
+      }),
+    );
+    const world = buildWorld(
+      {
+        country: 'India',
+        educationLevel: 'Undergraduate',
+        interests: [],
+        skills: [],
+        opportunityTypes: ['hackathon'],
+        fundingRequirement: 'any',
+        locations: [],
+      },
+      [cached, fresh],
+    );
+    expect(world.matches).toHaveLength(1);
+    expect(world.matches[0]?.opportunity.deadline).toBe('2026-08-23');
   });
 });

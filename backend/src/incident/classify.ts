@@ -147,6 +147,40 @@ export function classify(input: ClassificationInput): Classification {
   }
 
   const reconciliation = input.reconciliation;
+  const failingFields = [
+    ...new Set(failing.map((check) => check.field).filter((field): field is string => field !== undefined)),
+  ];
+
+  /*
+   * Agreement on one field cannot explain a failure on another.
+   *
+   * A real WeMakeDevs collector failed its provider invariant while the only
+   * witness spec read the deadline. Coverage was 100 percent across that one
+   * spec, so the old logic declared a genuine source change even though the
+   * witness had never observed provider at all.
+  */
+  const comparedFields = new Set([...reconciliation.agreed, ...reconciliation.disagreed]);
+  const unobservedFailures = failingFields.filter(
+    (field) =>
+      ![...comparedFields].some(
+        (observed) =>
+          observed === field || field.startsWith(`${observed}.`) || observed.startsWith(`${field}.`),
+      ),
+  );
+  if (unobservedFailures.length > 0) {
+    return {
+      verdict: 'inconclusive',
+      confidence: 0.35,
+      affectedFields: failingFields,
+      evidence: [
+        ...evidence,
+        `the witness did not observe the failing ${unobservedFailures.join(', ')} ${
+          unobservedFailures.length === 1 ? 'field' : 'fields'
+        }, so it cannot determine whether the page or extractor changed`,
+      ],
+      capturedInstead: {},
+    };
+  }
 
   // 4. Did the two sensors actually look at the same thing? If a redirect,
   //    region or variant differs, any value difference is explained by that
