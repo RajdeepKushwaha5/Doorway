@@ -171,7 +171,40 @@ function fromLabelledLine(lines: readonly string[], spec: WitnessFieldSpec): Wit
     const followingIsOwnField =
       following === undefined || /^\s*[A-Za-z][^:\n]{0,47}:\s*\S/.test(normalizeText(following));
 
-    const preferLineBelow = separator === -1 && !followingIsOwnField;
+    /*
+     * The line must be nothing but the label before its value is sought below.
+     *
+     * Looking only at the line underneath was not enough, and a real page
+     * proved it. Adobe's fellowship page says, in a bullet:
+     *
+     *   * Applications are closed for the Adobe India AI Research Fellowship
+     *   # Who this fellowship is for
+     *
+     * The first line matches the label "applications close", carries no
+     * separator, and is followed by a heading that is not its own `Label:
+     * value`. Every condition for reading downward was met, so the witness
+     * returned "Who this fellowship is for" as the closing date and reported
+     * drift against a collector that had read the sentence correctly.
+     *
+     * What the fixture case and this one actually differ on is how much of the
+     * line the label accounts for. "Application deadline" is the label and
+     * nothing else, so the value has to be elsewhere. "Applications are closed
+     * for the Adobe India AI Research Fellowship" contains the label and then
+     * says something, and that something is the answer.
+     *
+     * So: read downward only when removing the matched label leaves nothing
+     * behind. That keeps definition lists working, keeps a spec that names a
+     * product title as its own label working, and stops this.
+     */
+    const labelIsWholeLine = spec.labels.some((label) => {
+      const key = comparisonKey(label);
+      if (key === '') return false;
+      const stripped = comparisonKey(line).replace(key, '');
+      // Punctuation and list markers survive normalisation; text does not.
+      return stripped.replace(/[^a-z0-9]/g, '') === '';
+    });
+
+    const preferLineBelow = separator === -1 && labelIsWholeLine && !followingIsOwnField;
     const coerced = preferLineBelow ? null : coerce(candidate.trim(), spec);
 
     if (coerced !== null) {

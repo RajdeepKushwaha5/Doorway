@@ -290,3 +290,53 @@ Location: India
     expect(extractField(DRIFTMART_MARKDOWN, spec)?.value).toBe('Nova Headphones');
   });
 });
+
+/**
+ * A sentence that contains a label is not a label.
+ *
+ * Looking only at the line underneath was not enough, and a real page proved
+ * it. Adobe's fellowship page says, in a bullet:
+ *
+ *   * Applications are closed for the Adobe India AI Research Fellowship
+ *   # Who this fellowship is for
+ *
+ * The first line matches "applications close", carries no separator, and is
+ * followed by a heading that is not its own `Label: value`. Every condition for
+ * reading downward was satisfied, so the witness returned "Who this fellowship
+ * is for" as the closing date and reported drift against a collector that had
+ * read the sentence correctly.
+ *
+ * The fixture case and this one differ on how much of the line the label
+ * accounts for, not on what follows.
+ */
+describe('a label inside a sentence', () => {
+  const deadlineSpec: WitnessFieldSpec = {
+    path: 'deadline_raw',
+    meaning: 'the date applications close',
+    // The spec as registered against the real page, including the phrase
+    // that actually matched.
+    labels: ['application deadline', 'applications close', 'applications are closed', 'deadline'],
+    excludeLabels: ['notification', 'result'],
+    kind: 'text',
+    allowed: [],
+  };
+
+  it('keeps the sentence when the label is only part of it', () => {
+    const page = [
+      '# Adobe India AI Research Fellowship',
+      '',
+      '* Applications are closed for the Adobe India AI Research Fellowship',
+      '',
+      '# Who this fellowship is for',
+    ].join('\n');
+
+    expect(extractField(page, deadlineSpec)?.value).toBe(
+      'Applications are closed for the Adobe India AI Research Fellowship',
+    );
+  });
+
+  it('still reads downward when the line is only the label', () => {
+    const page = ['Application deadline', '', '18 September 2026', '', 'Location: India'].join('\n');
+    expect(extractField(page, deadlineSpec)?.value).toBe('18 September 2026');
+  });
+});
