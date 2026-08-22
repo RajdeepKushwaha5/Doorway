@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { OpportunityDraft } from '../acquire/index.js';
 import { deadlineHasPassed, parseDeadline } from '../acquire/dates.js';
-import { scanForDeadline } from '../acquire/plausible.js';
+import { plausibleDeadline, scanForDeadline } from '../acquire/plausible.js';
 import { looksLikeIndex } from '../acquire/read.js';
 import type { Opportunity, OpportunityType } from './types.js';
 
@@ -94,17 +94,32 @@ function isoDeadline(raw: string | null): string | null {
 export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
   const type = TYPES.has(draft.type) ? draft.type : 'scholarship';
   const { amount, currency } = money(draft.fundingLevel);
-  const deadlineRaw = draft.deadlineRaw ?? scanForDeadline(draft.summary);
-  const applicationStatus = deadlineHasPassed(deadlineRaw)
+  const provider = platformProvider(draft.host, draft.provider);
+  const missing = knownPlatformProvider(draft.host)
+    ? draft.missing.filter((field) => field !== 'provider')
+    : draft.missing;
+  const sourceReportsComplete = /\b(?:complete|completed|event ended|applications? closed)\b/i.test(
+    draft.summary,
+  );
+  const deadlineRaw =
+    draft.deadlineRaw ??
+    explicitDeadlineFromSummary(draft.summary) ??
+    (sourceReportsComplete ? dateRangeFromSummary(draft.summary) : null) ??
+    scanForDeadline(draft.summary);
+  const applicationStatus = deadlineHasPassed(deadlineRaw) || sourceReportsComplete
     ? 'closed'
-    : draft.applicationStatus ?? (deadlineRaw === null ? 'unknown' : 'open');
+    : draft.applicationStatus !== undefined && draft.applicationStatus !== 'unknown'
+      ? draft.applicationStatus
+      : deadlineRaw === null
+        ? 'unknown'
+        : 'open';
 
   return {
     id: createHash('sha256').update(`discovered:${draft.sourceUrl}`).digest('hex').slice(0, 18),
     collectorId: `discovered:${draft.host}`,
     sourceUrl: draft.sourceUrl,
     title: cleanTitle(draft.title),
-    provider: platformProvider(draft.host, draft.provider),
+    provider,
     type,
     summary: draft.summary,
     eligibility: draft.eligibility === null ? [] : [draft.eligibility],
@@ -121,10 +136,13 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
     statusReason:
       deadlineHasPassed(deadlineRaw)
         ? 'The published application deadline has passed.'
-        : draft.statusReason ??
-          (deadlineRaw === null
+        : sourceReportsComplete
+          ? 'The source reports that this event is complete.'
+        : applicationStatus !== 'unknown' && draft.applicationStatus === applicationStatus
+          ? draft.statusReason ?? 'The official page reports the application window is open.'
+          : deadlineRaw === null
             ? 'The official page did not publish a reliable closing date.'
-            : 'The published deadline has not passed.'),
+            : 'The published deadline has not passed.',
     locations: [],
     remote: null,
     requiredDocuments: [],
@@ -159,15 +177,15 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
        */
       fieldsDegraded:
         draft.corroboration === 'conflicting'
-          ? [...new Set([...draft.missing, 'deadline_raw'])]
-          : draft.missing,
+          ? [...new Set([...missing, 'deadline_raw'])]
+          : missing,
     },
   };
 }
 
 /** Apply current page-quality rules to records written by an older parser. */
 export function isPublishableDraft(draft: OpportunityDraft): boolean {
-  return !looksLikeIndex(draft.title, '', draft.sourceUrl);
+  return !looksLikeIndex(cleanTitle(draft.title), '', draft.sourceUrl);
 }
 
 function platformProvider(host: string, extracted: string): string {
@@ -175,9 +193,46 @@ function platformProvider(host: string, extracted: string): string {
   if (lower.includes('wemakedevs.org')) return 'WeMakeDevs';
   if (lower.includes('hackindia.org')) return 'HackIndia';
   if (lower.includes('devpost.com')) return 'Devpost';
+  if (/^(?:organization name|organisation name|provider|organizer|organiser|host)$/i.test(extracted.trim())) {
+    return host.replace(/^www\./i, '');
+  }
   return extracted;
+}
+
+function knownPlatformProvider(host: string): boolean {
+  const lower = host.toLowerCase();
+  return (
+    lower.includes('wemakedevs.org') ||
+    lower.includes('hackindia.org') ||
+    lower.includes('devpost.com')
+  );
 }
 
 function cleanTitle(value: string): string {
   return value.replace(/^\\?#+\s*/, '').replace(/\s+/g, ' ').trim();
+}
+
+function explicitDeadlineFromSummary(summary: string): string | null {
+  const match =
+    /\b(?:registration|application|project|submission|round\s+\d+)\s+(?:&\s+round\s+\d+\s+)?(?:submission\s+)?deadline\s*:?\s*(.{1,100})/i.exec(
+      summary,
+    );
+  const tail = match?.[1]?.split(/[·|]/, 1)[0]?.trim();
+  if (tail === undefined) return null;
+  return plausibleDeadline(tail);
+}
+
+function dateRangeFromSummary(summary: string): string | null {
+  const repeatedMonth =
+    /\b[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?\s*[-–—]\s*([A-Za-z]{3,9}\.?)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})\b/.exec(
+      summary,
+    );
+  if (repeatedMonth !== null) {
+    return `${repeatedMonth[1] ?? ''} ${repeatedMonth[2] ?? ''}, ${repeatedMonth[3] ?? ''}`.trim();
+  }
+  const range =
+    /\b[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?\s*[-–—]\s*\d{1,2}(?:st|nd|rd|th)?,?\s+(?:19|20)\d{2}\b/.exec(
+      summary,
+    );
+  return range?.[0] ?? null;
 }

@@ -393,9 +393,17 @@ describe('live platform records', () => {
       draft({
         host: 'summer.devpost.com',
         provider: 'Drive innovation, collaboration, and retention within your organization',
+        missing: ['provider', 'eligibility'],
       }),
     );
     expect(result.provider).toBe('Devpost');
+    expect(result.trust.fieldsDegraded).toEqual(['eligibility']);
+  });
+
+  it('replaces a placeholder organiser with the source host', () => {
+    expect(draftToOpportunity(draft({ host: 'i4c.in', provider: 'Organization Name' })).provider).toBe(
+      'i4c.in',
+    );
   });
 
   it('reclassifies an older indexed record when its explicit deadline has passed', () => {
@@ -409,12 +417,31 @@ describe('live platform records', () => {
     expect(result.applicationStatus).toBe('closed');
   });
 
+  it('uses the labelled closing date instead of a later event date in a search summary', () => {
+    const result = draftToOpportunity(
+      draft({
+        summary:
+          'Registration Deadline: 15th July 2026 · Hackathon Dates: 5th & 6th August 2026',
+      }),
+    );
+    expect(result.deadline).toBe('2026-07-15');
+    expect(result.applicationStatus).toBe('closed');
+  });
+
+  it('labels a completed archived event with its published date range', () => {
+    const result = draftToOpportunity(
+      draft({ summary: 'complete Dates Jul 20 – Jul 26, 2026. The event has ended.' }),
+    );
+    expect(result.deadline).toBe('2026-07-26');
+    expect(result.applicationStatus).toBe('closed');
+  });
+
   it('cleans escaped markdown out of a live title', () => {
     expect(draftToOpportunity(draft({ title: '\\# Register now' })).title).toBe('Register now');
   });
 
   it('keeps legacy listing pages out after parser rules improve', () => {
-    expect(isPublishableDraft(draft({ title: 'Register for an upcoming hackathon' }))).toBe(false);
+    expect(isPublishableDraft(draft({ title: '\\# Register for an upcoming hackathon' }))).toBe(false);
   });
 
   it('prefers a fresher complete reading over an equal-trust cached copy', () => {

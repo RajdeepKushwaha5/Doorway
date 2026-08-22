@@ -78,6 +78,9 @@ export default async function OpportunityPage({
   const deadline = formatDeadline(opportunity.deadline);
   const quarantined = opportunity.trust.status === 'quarantined';
   const closed = opportunity.applicationStatus === 'closed';
+  const singleReadMissing =
+    opportunity.trust.status === 'discovered' &&
+    opportunity.trust.confirmedBy === 'single_sensor';
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -207,10 +210,16 @@ export default async function OpportunityPage({
             </p>
 
             {opportunity.trust.fieldsDegraded.length > 0 ? (
-              <p className="mt-4 border border-blocked/40 bg-red-50 p-3 font-mono text-[12px] leading-relaxed text-blocked">
-                Currently withheld: {opportunity.trust.fieldsDegraded.join(', ')}. The two sensors
-                disagree about {opportunity.trust.fieldsDegraded.length === 1 ? 'this field' : 'these fields'},
-                so the last agreed value is shown rather than the new one.
+              <p
+                className={`mt-4 border p-3 font-mono text-[12px] leading-relaxed ${
+                  singleReadMissing
+                    ? 'border-amber-500/40 bg-amber-50 text-amber-800'
+                    : 'border-blocked/40 bg-red-50 text-blocked'
+                }`}
+              >
+                {singleReadMissing
+                  ? `Not stated in this live reading: ${opportunity.trust.fieldsDegraded.join(', ')}. Doorway leaves these fields unknown instead of guessing.`
+                  : `Currently withheld: ${opportunity.trust.fieldsDegraded.join(', ')}. The verification checks could not support the current values, so Doorway does not present them as trusted.`}
               </p>
             ) : null}
 
