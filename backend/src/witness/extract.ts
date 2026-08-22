@@ -1,5 +1,6 @@
 import { comparisonKey, normalizeMoney, normalizeText } from '../shared/index.js';
 import type { EvidenceSpan, WitnessFieldSpec, WitnessValue } from './spec.js';
+import { parseDeadline } from '../acquire/dates.js';
 
 /**
  * Deterministic extraction from markdown.
@@ -394,9 +395,35 @@ export function extractField(markdown: string, spec: WitnessFieldSpec): WitnessV
   const lines = markdown.split(/\r?\n/);
   for (const strategy of STRATEGIES) {
     const found = strategy(lines, spec);
-    if (found !== null) return found;
+    if (found === null) continue;
+    /*
+     * A value has to look like the thing the spec asked for.
+     *
+     * `kind` says how to coerce; it does not say the result is credible. Text
+     * coerces from any text, so a spec looking for a closing date accepted any
+     * sentence merely containing the word, and on a real hackathon page the
+     * witness returned "installing it the night before the deadline" as the
+     * deadline and called a collector that had read "August 24-30, 2026"
+     * drifted.
+     *
+     * Discovery has always held its values to a shape. The witness is where
+     * that matters more, because a false reading here quarantines a real
+     * opportunity and teaches an operator to distrust incidents.
+     *
+     * Keep looking rather than giving up: a later strategy often finds the
+     * labelled line an earlier one walked past.
+     */
+    if (!satisfiesShape(found.value, spec)) continue;
+    return found;
   }
   return null;
+}
+
+/** Whether a candidate matches the optional shape a spec declared. */
+function satisfiesShape(value: unknown, spec: WitnessFieldSpec): boolean {
+  if (spec.shape === undefined) return true;
+  if (spec.shape === 'date') return typeof value === 'string' && parseDeadline(value) !== null;
+  return true;
 }
 
 /** Extract every field in a spec list. */

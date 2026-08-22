@@ -37,6 +37,25 @@ export const witnessFieldSpecSchema = z.object({
 
   /** For `enum`, the accepted canonical values. */
   allowed: z.array(z.string()).default([]),
+
+  /**
+   * A shape the value must satisfy before the witness will report it.
+   *
+   * `kind` says how to coerce; this says whether the result is credible. They
+   * are different questions, and only the first was being asked. A text field
+   * accepts any text, so a spec looking for a closing date happily returned a
+   * sentence that merely contained the word: on a real hackathon page the
+   * witness read "installing it the night before the deadline" and reported
+   * drift against a collector that had read "August 24-30, 2026" correctly.
+   *
+   * Discovery has always held its values to a shape and refused what fails.
+   * The witness is where that standard matters more, because a false reading
+   * here quarantines a real opportunity and teaches an operator to distrust
+   * incidents.
+   *
+   * Opt-in, so every existing spec behaves exactly as before.
+   */
+  shape: z.enum(['date']).optional(),
 });
 
 export type WitnessFieldSpec = z.infer<typeof witnessFieldSpecSchema>;

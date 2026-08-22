@@ -27,7 +27,8 @@
           "posted"
         ],
         "kind": "text",
-        "allowed": []
+        "allowed": [],
+        "shape": "date"
       },
       {
         "path": "funding_level",
@@ -90,7 +91,8 @@
           "posted"
         ],
         "kind": "text",
-        "allowed": []
+        "allowed": [],
+        "shape": "date"
       },
       {
         "path": "funding_coverage",
@@ -123,6 +125,150 @@
     "currency": "INR"
   },
   {
+    "brightDataCollectorId": "c_mt44fc4f2loq3t8phs",
+    "name": "La Trobe University, AI Scholarship",
+    "targetDomain": "latrobe.edu.au",
+    "schedule": "every 6 hours",
+    "watchUrls": [
+      "https://latrobe.edu.au/study/scholarships/other/la-trobe-artificial-intelligence-scholarship-30"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "deadline_raw",
+        "meaning": "The date applications close, not a notification, results or interview date.",
+        "labels": [
+          "application deadline",
+          "applications close",
+          "registration deadline",
+          "last date to apply",
+          "closing date",
+          "deadline",
+          "apply by",
+          "submissions due"
+        ],
+        "excludeLabels": [
+          "notification",
+          "announced",
+          "result",
+          "interview",
+          "posted"
+        ],
+        "kind": "text",
+        "allowed": [],
+        "shape": "date"
+      }
+    ],
+    "invariants": [
+      {
+        "kind": "required",
+        "field": "title"
+      }
+    ],
+    "protectedFields": [
+      "deadline_raw"
+    ],
+    "goldenCases": [],
+    "autoPromote": "never",
+    "freshnessMinutes": 1440,
+    "currency": "AUD"
+  },
+  {
+    "brightDataCollectorId": "c_mt44l71t10f3gdtrs7",
+    "name": "WeMakeDevs, The Agent Harness Hackathon",
+    "targetDomain": "www.wemakedevs.org",
+    "schedule": "every 6 hours",
+    "watchUrls": [
+      "https://www.wemakedevs.org/hackathons/trueforge"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "deadline_raw",
+        "meaning": "The date applications close, not a notification, results or interview date.",
+        "labels": [
+          "application deadline",
+          "applications close",
+          "registration deadline",
+          "last date to apply",
+          "closing date",
+          "deadline",
+          "apply by",
+          "submissions due"
+        ],
+        "excludeLabels": [
+          "notification",
+          "announced",
+          "result",
+          "interview",
+          "posted"
+        ],
+        "kind": "text",
+        "allowed": [],
+        "shape": "date"
+      }
+    ],
+    "invariants": [
+      {
+        "kind": "required",
+        "field": "title"
+      }
+    ],
+    "protectedFields": [
+      "deadline_raw"
+    ],
+    "goldenCases": [],
+    "autoPromote": "never",
+    "freshnessMinutes": 1440,
+    "currency": "USD"
+  },
+  {
+    "brightDataCollectorId": "c_mt44nnhx3cd5t6wy1",
+    "name": "DevNetwork, API Cloud and AI Hackathon",
+    "targetDomain": "api-cloud-ai-hackathon-2026.devpost.com",
+    "schedule": "every 6 hours",
+    "watchUrls": [
+      "https://api-cloud-ai-hackathon-2026.devpost.com/"
+    ],
+    "witnessSpecs": [
+      {
+        "path": "deadline_raw",
+        "meaning": "The date applications close, not a notification, results or interview date.",
+        "labels": [
+          "application deadline",
+          "applications close",
+          "registration deadline",
+          "last date to apply",
+          "closing date",
+          "deadline",
+          "apply by",
+          "submissions due"
+        ],
+        "excludeLabels": [
+          "notification",
+          "announced",
+          "result",
+          "interview",
+          "posted"
+        ],
+        "kind": "text",
+        "allowed": [],
+        "shape": "date"
+      }
+    ],
+    "invariants": [
+      {
+        "kind": "required",
+        "field": "title"
+      }
+    ],
+    "protectedFields": [
+      "deadline_raw"
+    ],
+    "goldenCases": [],
+    "autoPromote": "never",
+    "freshnessMinutes": 1440,
+    "currency": "USD"
+  },
+  {
     "brightDataCollectorId": "c_mt36mo6tj37dmjgqh",
     "name": "Doorway Lab, AI Research Fellowship",
     "targetDomain": "${DOORWAY_LAB_HOST}",
@@ -148,7 +294,8 @@
           "result"
         ],
         "kind": "text",
-        "allowed": []
+        "allowed": [],
+        "shape": "date"
       },
       {
         "path": "funding_level",
