@@ -16,7 +16,7 @@ const PROFILE: DoorwayProfile = {
   educationLevel: 'Undergraduate',
   interests: ['artificial intelligence'],
   skills: [],
-  opportunityTypes: ['scholarship', 'fellowship'],
+  opportunityTypes: ['scholarship', 'fellowship', 'internship', 'research-program'],
   fundingRequirement: 'full',
   locations: [],
 };
@@ -36,8 +36,8 @@ async function main(): Promise<void> {
     { apiKey, zone, country: 'in' },
     PROFILE,
     {
-      maxPages: 12,
-      maxTypes: 2,
+      maxPages: 18,
+      maxTypes: 4,
       onEvent: (event) => out(`  ${event.line}`),
     },
   );

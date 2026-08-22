@@ -70,7 +70,7 @@ function clean(value: string): string {
  * across all six rather than six variations of the first.
  */
 export function buildQueries(profile: DoorwayProfile, options: { maxTypes?: number } = {}): DiscoveryQuery[] {
-  const maxTypes = options.maxTypes ?? 3;
+  const maxTypes = options.maxTypes ?? 4;
 
   const interests = profile.interests.filter((entry) => clean(entry) !== '').slice(0, 2);
   const subject = interests.length === 0 ? '' : interests.join(' ');

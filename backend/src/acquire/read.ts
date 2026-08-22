@@ -10,6 +10,7 @@ import {
   plausibleProvider,
   scanForDeadline,
   scanForFunding,
+  saysClosed,
 } from './plausible.js';
 
 /**
@@ -157,7 +158,17 @@ export function looksLikeIndex(title: string, markdown: string, url = ''): boole
    * slug was never in any doubt.
    */
   const slug = url.toLowerCase();
-  if (/\/(?:top|best|list)-|-list-|\/blog\/|\/articles?\//.test(slug)) return true;
+  /*
+   * News coverage of a fellowship is not the fellowship.
+   *
+   * acr.iitm.ac.in/iitm_in_news/... and earlham.edu/news-events/... both came
+   * through a live run as opportunities. They are press releases about somebody
+   * else winning one, so their "funding" was the article's own headline and
+   * their apply link went to a newsroom.
+   */
+  if (/\/(?:top|best|list)-|-list-|\/blog\/|\/articles?\/|\/news|_news|\/press/.test(slug)) {
+    return true;
+  }
 
   const lower = title.toLowerCase();
   if (INDEX_HINTS.some((hint) => lower.includes(hint))) return true;
@@ -216,6 +227,11 @@ const DANGLING = /\s+(?:in|for|at|to|of|on|with|and|the|a|an|by|from)$/i;
 /** Strip a search engine's truncation and whatever it left behind. */
 function tidyTitle(value: string): string {
   let out = value
+    // A heading that is itself a link arrives as "[SuperKalam](/companies/...)",
+    // which a live run served as an opportunity title. Keep the text, drop the
+    // machinery.
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`]/g, '')
     .replace(/\s*\.{2,}\s*$/, '')
     .replace(/\s*[|–—-]\s*$/, '')
     .trim();
@@ -326,6 +342,20 @@ export async function readCandidate(
 
   if (markdown.trim().length < 400) return null;
 
+  /*
+   * A closed opportunity is not an opportunity.
+   *
+   * Adobe's page has a "Key dates" section whose entire content is
+   * "Applications are closed for the Adobe India AI Research Fellowship". That
+   * line matched the deadline label and was then rejected for containing no
+   * date, so the record went out with its deadline reading "Not stated". A
+   * student reads that as still open with the date unclear, and spends an
+   * evening on an application that cannot be submitted. Dropping the record is
+   * the only honest answer: this product exists to find things somebody can
+   * still apply to.
+   */
+  if (saysClosed(markdown)) return null;
+
   const title = titleFrom(markdown, candidate.title);
   if (looksLikeIndex(title, markdown, candidate.url)) return null;
   // A title that is a question means an article about the subject, not the
@@ -377,10 +407,28 @@ export async function readCandidate(
   // empty. What matters to a reader is that the page did not state it.
   const missing = Object.keys(resolved).filter((path) => resolved[path] === null);
 
-  // A page with neither a deadline nor a funding line is almost certainly an
-  // article about opportunities rather than one. Requiring at least one keeps
-  // the results to things a student can act on.
-  if (deadlineRaw === null && fundingLevel === null) return null;
+  /*
+   * Requiring a scannable date or amount threw away real opportunities.
+   *
+   * Plenty of genuine funding pages state neither in a form any scanner can
+   * reach: the money is in a PDF, the date is in an image, or both are three
+   * clicks away behind "Apply". Insisting on one of them meant a search of the
+   * whole web returned a single result, which is not a filter doing its job,
+   * it is a filter set too tight.
+   *
+   * A page that names itself a fellowship or a scholarship and offers a way to
+   * apply is an opportunity, whether or not it makes the details easy to read.
+   * It comes through with those fields honestly empty, which is what the record
+   * already says out loud, rather than being dropped for the sin of being
+   * badly laid out.
+   */
+  const namesAnOpportunity =
+    /\b(fellowship|scholarship|internship|grant|programme|program|bursary|award)\b/i.test(title);
+  const offersAWayIn = /\[[^\]]*\b(apply|application|register|submit)\b[^\]]*\]\(/i.test(markdown);
+
+  if (deadlineRaw === null && fundingLevel === null && !(namesAnOpportunity && offersAWayIn)) {
+    return null;
+  }
 
   return {
     sourceUrl: candidate.url,

@@ -237,3 +237,63 @@ export function scanForFunding(markdown: string): string | null {
   }
   return null;
 }
+
+
+/* ------------------------------------------------------------------------ *
+ * Closed
+ *
+ * The single most important thing a funding page can tell a student is that
+ * they are too late, and it was the one thing being discarded.
+ *
+ * Adobe's fellowship page has a "Key dates" section whose entire content is
+ * "Applications are closed for the Adobe India AI Research Fellowship". That
+ * line was found, matched the deadline label, and was then rejected for not
+ * containing a date. The record went out with the deadline reading "Not
+ * stated", which is not what the page said and is worse than saying nothing:
+ * a student reads "Not stated" as "still open, date unclear" and spends an
+ * evening on an application that cannot be submitted.
+ *
+ * A closed opportunity is not an opportunity. It is detected here, and the
+ * record is kept out of the results rather than shown with a caveat, because
+ * the product's entire job is finding things somebody can still apply to.
+ * ------------------------------------------------------------------------ */
+
+const CLOSED_PHRASES = [
+  /\bapplications?\s+(?:are|is|has|have)\s+(?:now\s+)?closed\b/i,
+  /\bapplications?\s+(?:for\s+\d{4}\s+)?(?:are\s+)?no longer\s+(?:being\s+)?accept/i,
+  /\bno longer accepting applications\b/i,
+  /\bthis (?:programme|program|fellowship|scholarship|call) (?:is|has) closed\b/i,
+  /\bapplications? closed\b/i,
+  /\bthe deadline has passed\b/i,
+  /\bsubmissions? (?:are|is) closed\b/i,
+  /\bround (?:is|has) closed\b/i,
+];
+
+/**
+ * Language that means the page is announcing a future opening, not a closure.
+ *
+ * "Applications open in March" and "applications are closed until March" mean
+ * opposite things to a student deciding whether to read on, and only one of
+ * them should remove the record.
+ */
+const REOPENING = /\bapplications?\s+(?:will\s+)?(?:open|reopen)\b/i;
+
+/**
+ * Whether this page says the door is shut.
+ *
+ * Checked against the whole document rather than one line, because a closure
+ * notice is a banner or a section heading far more often than it is a labelled
+ * field.
+ */
+export function saysClosed(markdown: string): boolean {
+  for (const raw of markdown.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.length < 6 || line.length > 300) continue;
+    if (!CLOSED_PHRASES.some((phrase) => phrase.test(line))) continue;
+    // A line that announces the next opening in the same breath is news about
+    // the next cycle, not a shut door today.
+    if (REOPENING.test(line)) continue;
+    return true;
+  }
+  return false;
+}

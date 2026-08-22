@@ -6,6 +6,7 @@ import {
   plausibleProvider,
   scanForDeadline,
   scanForFunding,
+  saysClosed,
 } from './plausible.js';
 import { inferType, looksLikeIndex, titleFrom } from './read.js';
 import { mergeResults, type SerpResult } from './serp.js';
@@ -363,5 +364,79 @@ describe('titles a search engine truncated', () => {
     expect(titleFrom('body with no heading', 'Oxford Schmidt AI in Science Fellowship')).toBe(
       'Oxford Schmidt AI in Science Fellowship',
     );
+  });
+});
+
+/**
+ * The single most important thing a page can tell a student is that they are
+ * too late, and it was the one thing being discarded.
+ *
+ * Adobe's fellowship page has a "Key dates" section whose entire content is
+ * "Applications are closed for the Adobe India AI Research Fellowship". The
+ * line was found, matched the deadline label, and was rejected for containing
+ * no date, so the record went out reading "Deadline: Not stated". A student
+ * reads that as still open with the date unclear.
+ */
+describe('a door that is already shut', () => {
+  it('recognises the closure Adobe actually publishes', () => {
+    expect(
+      saysClosed('# Key dates\n\n* Applications are closed for the Adobe India AI Research Fellowship'),
+    ).toBe(true);
+  });
+
+  it('recognises the other ways a page says it', () => {
+    expect(saysClosed('Applications are now closed.')).toBe(true);
+    expect(saysClosed('We are no longer accepting applications')).toBe(true);
+    expect(saysClosed('The deadline has passed for this round.')).toBe(true);
+    expect(saysClosed('This fellowship is closed.')).toBe(true);
+  });
+
+  /*
+   * "Applications open in March" and "applications are closed until March"
+   * mean opposite things to somebody deciding whether to read on.
+   */
+  it('does not mistake an announcement of the next round for a shut door', () => {
+    expect(saysClosed('Applications are closed. Applications will open again in March 2027.')).toBe(
+      false,
+    );
+    expect(saysClosed('Applications open on 1 March 2027')).toBe(false);
+  });
+
+  it('leaves an open page alone', () => {
+    expect(saysClosed('Applications close on 17 May 2026')).toBe(false);
+    expect(saysClosed('Apply by 30 September 2026')).toBe(false);
+  });
+});
+
+describe('press coverage is not the opportunity', () => {
+  /*
+   * Both of these came through a live run as opportunities. They are articles
+   * about somebody else winning one, so the "funding" was the headline and the
+   * apply link went to a newsroom.
+   */
+  it('drops news and press paths', () => {
+    expect(
+      looksLikeIndex('IIT Madras Announces AI Fellowship', '', 'https://acr.iitm.ac.in/iitm_in_news/x'),
+    ).toBe(true);
+    expect(
+      looksLikeIndex('Student selected for fellowship', '', 'https://earlham.edu/news-events/x'),
+    ).toBe(true);
+  });
+
+  it('leaves a real programme page alone', () => {
+    expect(looksLikeIndex('Fellowships', '', 'https://wsai.iitm.ac.in/fellowships/')).toBe(false);
+  });
+});
+
+describe('titles carrying markdown', () => {
+  /*
+   * A heading that is itself a link arrives as "[SuperKalam](/companies/...)",
+   * which a live run served to a student as the name of an opportunity.
+   */
+  it('keeps the text and drops the machinery', () => {
+    expect(titleFrom('body with no heading', '[SuperKalam](/companies/superkalam)')).toBe(
+      'SuperKalam',
+    );
+    expect(titleFrom('# **Oxford Fellowship**\n\nbody', 'x')).toBe('Oxford Fellowship');
   });
 });

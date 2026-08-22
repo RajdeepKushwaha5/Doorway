@@ -858,8 +858,12 @@ export function buildRouter(deps: ApiDeps): Router {
     let found: Awaited<ReturnType<typeof discover>> | null = null;
     try {
       found = await discover(deps.discovery, profile, {
-        maxPages: 12,
-        maxTypes: 3,
+        // Twelve pages across three types returned a single result for a
+        // realistic profile. The cost is linear and the ceiling in
+        // DiscoveryBudget is what protects the account, so the search is
+        // wider rather than the filters looser.
+        maxPages: 18,
+        maxTypes: 4,
         onEvent: (event) => {
           emit({
             step: event.step,
