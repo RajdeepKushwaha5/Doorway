@@ -1,3 +1,4 @@
+import { daysUntil, formatDeadline } from '@/lib/dates';
 import { ApplicationMission } from '@/components/ApplicationMission';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -50,13 +51,20 @@ const STATUS: Record<
   },
 };
 
-function formatDeadline(iso: string | null): string | null {
-  if (iso === null) return null;
-  const at = Date.parse(iso);
-  if (Number.isNaN(at)) return null;
-  const days = Math.ceil((at - Date.now()) / 86_400_000);
-  const date = new Date(at).toISOString().slice(0, 10);
+/**
+ * The date, plus how long is left, in the site's one date format.
+ *
+ * This rendered an ISO string, which is unambiguous and reads like a log line
+ * rather than a closing date. Ceil also flattered the reader: most of a day
+ * left was reported as a whole day remaining.
+ */
+function deadlineWithCountdown(iso: string | null, raw: string | null): string | null {
+  if (iso === null && (raw === null || raw.trim() === '')) return null;
+  const date = formatDeadline(iso, raw);
+  const days = daysUntil(iso);
+  if (days === null) return date;
   if (days < 0) return `${date} · closed`;
+  if (days === 0) return `${date} · today`;
   return `${date} · ${String(days)} day${days === 1 ? '' : 's'} left`;
 }
 
@@ -76,7 +84,7 @@ export default async function OpportunityPage({
   }
 
   const status = STATUS[opportunity.trust.status];
-  const deadline = formatDeadline(opportunity.deadline);
+  const deadline = deadlineWithCountdown(opportunity.deadline, opportunity.deadlineRaw);
   const quarantined = opportunity.trust.status === 'quarantined';
   const closed = opportunity.applicationStatus === 'closed';
   const singleReadMissing =

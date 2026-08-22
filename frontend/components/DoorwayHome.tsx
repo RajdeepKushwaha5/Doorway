@@ -1,5 +1,6 @@
 'use client';
 
+import { formatDeadline } from '@/lib/dates';
 import { ApplicationMission } from '@/components/ApplicationMission';
 import { fundingLabel } from '@/lib/funding';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -878,10 +879,4 @@ function HowItLives() {
   );
 }
 
-function formatDeadline(value: string | null, raw: string | null): string {
-  if (value === null) return raw ?? 'Date not published';
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-    new Date(value),
-  );
-}
 

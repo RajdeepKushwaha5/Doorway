@@ -1,3 +1,4 @@
+import { formatDeadline } from '@/lib/dates';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import type { DoorwayOpportunity } from '@/lib/types';
@@ -135,9 +136,9 @@ export default async function VerifiedPage() {
                             </span>
                             <span className="block font-mono text-[11.5px] text-gray-500">
                               {opportunity.provider} · {opportunity.type.replace('-', ' ')}
-                              {opportunity.deadlineRaw === null
+                              {opportunity.deadline === null && opportunity.deadlineRaw === null
                                 ? ''
-                                : ` · ${opportunity.deadlineRaw}`}
+                                : ` · ${formatDeadline(opportunity.deadline, opportunity.deadlineRaw)}`}
                             </span>
                           </span>
                           <span className="font-mono text-[11.5px] text-gray-500">

@@ -46,6 +46,12 @@ services:
     # Tracks main. The deployed API sat on a build old enough to predate the
     # Doorway routes entirely, because every deploy had to be remembered by
     # hand, and nothing about the running service said it was behind.
+    #
+    # The branch is named explicitly. A blueprint that does not say which
+    # branch it follows leaves that to whatever the dashboard was last set to,
+    # which is exactly the kind of state that cannot be read from the
+    # repository and therefore cannot be trusted from it.
+    branch: main
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
@@ -127,6 +133,7 @@ services:
     rootDir: .
     buildCommand: npm install && npm run build --workspace driftmart
     startCommand: npm run start --workspace driftmart
+    branch: main
     autoDeploy: true
     envVars:
       - key: NODE_VERSION

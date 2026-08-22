@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getMissionAction } from '@/app/actions';
+import { formatDeadline } from '@/lib/dates';
 import type { Mission } from '@/lib/types';
 
 /**
@@ -60,13 +61,8 @@ const STATE_TONE: Record<Mission['state'], string> = {
   submitted: 'text-gray-500',
 };
 
-function formatDate(at: number | null): string {
-  if (at === null) return 'not published';
-  return new Date(at).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+function formatDate(at: number | null, raw: string | null = null): string {
+  return formatDeadline(at === null ? null : new Date(at).toISOString(), raw);
 }
 
 export function ApplicationMission({ opportunityId }: { opportunityId: string }) {
@@ -156,7 +152,7 @@ export function ApplicationMission({ opportunityId }: { opportunityId: string })
             Verified deadline
           </div>
           <div className="mt-1 font-mono text-[12px] text-gray-900">
-            {mission.deadline.raw ?? 'not published'}
+            {formatDate(mission.deadline.at, mission.deadline.raw)}
           </div>
         </div>
         <div className="bg-white px-4 py-3">
