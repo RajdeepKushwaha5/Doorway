@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { OpportunityDraft } from '../acquire/index.js';
 import { deadlineHasPassed, parseDeadline } from '../acquire/dates.js';
 import { plausibleDeadline, scanForDeadline } from '../acquire/plausible.js';
-import { looksLikeIndex } from '../acquire/read.js';
+import { looksLikeIndex, looksLikePageFurniture } from '../acquire/read.js';
 import type { Opportunity, OpportunityType } from './types.js';
 import { decideLifecycle } from './lifecycle.js';
 
@@ -188,7 +188,10 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
 
 /** Apply current page-quality rules to records written by an older parser. */
 export function isPublishableDraft(draft: OpportunityDraft): boolean {
-  return !looksLikeIndex(cleanTitle(draft.title), '', draft.sourceUrl);
+  const title = cleanTitle(draft.title);
+  // Two different ways a page is not an opportunity: it is a list of them, or
+  // it was never about one at all.
+  return !looksLikeIndex(title, '', draft.sourceUrl) && !looksLikePageFurniture(title);
 }
 
 function platformProvider(host: string, extracted: string): string {

@@ -213,6 +213,53 @@ const INDEX_SHAPES = [
  * is exactly the confident wrong answer this project exists to prevent, so
  * these are dropped rather than published with a caveat.
  */
+/**
+ * Page furniture that a crawler will happily read as a title.
+ *
+ * These came back from a live crawl as opportunities: "Online", "On-Campus",
+ * "Degree Programs", and an unsupported-browser banner. None is a list page,
+ * so the index detector had no reason to object, and each was served to a
+ * student as something they could apply for.
+ */
+const CHROME = [
+  /\byou seem to be using\b/i,
+  /\bunsupported browser\b/i,
+  /\benable javascript\b/i,
+  /\bcookies?\b.*\b(policy|consent|settings|accept)\b/i,
+  /\baccept (all )?cookies\b/i,
+  /\bskip to (main )?content\b/i,
+  /\bprivacy (policy|notice)\b/i,
+  /\bterms (of|and)\b/i,
+  /^\s*(home|menu|search|login|log in|sign in|register|apply|back|next|previous|share)\s*$/i,
+  /^\s*(online|on-?campus|full-?time|part-?time|undergraduate|postgraduate|degree programs?|programmes?)\s*$/i,
+];
+
+/** Words that make a short title specific enough to be an opportunity. */
+const NAMES_AN_OPPORTUNITY =
+  /\b(scholarship|fellowship|internship|grant|bursary|hackathon|award|prize|traineeship|residency|stipend|studentship|chair)s?\b/i;
+
+/**
+ * Whether a title names an opportunity at all.
+ *
+ * Separate from the index check because these fail differently. An index page
+ * is a real page about many opportunities; this is a fragment of furniture
+ * that was never about anything. Both end up served to a student as something
+ * to apply for, and the second is more embarrassing because it is obviously
+ * not one to any reader.
+ *
+ * The specificity rule is deliberately mild: three words, or one word that
+ * names the kind of thing. "Chevening Scholarships" passes on the second,
+ * "AI for Good Fellowship Program" on both, "Degree Programs" on neither.
+ */
+export function looksLikePageFurniture(title: string): boolean {
+  const clean = title.replace(/\s+/g, ' ').trim();
+  if (clean === '') return true;
+  if (CHROME.some((pattern) => pattern.test(clean))) return true;
+
+  const words = clean.split(/\s+/).filter((word) => /[a-z0-9]/i.test(word));
+  return words.length < 3 && !NAMES_AN_OPPORTUNITY.test(clean);
+}
+
 export function looksLikeIndex(title: string, markdown: string, url = ''): boolean {
   /*
    * The URL says what a page is even when its title does not.
