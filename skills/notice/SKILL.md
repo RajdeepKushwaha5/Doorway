@@ -3,7 +3,7 @@ name: notice
 description: Operate a fleet of Bright Data Scraper Studio collectors under continuous dual-sensor verification with the Doorway Trust Engine. Use when asked to check collectors, investigate scraper output that looks wrong, decide whether a website changed or a scraper broke, run Self-Healing safely, or approve a proposed repair.
 ---
 
-# NOTICE
+# Doorway Trust Engine (NOTICE)
 
 NOTICE decides whether a website changed or a collector broke, then repairs only the second case and only after proving the repair works.
 

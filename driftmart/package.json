@@ -2,7 +2,7 @@
   "name": "@notice/driftmart",
   "version": "0.1.0",
   "private": true,
-  "description": "Controlled fault-injection and drift fixture for Doorway Trust Engine verification.",
+  "description": "Controlled fault-injection drift fixture for Doorway Trust Engine verification.",
   "scripts": {
     "dev": "next dev -p 3002",
     "build": "next build",

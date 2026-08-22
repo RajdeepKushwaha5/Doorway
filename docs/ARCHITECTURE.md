@@ -1,4 +1,4 @@
-# Doorway Architecture & Dual-Sensor Flow
+# Doorway Architecture & Dual-Sensor Verification Pipeline
 
 One rule decides everything in this system:
 

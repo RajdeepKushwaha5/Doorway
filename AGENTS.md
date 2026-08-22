@@ -1,4 +1,4 @@
-# Doorway Trust Engine, for coding agents
+# Doorway Trust Engine & Agent Operational Rules
 
 You are operating the Doorway fleet: a set of Bright Data Scraper Studio collectors under continuous dual-sensor verification.
 

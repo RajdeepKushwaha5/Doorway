@@ -23,5 +23,5 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true
   },
-  "exclude": ["node_modules", "dist", ".next"]
+  "exclude": ["node_modules", "dist", ".next", "out"]
 }

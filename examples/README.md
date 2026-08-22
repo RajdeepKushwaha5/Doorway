@@ -1,4 +1,4 @@
-# Doorway Example Structured Output
+# Doorway Example Structured Outputs & Drift Observations
 
 Real output from the two custom Scraper Studio collectors built for this
 project. Nothing here is hand-written or edited; each file is the response body

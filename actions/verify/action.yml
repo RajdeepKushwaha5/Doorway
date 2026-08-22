@@ -1,3 +1,4 @@
+# Doorway data verification GitHub Action
 name: 'Doorway data verification gate'
 description: >-
   Fail a build when the web data it depends on is not currently verified by two

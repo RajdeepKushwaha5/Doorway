@@ -1,4 +1,4 @@
-# Render blueprint for the Doorway API and the controlled fixture it scrapes.
+# Render blueprint for the Doorway Trust Engine API and controlled fixture.
 #
 # The dashboard goes to Vercel and is not defined here. It needs no config file:
 # set the project's Root Directory to `frontend` and take every default. Vercel

@@ -2,7 +2,7 @@
   "name": "@notice/backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Doorway Trust Engine dual-sensor verification backend and native MCP server.",
+  "description": "Doorway Trust Engine dual-sensor verification backend and Model Context Protocol server.",
   "type": "module",
   "main": "./dist/src/index.js",
   "scripts": {

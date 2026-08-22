@@ -1,8 +1,6 @@
-# Doorway
+# Doorway · Verified Opportunity Intelligence
 
-**Describe the future you want. Doorway turns official scholarships, fellowships, internships,
-grants and research programmes into a living opportunity world, then keeps every important field
-accurate as the web changes.**
+**Describe the future you want. Doorway turns official scholarships, fellowships, internships, grants and research programmes into a living opportunity world, then keeps every important field accurate as the web changes.**
 
 Doorway is one product with three internal systems:
 
