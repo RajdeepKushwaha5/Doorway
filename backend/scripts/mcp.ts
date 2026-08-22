@@ -24,7 +24,7 @@
  */
 import { buildTools, dispatch, type JsonRpcRequest } from '../src/mcp/server.js';
 
-const API = (process.env['NOTICE_API_BASE'] ?? 'https://notice-api-0vfo.onrender.com').replace(
+const API = (process.env['NOTICE_API_BASE'] ?? 'https://doorway-api-4ftn.onrender.com').replace(
   /\/+$/,
   '',
 );

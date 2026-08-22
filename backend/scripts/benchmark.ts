@@ -33,7 +33,7 @@ import { extractField } from '../src/witness/extract.js';
 import { compareValues, normalizeMoney } from '../src/shared/normalize.js';
 import type { WitnessFieldSpec } from '../src/witness/spec.js';
 
-const FIXTURE = (process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com').replace(
+const FIXTURE = (process.env['DRIFTMART_URL'] ?? 'https://doorway-lab.onrender.com').replace(
   /\/+$/,
   '',
 );

@@ -30,11 +30,11 @@
  *   DRIFTMART_ADMIN_TOKEN   required for `mode`
  */
 
-const API = (process.env['NOTICE_API_BASE'] ?? 'https://notice-api-0vfo.onrender.com').replace(
+const API = (process.env['NOTICE_API_BASE'] ?? 'https://doorway-api-4ftn.onrender.com').replace(
   /\/+$/,
   '',
 );
-const FIXTURE = (process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com').replace(
+const FIXTURE = (process.env['DRIFTMART_URL'] ?? 'https://doorway-lab.onrender.com').replace(
   /\/+$/,
   '',
 );

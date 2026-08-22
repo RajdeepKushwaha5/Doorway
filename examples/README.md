@@ -51,7 +51,7 @@ Then trigger either collector from the CLI:
 
 ```bash
 npx -p @brightdata/cli bdata scraper run c_msvllpds1n1dcoz8qx \
-  https://driftmart-3ut8.onrender.com/product/headphones --pretty
+  https://doorway-lab.onrender.com/product/headphones --pretty
 ```
 
 ## What NOTICE does with them

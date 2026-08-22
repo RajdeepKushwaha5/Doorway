@@ -230,9 +230,21 @@ export function buildRouter(deps: ApiDeps): Router {
     what: 'Builds a verified opportunity world from Bright Data Scraper Studio collectors, with an independent Trust Engine that catches silent extraction drift.',
     status: 'ok',
     at: new Date().toISOString(),
-    dashboard: 'https://notice-frontend-bay.vercel.app',
-    fixture: 'https://driftmart-3ut8.onrender.com',
+    dashboard: 'https://doorway-frontend-snowy.vercel.app',
+    fixture: 'https://doorway-lab.onrender.com',
     repository: 'https://github.com/RajdeepKushwaha5/Doorway',
+    /*
+     * What is actually running here.
+     *
+     * Twice in one day a fix was reported as live when the host was serving an
+     * older build, and the only way to tell was to probe for a behaviour the
+     * new code has. A deployment that cannot say which commit it is has to be
+     * interrogated instead of asked.
+     *
+     * Render sets RENDER_GIT_COMMIT on every deploy. Absent locally, where the
+     * honest answer is that this is a working tree rather than a build.
+     */
+    build: process.env['RENDER_GIT_COMMIT']?.slice(0, 7) ?? 'local working tree',
     read: {
       health: '/api/health',
       collectors: '/api/collectors',

@@ -10,7 +10,7 @@ Scraper Studio exposes browser functions for exactly this — `type`, `click`,
 touches any of them.
 
 This collector uses them against
-[`/search`](https://driftmart-3ut8.onrender.com/search) on the DriftMart
+[`/search`](https://doorway-lab.onrender.com/search) on the DriftMart
 fixture.
 
 ## Interaction stage

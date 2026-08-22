@@ -69,10 +69,10 @@ verdict, what the witness read, the line it read it from, and a SHA-256 of the
 page body it read — sealed with a digest over all of it.
 
 ```bash
-curl https://notice-api-0vfo.onrender.com/api/incidents/<id>/certificate
+curl https://doorway-api-4ftn.onrender.com/api/incidents/<id>/certificate
 ```
 
-Paste it into [`/verify`](https://notice-frontend-bay.vercel.app/verify). The
+Paste it into [`/verify`](https://doorway-frontend-snowy.vercel.app/verify). The
 digest is re-derived **in your browser with no network calls**, because a
 verifier that asked our server whether our own document is valid would prove
 nothing. Change one character in any value and it fails.
@@ -233,11 +233,11 @@ Not our characterisation. Their support engineer, asked directly on 2026-08-18:
 ### 5. A verdict you can re-check without us
 
 Every incident exports as a hash-sealed certificate, and
-[`/verify`](https://notice-frontend-bay.vercel.app/verify) re-derives the digest
+[`/verify`](https://doorway-frontend-snowy.vercel.app/verify) re-derives the digest
 in your own browser with no network calls. Change one character and it fails.
 
 ```bash
-curl https://notice-api-0vfo.onrender.com/api/incidents/<id>/certificate
+curl https://doorway-api-4ftn.onrender.com/api/incidents/<id>/certificate
 ```
 
 ### 6. In the Bright Data console
@@ -274,9 +274,9 @@ it broke, and it takes the same evidence.
 
 | | |
 |---|---|
-| Dashboard | https://notice-frontend-bay.vercel.app |
-| API | https://notice-api-0vfo.onrender.com/api/health |
-| DriftMart fixture | https://driftmart-3ut8.onrender.com |
+| Dashboard | https://doorway-frontend-snowy.vercel.app |
+| API | https://doorway-api-4ftn.onrender.com/api/health |
+| DriftMart fixture | https://doorway-lab.onrender.com |
 
 The two Render services are on the free plan and spin down after 15 minutes
 idle, so the first request after a quiet period takes around 30 seconds. Open
@@ -407,7 +407,7 @@ easy case, and it never touches the browser functions Scraper Studio exposes
 for the harder one.
 
 `c_mszt6dg019q6p244j6` operates
-[`/search`](https://driftmart-3ut8.onrender.com/search), where no price exists
+[`/search`](https://doorway-lab.onrender.com/search), where no price exists
 until a term is typed and a button pressed. It was built with
 `bdata scraper create`, then corrected with `bdata scraper heal` when the first
 version tried to shortcut to the product page instead of using the form. The
@@ -434,7 +434,7 @@ Every step still succeeds. Real run, real collector:
   "product_name": "Vega Earbuds",
   "price": 79,
   "availability": "In stock",
-  "product_page_url": "https://driftmart-3ut8.onrender.com/search?query=Nova"
+  "product_page_url": "https://doorway-lab.onrender.com/search?query=Nova"
 }
 ```
 
@@ -582,7 +582,7 @@ by being registered.
 ```yaml
 - uses: RajdeepKushwaha5/Doorway/actions/verify@main
   with:
-    api-base: https://notice-api-0vfo.onrender.com
+    api-base: https://doorway-api-4ftn.onrender.com
     collector: c_msvk2zahnc2mizts6
 ```
 

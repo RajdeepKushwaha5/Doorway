@@ -27,7 +27,7 @@ import { fetchWitnessMarkdown } from '../src/brightdata/unlocker.js';
 import { compareValues } from '../src/shared/normalize.js';
 import type { WitnessFieldSpec } from '../src/witness/spec.js';
 
-const FIXTURE = process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com';
+const FIXTURE = process.env['DRIFTMART_URL'] ?? 'https://doorway-lab.onrender.com';
 const PAGE = `${FIXTURE}/product/headphones`;
 
 const PRICE: WitnessFieldSpec = {
