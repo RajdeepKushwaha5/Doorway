@@ -539,6 +539,52 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Blueprint Corner Crosses & Developer Syntax                        */
+/* ------------------------------------------------------------------ */
+
+.blueprint-card {
+  position: relative;
+}
+
+.blueprint-card::before,
+.blueprint-card::after {
+  content: '+';
+  position: absolute;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: #10b981;
+  pointer-events: none;
+  font-weight: 700;
+  z-index: 20;
+}
+
+.blueprint-card::before {
+  top: -6px;
+  left: -5px;
+}
+
+.blueprint-card::after {
+  bottom: -6px;
+  right: -5px;
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 6px;
+  height: 12px;
+  background-color: #10b981;
+  vertical-align: middle;
+  margin-left: 4px;
+  animation: terminal-blink 1s steps(2, start) infinite;
+}
+
+@keyframes terminal-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ------------------------------------------------------------------ */
 /* Interior pages                                                      */
 /* ------------------------------------------------------------------ */
 

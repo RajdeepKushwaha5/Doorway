@@ -31,6 +31,35 @@ const DEFAULT_PROFILE: DoorwayProfile = {
   locations: [],
 };
 
+function CliPill({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    void navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title="Click to copy CLI command"
+      className="group inline-flex items-center gap-2 rounded border border-gray-300 bg-gray-50/80 px-3.5 py-2.5 font-mono text-[11px] text-gray-700 hover:border-emerald-500 hover:bg-white transition-all text-left"
+    >
+      <span className="text-emerald-600 font-bold">$</span>
+      <span className="font-semibold text-gray-800">{command}</span>
+      <span className="ml-1 rounded bg-gray-200 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-gray-600 group-hover:bg-emerald-100 group-hover:text-emerald-800 font-bold transition-colors">
+        {copied ? 'Copied ✓' : 'Copy ↗'}
+      </span>
+    </button>
+  );
+}
+
+function splitList(str: string): string[] {
+  return str.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWorld | null }) {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [interest, setInterest] = useState('Artificial intelligence');
@@ -77,15 +106,18 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
               the web changes.
             </p>
 
-            <div className="mt-9 grid gap-px border border-gray-200 bg-gray-200 sm:grid-cols-3">
+            <div className="mt-9 grid gap-px border border-gray-200 bg-gray-200 sm:grid-cols-3 blueprint-card">
               {[
-                ['01', 'Discover', 'Official long-tail sources'],
-                ['02', 'Structure', 'Scraper Studio collectors'],
-                ['03', 'Prove', 'Two-sensor verification'],
+                ['01', 'discover-sources/', 'Official long-tail sources'],
+                ['02', 'structure-collectors/', 'Scraper Studio collectors'],
+                ['03', 'prove-truth/', 'Two-sensor verification'],
               ].map(([number, title, copy]) => (
-                <div key={number} className="bg-white p-4">
-                  <div className="font-neuebit text-[11px] tracking-[0.15em] text-emerald-600 font-bold">{number}</div>
-                  <div className="mt-4 font-mondwest text-2xl">{title}</div>
+                <div key={number} className="bg-white p-4 group hover:bg-neutral-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="font-neuebit text-[11px] tracking-[0.15em] text-emerald-600 font-bold">{number}</div>
+                    <span className="font-mono text-[10px] text-gray-300 group-hover:text-emerald-500 transition-colors">■</span>
+                  </div>
+                  <div className="mt-4 font-mondwest text-2xl group-hover:text-emerald-800 transition-colors">{title}</div>
                   <div className="mt-1 font-mono text-[10px] leading-5 text-gray-500">{copy}</div>
                 </div>
               ))}
@@ -100,16 +132,15 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
               sits in the hero rather than in a footer because a demonstration
               nobody finds is worth the same as no demonstration.
             */}
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3">
               <Link
                 href="/proof"
-                className="border border-black bg-black px-6 py-3 font-neuebit text-[12px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-white hover:text-black"
+                className="inline-flex items-center justify-center gap-2 border border-black bg-black px-6 py-3 font-neuebit text-[12px] uppercase tracking-[0.14em] text-white transition-all hover:bg-neutral-800 shadow-sm whitespace-nowrap"
               >
-                Break the page and watch
+                <span>Break the page and watch</span>
+                <span>↗</span>
               </Link>
-              <span className="font-mono text-[11.5px] leading-relaxed text-gray-500">
-                Cause a wrong deadline on purpose. No terminal, no account.
-              </span>
+              <CliPill command="bdata scraper run c_mt36mo6tj37dmjgqh" />
             </div>
           </div>
 
@@ -124,15 +155,15 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
             {/* Ambient Floating Orbit Sensors */}
             <div className="pointer-events-none absolute top-7 right-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/90 px-3 py-1 font-mono text-[10px] text-emerald-800 shadow-sm backdrop-blur-sm animate-float-slow">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Sensor 2 · Web Unlocker Witness</span>
+              <span>dev.witness() · Web Unlocker</span>
             </div>
             <div className="pointer-events-none absolute top-14 left-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-3 py-1 font-mono text-[10px] text-gray-700 shadow-sm backdrop-blur-sm animate-float-reverse">
               <span className="h-1.5 w-1.5 rounded-full bg-black" />
-              <span>Sensor 1 · Scraper Studio Stream</span>
+              <span>dev.collector() · Scraper Studio</span>
             </div>
 
             {/* Top Telemetry & Sensor Radar Ribbon */}
-            <div className="relative z-10 mb-3.5 w-full max-w-[620px]">
+            <div className="relative z-10 mb-2 w-full max-w-[620px]">
               <div className="flex items-center justify-between gap-2 rounded-md border border-black/10 bg-white/85 px-3.5 py-2 backdrop-blur-md shadow-sm font-mono text-[11px]">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2 w-2">
@@ -145,7 +176,7 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                 </div>
                 <div className="hidden sm:flex items-center gap-2 overflow-hidden text-[10.5px] text-gray-500">
                   <span className="h-1 w-1 rounded-full bg-gray-300" />
-                  <span className="truncate">Active web crawlers &amp; extractors</span>
+                  <span className="truncate">dev.pipeline() active</span>
                   <span className="h-1 w-1 rounded-full bg-gray-300" />
                   <span className="text-emerald-700 font-semibold">100% Evidence Gated</span>
                 </div>
@@ -155,7 +186,21 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
               </div>
             </div>
 
-            <div className="doorway-builder-card relative z-10 min-w-0 w-full max-w-[620px] border border-black bg-white">
+            {/* Interactive File Explorer Strip (GitHub Universe Motif) */}
+            <div className="relative z-10 mb-3 w-full max-w-[620px] flex items-center gap-2 overflow-x-auto text-[10.5px] font-mono">
+              <span className="text-gray-400 font-bold font-neuebit uppercase tracking-wider text-[9px] shrink-0">SOURCE STREAMS:</span>
+              <span className="inline-flex items-center gap-1 bg-white/90 border border-emerald-500/40 text-emerald-800 px-2 py-0.5 rounded shadow-2xs font-semibold shrink-0">
+                <span>📄</span> c_fellowship.json <span className="text-[8.5px] bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded font-bold">200 OK</span>
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white/75 border border-black/10 text-gray-700 px-2 py-0.5 rounded shadow-2xs shrink-0">
+                <span>📝</span> witness_extract.md <span className="text-[8.5px] bg-gray-100 text-gray-700 px-1 py-0.2 rounded font-bold">PROVED</span>
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white/75 border border-black/10 text-gray-700 px-2 py-0.5 rounded shadow-2xs shrink-0">
+                <span>🔐</span> sha256.cert
+              </span>
+            </div>
+
+            <div className="doorway-builder-card blueprint-card relative z-10 min-w-0 w-full max-w-[620px] border border-black bg-white">
               <div className="flex items-center justify-between gap-3 border-b border-black px-4 py-3 font-neuebit text-[11px] uppercase tracking-[0.15em] sm:px-5 bg-white">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
@@ -280,8 +325,6 @@ function WorldSection({
 }: {
   world: DoorwayWorld | null;
   pending: boolean;
-  // Passed down so the live search asks for what this student asked for,
-  // rather than for whatever the page was first rendered with.
   profile: DoorwayProfile;
 }) {
   return (
@@ -316,9 +359,6 @@ function WorldSection({
         {pending ? <WorldSkeleton /> : null}
         {!pending && world === null ? <EmptyWorld initial /> : null}
         {!pending && world !== null && world.matches.length === 0 ? <EmptyWorld initial={false} /> : null}
-        {/* The world first, because the transformation is the point: a pile of
-            unrelated websites became a place you can read at a glance. The
-            cards stay underneath for the detail the geometry cannot carry. */}
         {!pending && world !== null && world.matches.length > 0 ? (
           <>
             <IsometricWorld matches={world.matches} />
@@ -330,16 +370,6 @@ function WorldSection({
           </>
         ) : null}
 
-        {/*
-          The other half of the answer.
-
-          The world above is what Doorway watches continuously, which is the
-          strong claim and, necessarily, a short list. A student whose interest
-          is not on it would otherwise reach an empty map and a dead end. This
-          goes and looks now, and is kept visually and verbally apart from the
-          verified world because what it returns has been read once by one
-          sensor and deserves a smaller claim.
-        */}
         <div className="mt-16">
           <LiveDiscovery profile={profile} />
         </div>
@@ -354,7 +384,7 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
   const quarantined = opportunity.trust.status === 'quarantined';
   return (
     <article
-      className={`doorway-building border border-black bg-white ${quarantined ? 'doorway-building-broken' : ''}`}
+      className={`doorway-building blueprint-card border border-black bg-white ${quarantined ? 'doorway-building-broken' : ''}`}
       style={{ animationDelay: `${String(index * 90)}ms` }}
     >
       <div className="doorway-building-roof flex items-center justify-between border-b border-black px-4 py-3 font-neuebit text-[10px] uppercase tracking-[0.12em]">
@@ -383,10 +413,6 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
             <div key={line}>+ {line}</div>
           ))}
         </div>
-        {/* The label used to read "Inspect evidence" while the link still went
-            to the application page, so a card whose values are withheld sent a
-            student off to apply on them. The destination now matches what the
-            card says it is. */}
         {quarantined ? (
           <Link
             href={`/opportunities/${opportunity.id}`}
@@ -503,10 +529,6 @@ function HowItLives() {
       </div>
     </section>
   );
-}
-
-function splitList(value: string): string[] {
-  return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
 function formatDeadline(value: string | null): string {
