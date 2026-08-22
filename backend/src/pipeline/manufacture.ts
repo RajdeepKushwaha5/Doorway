@@ -88,6 +88,69 @@ function specsFor(brief: ReturnType<typeof composeBrief>): WitnessFieldSpec[] {
   return specs;
 }
 
+/**
+ * Match a derived spec onto the field name the scraper actually produced.
+ *
+ * Scraper Studio names its own output. Asking for a closing date returns
+ * `application_deadline` on one page and `deadline` on another, and a witness
+ * spec keyed to a name nobody chose reads nothing at all.
+ *
+ * The first manufactured collector proved this the expensive way: it returned
+ * `application_deadline` and `apply_url`, the derived specs said `deadline_raw`
+ * and `application_url`, the witness therefore read neither, and the record
+ * published as verified. Specs have to be written against the schema that
+ * exists rather than the one the rest of this codebase happens to use.
+ */
+function matchPath(want: string, actual: readonly string[]): string | null {
+  const patterns: Record<string, RegExp> = {
+    deadline_raw: /(deadline|closing|close|apply_by|last_date)/i,
+    application_url: /(apply|application).*(url|link)|^(apply_url|application_url)$/i,
+  };
+
+  const exact = actual.find((field) => field === want);
+  if (exact !== undefined) return exact;
+
+  const pattern = patterns[want];
+  if (pattern === undefined) return null;
+
+  // Longest match last, so a field literally named for the thing beats one
+  // that merely mentions it.
+  const candidates = actual.filter((field) => pattern.test(field) && field !== 'input');
+  return candidates[0] ?? null;
+}
+
+/**
+ * Point the derived specs at the fields the scraper really returns.
+ *
+ * A spec that cannot be matched is dropped rather than kept pointing at
+ * nothing. Keeping it would mean protecting a field no sensor can read, which
+ * is the arrangement that published a listing with no way to apply.
+ */
+export function alignSpecs(
+  specs: readonly WitnessFieldSpec[],
+  row: unknown,
+): WitnessFieldSpec[] {
+  /*
+   * No schema means no specs, not the guessed ones.
+   *
+   * Returning the derived paths when the scraper could not be run would key a
+   * second sensor to names nobody chose, which is precisely the failure this
+   * function exists to prevent. A collector with no witness specs is honest
+   * about being unwatched; one with wrong specs claims a second sensor that
+   * reads nothing.
+   */
+  if (row === null || typeof row !== 'object') return [];
+  const actual = Object.keys(row as Record<string, unknown>);
+
+  const aligned: WitnessFieldSpec[] = [];
+  for (const spec of specs) {
+    const path = matchPath(spec.path, actual);
+    if (path === null) continue;
+    aligned.push({ ...spec, path });
+  }
+  return aligned;
+}
+
 /** The step Bright Data names, when it names one. */
 function stepName(raw: unknown): string | null {
   if (raw === null || typeof raw !== 'object') return null;
@@ -196,7 +259,44 @@ export async function manufactureCollector(
     detail: { brightDataCollectorId, generationSeconds },
   });
 
-  const specs = specsFor(brief);
+  /*
+   * Run it once before writing its specs.
+   *
+   * You cannot write a witness spec for a schema you have not seen. Scraper
+   * Studio names its own output, so the only honest way to key a second sensor
+   * to a field is to look at what the first one actually produced, which costs
+   * one run and buys a collector whose two sensors are talking about the same
+   * things.
+   */
+  input.emit({ step: 'generating', line: 'running it once to learn its schema', detail: {} });
+  let firstRow: unknown = null;
+  try {
+    const rows = await input.client.runCollector(brightDataCollectorId, [input.url], {
+      timeoutMs: 180_000,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
+    });
+    firstRow = Array.isArray(rows) ? rows[0] : null;
+    input.emit({
+      step: 'generated',
+      line: `schema  ${Object.keys((firstRow ?? {}) as Record<string, unknown>).filter((k) => k !== 'input').join(', ')}`,
+      detail: { fields: Object.keys((firstRow ?? {}) as Record<string, unknown>) },
+    });
+  } catch (error) {
+    /*
+     * A scraper that will not run is still worth registering.
+     *
+     * It has an id, a brief and a page, and whoever looks at it next needs all
+     * three. What it does not get is witness specs invented from a schema
+     * nobody saw, so it registers with none and says so.
+     */
+    input.emit({
+      step: 'generating',
+      line: `could not run it yet: ${error instanceof Error ? error.message : String(error)}`,
+      detail: {},
+    });
+  }
+
+  const specs = alignSpecs(specsFor(brief), firstRow);
   const collector: CollectorRecord = {
     id: randomUUID(),
     brightDataCollectorId,
@@ -240,8 +340,11 @@ export async function manufactureCollector(
   await input.store.saveCollector(collector);
   input.emit({
     step: 'registered',
-    line: `registered as ${collector.id} with ${String(specs.length)} witness spec${specs.length === 1 ? '' : 's'}`,
-    detail: { collectorId: collector.id, brightDataCollectorId },
+    line:
+      specs.length === 0
+        ? `registered as ${collector.id} with no witness specs, because its schema could not be read`
+        : `registered as ${collector.id}, second sensor watching ${specs.map((s) => s.path).join(', ')}`,
+    detail: { collectorId: collector.id, brightDataCollectorId, witnessing: specs.map((s) => s.path) },
   });
 
   return { collector, brightDataCollectorId, description: brief.description, generationSeconds };

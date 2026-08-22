@@ -684,7 +684,24 @@ export async function observeOnce(
       // reading two sensors agreed about. A shape taken from a run nobody
       // trusted would let a consent wall become the definition of the page.
       shape: observation.shape,
-      confirmedBy: 'two_sensors',
+      /*
+       * Say how much corroboration there actually was.
+       *
+       * This was hardcoded to `two_sensors` on every publish, so a run where
+       * the witness read nothing at all still produced a record badged
+       * "confirmed by two independent sensors". Found on a freshly
+       * manufactured collector whose field names did not match its witness
+       * specs: the run's own evidence line said the witness could not read
+       * either field, and the published record claimed both were confirmed.
+       *
+       * That is a confident, well-formed, wrong claim on the one badge this
+       * whole product asks people to trust, which makes it the exact failure
+       * it exists to catch, printed on its own summary line.
+       *
+       * A witness that agreed about nothing has corroborated nothing, however
+       * clean the contract checks were.
+       */
+      confirmedBy: reconciliation.agreed.length > 0 ? 'two_sensors' : 'contract_only',
     });
   }
 

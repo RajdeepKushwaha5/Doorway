@@ -225,7 +225,7 @@ export function DoorwayHome({
             </div>
           </div>
 
-          <div className="doorway-form-stage relative flex min-w-0 flex-col items-center justify-center overflow-hidden p-6 sm:p-10 lg:p-12">
+          <div className="doorway-form-stage relative flex min-w-0 flex-col items-center justify-start overflow-hidden p-5 sm:p-8 lg:p-10 pt-2 sm:pt-4 lg:pt-4">
             <div aria-hidden="true" className="doorway-form-grid" />
             <div aria-hidden="true" className="doorway-form-dots" />
             <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-primary" />
@@ -235,21 +235,8 @@ export function DoorwayHome({
 
             {/*
               One strip, and every number on it is real.
-
-              This was two rows of invented telemetry: a ribbon reading
-              "dev.pipeline() active" and a file explorer showing
-              c_fellowship.json 200 OK, witness_extract.md PROVED and
-              sha256.cert. No such files exist, nothing returned that status,
-              and nothing was proved. Decorative fiction on a product whose
-              entire argument is that a system should never assert what it has
-              not checked, placed directly above the button that does the
-              checking.
-
-              What replaces it is what the index actually holds. Those numbers
-              are more impressive than the invented ones were, and a reader can
-              go and verify every one of them.
             */}
-            <div className="relative z-10 mb-3 w-full max-w-[620px]">
+            <div className="relative z-10 mb-2 w-full max-w-[620px]">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-black/10 bg-white/85 px-4 py-2.5 backdrop-blur-md shadow-sm">
                 <span className="flex items-center gap-2">
                   <span className="relative flex h-2 w-2">

@@ -33,10 +33,19 @@ const MARKDOWN = [
   '[Start application](/opportunity/fellowship/apply)',
 ].join('\n');
 
-function stubClient(steps: string[]): BrightDataClient {
+function stubClient(
+  steps: string[],
+  row: unknown = {
+    opportunity_title: 'Open AI Research Fellowship',
+    application_deadline: '2026-09-18T00:00:00.000Z',
+    apply_url: 'https://lab.test/opportunity/fellowship/apply',
+    input: { url: PAGE },
+  },
+): BrightDataClient {
   let call = 0;
   return {
     createScraperTemplate: vi.fn(async () => 'c_manufactured1'),
+    runCollector: vi.fn(async () => (row === null ? [] : [row])),
     generateScraper: vi.fn(async () => undefined),
     getGenerationProgress: vi.fn(async () => {
       const step = steps[Math.min(call++, steps.length - 1)] ?? 'done';
@@ -52,12 +61,12 @@ function stubClient(steps: string[]): BrightDataClient {
   } as unknown as BrightDataClient;
 }
 
-async function run(steps: string[] = ['planner', 'code_fixer', 'done']) {
+async function run(steps: string[] = ['planner', 'code_fixer', 'done'], row?: unknown) {
   const store = new FileStore(join(await mkdtemp(join(tmpdir(), 'mf-')), 'store.json'));
   const events: ObserveEvent[] = [];
   const result = await manufactureCollector({
     url: PAGE,
-    client: stubClient(steps),
+    client: row === undefined ? stubClient(steps) : stubClient(steps, row),
     store,
     readPage: async () => ({ markdown: MARKDOWN }),
     emit: (event) => events.push({ at: new Date().toISOString(), ...event } as ObserveEvent),
@@ -88,8 +97,10 @@ describe('manufacturing a collector', () => {
 
   it('derives witness specs from what the page actually showed', async () => {
     const { result } = await run();
+    // Named for the schema the scraper produced, not for the names this
+    // codebase happens to use elsewhere.
     const paths = result.collector.witnessSpecs.map((s) => s.path);
-    expect(paths).toEqual(['deadline_raw', 'application_url']);
+    expect(paths).toEqual(['application_deadline', 'apply_url']);
     const deadline = result.collector.witnessSpecs[0];
     expect(deadline?.shape).toBe('date');
     expect(deadline?.excludeLabels).toContain('early interest');
@@ -122,5 +133,42 @@ describe('manufacturing a collector', () => {
 
   it('gives up rather than looping forever when generation fails', async () => {
     await expect(run(['planner', 'failed'])).rejects.toThrow(/could not build a scraper/);
+  });
+});
+
+describe('specs against the schema that exists', () => {
+  /*
+   * Scraper Studio names its own output. The first manufactured collector
+   * returned `application_deadline` and `apply_url` while the derived specs
+   * said `deadline_raw` and `application_url`, so the witness read neither
+   * field and the record published as verified by two sensors anyway.
+   */
+  it('points the specs at the field names the scraper really returns', async () => {
+    const { result } = await run();
+    expect(result.collector.witnessSpecs.map((s) => s.path)).toEqual([
+      'application_deadline',
+      'apply_url',
+    ]);
+  });
+
+  it('keeps the meaning and the exclusions when it renames the path', async () => {
+    const { result } = await run();
+    const deadline = result.collector.witnessSpecs.find((s) => s.path === 'application_deadline');
+    expect(deadline?.shape).toBe('date');
+    expect(deadline?.excludeLabels).toContain('early interest');
+  });
+
+  it('drops a spec it cannot match rather than pointing it at nothing', async () => {
+    const { result } = await run(['done'], { opportunity_title: 'Fellowship', input: {} });
+    expect(result.collector.witnessSpecs).toHaveLength(0);
+    // A protected field no sensor can read is the arrangement that published a
+    // listing with no way to apply.
+    expect(result.collector.protectedFields).toHaveLength(0);
+  });
+
+  it('still registers a scraper that will not run, with no invented specs', async () => {
+    const { result } = await run(['done'], null);
+    expect(result.collector.brightDataCollectorId).toBe('c_manufactured1');
+    expect(result.collector.witnessSpecs).toHaveLength(0);
   });
 });
