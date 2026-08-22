@@ -17,18 +17,18 @@ const SYMBOLS = [
 ];
 
 const THEME_COLORS = [
-  { bg: '#86efac', textColor: '#064e3b' }, // Mint green
-  { bg: '#a78bfa', textColor: '#2e1065' }, // Lavender purple
-  { bg: '#fb7185', textColor: '#881337' }, // Rose pink
-  { bg: '#10b981', textColor: '#ffffff' }, // Emerald green
-  { bg: '#3b82f6', textColor: '#ffffff' }, // Cobalt blue
-  { bg: '#b45309', textColor: '#ffffff' }, // Warm ochre
-  { bg: '#1e293b', textColor: '#34d399' }, // Dark slate with emerald text
-  { bg: '#6ee7b7', textColor: '#064e3b' }, // Soft green
-  { bg: '#93c5fd', textColor: '#1e3a8a' }, // Light blue
-  { bg: '#f472b6', textColor: '#831843' }, // Pink
-  { bg: '#fde047', textColor: '#713f12' }, // Soft amber
-  { bg: '#34d399', textColor: '#064e3b' }, // Jade
+  { bg: '#0c0c0a', textColor: '#10b981' }, // Obsidian black with emerald glyph
+  { bg: '#10b981', textColor: '#ffffff' }, // Vibrant emerald green with white glyph
+  { bg: '#064e3b', textColor: '#86efac' }, // Deep forest emerald with mint glyph
+  { bg: '#18181b', textColor: '#34d399' }, // Dark slate with bright green glyph
+  { bg: '#047857', textColor: '#ffffff' }, // Classic emerald with white glyph
+  { bg: '#022c22', textColor: '#10b981' }, // Deep obsidian-green with emerald glyph
+  { bg: '#86efac', textColor: '#064e3b' }, // Bright mint green with deep emerald glyph
+  { bg: '#059669', textColor: '#ffffff' }, // Jade green with white glyph
+  { bg: '#14532d', textColor: '#86efac' }, // Pine green with mint glyph
+  { bg: '#27272a', textColor: '#a7f3d0' }, // Charcoal with soft mint glyph
+  { bg: '#34d399', textColor: '#064e3b' }, // Neon mint with dark green glyph
+  { bg: '#052e16', textColor: '#4ade80' }, // Emerald black with bright lime-green glyph
 ];
 
 // Deterministic pseudorandom generator for stable layout across renders

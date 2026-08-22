@@ -39,6 +39,19 @@ export type ObserveStep =
   | 'reading'
   | 'read'
   | 'skipped'
+  /*
+   * Manufacturing a sensor shares this stream too.
+   *
+   * The steps differ again and the shape does not: something slow happens and
+   * a person watches it. Generation runs to minutes, so the alternative to a
+   * stream is a button that appears to have done nothing for seven of them.
+   */
+  | 'composing'
+  | 'brief'
+  | 'template'
+  | 'generating'
+  | 'generated'
+  | 'registered'
   | 'done'
   | 'error';
 
