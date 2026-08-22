@@ -33,6 +33,8 @@ import {
 } from '../doorway/index.js';
 import { discover, type OpportunityDraft } from '../acquire/index.js';
 import { DiscoveryBudget } from '../acquire/budget.js';
+import { crawl } from '../crawl/crawler.js';
+import { OpportunityIndex } from '../crawl/index-store.js';
 
 /**
  * Ceiling on a candidate replay.
@@ -84,6 +86,24 @@ interface FoundWorld extends DoorwayWorld {
   liveMessage?: string;
 }
 
+/**
+ * Crawl steps, said in the vocabulary the console already speaks.
+ *
+ * The stream is shared with observations and discovery, so a crawl reuses those
+ * names rather than adding a third set for a viewer to learn.
+ */
+const CRAWL_STEPS: Record<string, 'searching' | 'searched' | 'reading' | 'read' | 'done' | 'error'> = {
+  seeding: 'searching',
+  seeded: 'searched',
+  fetching: 'reading',
+  progress: 'read',
+  kept: 'read',
+  harvested: 'read',
+  dropped: 'read',
+  done: 'done',
+  error: 'error',
+};
+
 export interface ApiDeps {
   store: Store;
   client: BrightDataClient;
@@ -120,6 +140,16 @@ export function buildRouter(deps: ApiDeps): Router {
   const discoveries = new Map<string, OpportunityDraft[]>();
   // Finished searches, so a client that missed the stream still gets an answer.
   const finds = new Map<string, FoundWorld>();
+  /*
+   * What every crawl has ever found, kept between requests.
+   *
+   * This is what turns a crawl from a very expensive way to answer one question
+   * into the thing the product is made of. A student's search reads this rather
+   * than the live web, so it returns in milliseconds across everything every
+   * previous crawl reached.
+   */
+  const index = new OpportunityIndex(process.env['DOORWAY_INDEX_FILE']);
+  const crawls = new Map<string, Record<string, unknown>>();
   const { store, client } = deps;
   const witnessDeps = {
     ...(deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown }),
@@ -157,6 +187,8 @@ export function buildRouter(deps: ApiDeps): Router {
       opportunities: '/api/doorway/opportunities',
       opportunityWorld: 'POST /api/doorway/world',
       find: 'POST /api/doorway/find',
+      crawl: 'POST /api/crawl',
+      index: '/api/crawl',
       discover: 'POST /api/doorway/discover',
       discovery: '/api/doorway/discoveries/{id}',
       certificate: '/api/incidents/{id}/certificate',
@@ -852,6 +884,96 @@ export function buildRouter(deps: ApiDeps): Router {
    * be a listing rather than an opportunity. That is a better answer to "why is
    * this taking a minute" than any animation, because it is the reason.
    */
+  /*
+   * Crawl, and keep what is found.
+   *
+   * Admin-gated, unlike the student-facing search. A crawl spends hundreds of
+   * page loads in one go, which is the right amount for an operator filling an
+   * index and far too much to hand an anonymous visitor.
+   *
+   * Returns immediately with somewhere to watch, because a few hundred pages
+   * takes minutes and a request held open that long is one a proxy will cut.
+   */
+  router.post('/api/crawl', async ({ body, request }) => {
+    assertAdmin(request);
+    if (deps.discovery === undefined) {
+      throw new HttpError(503, 'crawling is not configured on this server');
+    }
+
+    const parsed = profileSchema.safeParse((body as { profile?: unknown } | null)?.profile ?? body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new HttpError(400, issue?.message ?? 'invalid student profile');
+    }
+
+    const asNumber = (value: unknown, fallback: number): number =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    const input = (body ?? {}) as Record<string, unknown>;
+
+    const id = randomUUID();
+    broker.start('crawl', parsed.data.interests.join(', '), id);
+    const emit = broker.emitterFor(id);
+
+    void crawl(deps.discovery, parsed.data, {
+      limits: {
+        maxFetches: Math.min(2000, Math.max(10, asNumber(input['maxFetches'], 200))),
+        maxPerHost: Math.min(200, Math.max(1, asNumber(input['maxPerHost'], 30))),
+        maxDepth: Math.min(4, Math.max(0, asNumber(input['maxDepth'], 2))),
+      },
+      concurrency: Math.min(100, Math.max(1, asNumber(input['concurrency'], 60))),
+      onEvent: (event) => {
+        // Per-page chatter is noise at this volume; the milestones carry the
+        // shape of the run.
+        if (event.step === 'kept' || event.step === 'dropped') return;
+        emit({
+          step: CRAWL_STEPS[event.step] ?? 'read',
+          line: event.line,
+          ...(event.detail === undefined ? {} : { detail: event.detail }),
+        });
+      },
+    })
+      .then(async (result) => {
+        const merged = await index.merge(result.drafts);
+        crawls.set(id, {
+          status: 'done',
+          fetched: result.fetched,
+          hosts: result.hosts,
+          harvested: result.harvested,
+          found: result.drafts.length,
+          ...merged,
+        });
+        emit({
+          step: 'done',
+          line: `indexed          ${String(merged.added)} new, ${String(merged.refreshed)} refreshed`,
+          detail: merged,
+        });
+      })
+      .catch((error: unknown) => {
+        emit({
+          step: 'error',
+          line: `failed           ${error instanceof Error ? error.message : String(error)}`,
+        });
+        crawls.set(id, { status: 'failed' });
+      })
+      .finally(() => {
+        broker.finish(id);
+      });
+
+    return { crawlId: id };
+  });
+
+  /** How a crawl went, once it is over. */
+  router.get('/api/crawl/:id', async ({ params }) => {
+    const id = params['id'] ?? '';
+    const done = crawls.get(id);
+    if (done !== undefined) return done;
+    if (broker.has(id)) return { status: 'running' as const };
+    throw new HttpError(404, 'no such crawl');
+  });
+
+  /** What the index holds, which is what a search can answer from. */
+  router.get('/api/crawl', async () => index.stats());
+
   router.post('/api/doorway/find', async ({ body, request }) => {
     const parsed = profileSchema.safeParse(body);
     if (!parsed.success) {
@@ -867,6 +989,22 @@ export function buildRouter(deps: ApiDeps): Router {
     ]);
     const watched = opportunitiesFromSnapshots(snapshots, collectors, incidents);
 
+    /*
+     * Answer out of what is already known, before touching the web.
+     *
+     * This is the whole point of keeping the crawl. A search used to mean a
+     * live search: a minute of waiting, a dozen pages, and results that varied
+     * wildly run to run because a search engine returns different things each
+     * time you ask. Reading the index instead answers in milliseconds, from
+     * everything every previous crawl reached, and the same question gets the
+     * same answer twice.
+     *
+     * The live search does not go away. It becomes the thing that tops the
+     * index up rather than the thing that produces results.
+     */
+    const indexed = await index.search(profile.interests, profile.opportunityTypes, 80);
+    const fromIndex = indexed.map(draftToOpportunity);
+
     const id = randomUUID();
 
     const settle = (world: FoundWorld): void => {
@@ -879,7 +1017,7 @@ export function buildRouter(deps: ApiDeps): Router {
     };
 
     if (deps.discovery === undefined) {
-      settle({ ...buildWorld(profile, watched), live: false, searched: 0 });
+      settle({ ...buildWorld(profile, [...watched, ...fromIndex]), live: false, searched: 0 });
       return { findId: id, live: false };
     }
 
@@ -894,13 +1032,31 @@ export function buildRouter(deps: ApiDeps): Router {
       // Over the cap is not an error. The watched sources are still worth
       // returning, and the world says the live half did not run.
       settle({
-        ...buildWorld(profile, watched),
+        ...buildWorld(profile, [...watched, ...fromIndex]),
         live: false,
         searched: 0,
         ...(decision.reason === null ? {} : { liveMessage: decision.reason }),
       });
       return { findId: id, live: false };
     }
+
+    /*
+     * Answer now, improve later.
+     *
+     * The index result was being held until the live search finished, which
+     * meant a student waited a minute to see records that were already sitting
+     * on disk. Settling immediately makes the answer available on the first
+     * poll, and the live search overwrites it with a fuller one when it lands.
+     *
+     * The world is therefore written twice for one request. That is the point:
+     * the first write is what the crawl already knew, the second is what this
+     * search added to it.
+     */
+    settle({
+      ...buildWorld(profile, [...watched, ...fromIndex]),
+      live: true,
+      searched: 0,
+    });
 
     // The stream is keyed by the same id, so the browser can open it the moment
     // this response lands.
@@ -919,11 +1075,22 @@ export function buildRouter(deps: ApiDeps): Router {
       },
     })
       .then((found) => {
+        // Everything the live search turned up joins the index, so the next
+        // student gets it for free.
+        void index.merge(found.drafts);
         const live = found.drafts.map(draftToOpportunity);
         // Watched first: a record two sensors agreed on outranks one read once,
         // and ordering says so before any badge is read.
+        /*
+         * Index first, then what the live search just added.
+         *
+         * Both are unverified finds and both say so. Ordering matters only in
+         * that a record seen by several crawls has been seen more than once,
+         * which is the closest thing this half of the system has to
+         * corroboration.
+         */
         settle({
-          ...buildWorld(profile, [...watched, ...live]),
+          ...buildWorld(profile, [...watched, ...fromIndex, ...live]),
           live: true,
           searched: found.considered,
         });
@@ -934,11 +1101,11 @@ export function buildRouter(deps: ApiDeps): Router {
           line: `failed           ${error instanceof Error ? error.message : String(error)}`,
         });
         settle({
-          ...buildWorld(profile, watched),
+          ...buildWorld(profile, [...watched, ...fromIndex]),
           live: false,
           searched: 0,
           liveMessage:
-            'The live search could not be completed, so this shows only the sources we watch continuously.',
+            'The live search could not be completed, so this shows what was already known rather than nothing.',
         });
       })
       .finally(() => {
