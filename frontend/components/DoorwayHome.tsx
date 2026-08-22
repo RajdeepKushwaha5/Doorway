@@ -113,22 +113,58 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
             </div>
           </div>
 
-          <div className="doorway-form-stage relative flex min-w-0 items-center justify-center overflow-hidden p-6 sm:p-10 lg:p-12">
+          <div className="doorway-form-stage relative flex min-w-0 flex-col items-center justify-center overflow-hidden p-6 sm:p-10 lg:p-12">
+            <div aria-hidden="true" className="doorway-form-grid" />
             <div aria-hidden="true" className="doorway-form-dots" />
-            <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-coral" />
-            <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-emerald" />
+            <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-primary" />
+            <div aria-hidden="true" className="doorway-form-glow doorway-form-glow-secondary" />
             <div aria-hidden="true" className="doorway-form-arc doorway-form-arc-one" />
             <div aria-hidden="true" className="doorway-form-arc doorway-form-arc-two" />
+
+            {/* Ambient Floating Orbit Sensors */}
+            <div className="pointer-events-none absolute top-7 right-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/90 px-3 py-1 font-mono text-[10px] text-emerald-800 shadow-sm backdrop-blur-sm animate-float-slow">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Sensor 2 · Web Unlocker Witness</span>
+            </div>
+            <div className="pointer-events-none absolute top-14 left-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-3 py-1 font-mono text-[10px] text-gray-700 shadow-sm backdrop-blur-sm animate-float-reverse">
+              <span className="h-1.5 w-1.5 rounded-full bg-black" />
+              <span>Sensor 1 · Scraper Studio Stream</span>
+            </div>
+
+            {/* Top Telemetry & Sensor Radar Ribbon */}
+            <div className="relative z-10 mb-3.5 w-full max-w-[620px]">
+              <div className="flex items-center justify-between gap-2 rounded-md border border-black/10 bg-white/85 px-3.5 py-2 backdrop-blur-md shadow-sm font-mono text-[11px]">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  <span className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-gray-800 font-bold">
+                    Opportunity Radar
+                  </span>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 overflow-hidden text-[10.5px] text-gray-500">
+                  <span className="h-1 w-1 rounded-full bg-gray-300" />
+                  <span className="truncate">Active web crawlers &amp; extractors</span>
+                  <span className="h-1 w-1 rounded-full bg-gray-300" />
+                  <span className="text-emerald-700 font-semibold">100% Evidence Gated</span>
+                </div>
+                <div className="flex items-center gap-1 font-neuebit text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-500/30 px-2 py-0.5 rounded font-bold shrink-0">
+                  Live Feed
+                </div>
+              </div>
+            </div>
+
             <div className="doorway-builder-card relative z-10 min-w-0 w-full max-w-[620px] border border-black bg-white">
-              <div className="flex items-center justify-between gap-3 border-b border-black px-4 py-3 font-neuebit text-[11px] uppercase tracking-[0.15em] sm:px-5">
+              <div className="flex items-center justify-between gap-3 border-b border-black px-4 py-3 font-neuebit text-[11px] uppercase tracking-[0.15em] sm:px-5 bg-white">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 bg-[#f06449]" />
-                  <span className="truncate">Build my opportunity world</span>
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                  <span className="truncate font-bold text-gray-900">Build my opportunity world</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5 font-bold text-emerald-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="sm:hidden">Bright Data</span>
-                  <span className="hidden sm:inline">Bright Data pipeline</span>
+                  <span className="hidden sm:inline">Bright Data live</span>
                 </span>
               </div>
               <div className="space-y-6 p-5 sm:p-7">

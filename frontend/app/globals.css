@@ -287,7 +287,8 @@
 
 .doorway-form-stage {
   isolation: isolate;
-  background: #f7f4ee;
+  background: #fafaf8;
+  position: relative;
 }
 
 .doorway-form-stage::before {
@@ -296,48 +297,61 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), transparent 42%),
-    linear-gradient(315deg, rgba(255, 255, 255, 0.55), transparent 38%);
+    radial-gradient(ellipse at 85% 15%, rgba(16, 185, 129, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 15% 85%, rgba(12, 12, 10, 0.04) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
+}
+
+.doorway-form-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(12, 12, 10, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(12, 12, 10, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse at center, black 45%, transparent 85%);
+  opacity: 0.85;
 }
 
 .doorway-form-dots {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: radial-gradient(circle, rgba(12, 12, 10, 0.32) 0.75px, transparent 0.9px);
-  background-size: 14px 14px;
-  opacity: 0.36;
-  mask-image: radial-gradient(ellipse at center, transparent 18%, black 62%, transparent 100%);
+  background-image: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0.8px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: 0.45;
+  mask-image: radial-gradient(ellipse at center, black 35%, transparent 75%);
 }
 
 .doorway-form-glow {
   position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+}
+
+.doorway-form-glow-primary {
+  top: -6rem;
+  right: -5rem;
+  width: 24rem;
+  height: 24rem;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 50%, transparent 70%);
+  animation: doorway-drift 10s ease-in-out infinite alternate;
+}
+
+.doorway-form-glow-secondary {
+  bottom: -8rem;
+  left: -6rem;
   width: 22rem;
   height: 22rem;
-  border-radius: 50%;
-  filter: blur(58px);
-  opacity: 0.42;
-  pointer-events: none;
-  animation: doorway-drift 9s ease-in-out infinite alternate;
-}
-
-.doorway-form-glow-coral {
-  top: -8rem;
-  right: -6rem;
-  background: rgba(240, 100, 73, 0.44);
-}
-
-.doorway-form-glow-emerald {
-  bottom: -10rem;
-  left: -7rem;
-  background: rgba(16, 185, 129, 0.3);
-  animation-delay: -4s;
-  animation-direction: alternate-reverse;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 65%);
+  animation: doorway-drift 12s ease-in-out infinite alternate-reverse;
 }
 
 .doorway-form-arc {
   position: absolute;
-  border: 1px solid rgba(12, 12, 10, 0.12);
+  border: 1px dashed rgba(12, 12, 10, 0.12);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -349,45 +363,53 @@
   right: 11%;
   width: 8px;
   height: 8px;
-  background: #f06449;
+  background: #10b981;
   border-radius: 50%;
-  box-shadow: 0 0 0 5px rgba(240, 100, 73, 0.12);
+  box-shadow:
+    0 0 10px rgba(16, 185, 129, 0.8),
+    0 0 0 4px rgba(16, 185, 129, 0.18);
+  animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .doorway-form-arc-one {
-  width: 35rem;
-  height: 35rem;
-  transform: translate(-39%, -31%);
+  width: 38rem;
+  height: 38rem;
+  transform: translate(-35%, -28%);
 }
 
 .doorway-form-arc-two {
-  width: 47rem;
-  height: 47rem;
-  transform: translate(34%, 38%);
-  border-color: rgba(16, 185, 129, 0.15);
+  width: 50rem;
+  height: 50rem;
+  transform: translate(32%, 35%);
+  border: 1px solid rgba(16, 185, 129, 0.18);
 }
 
 .doorway-form-arc-two::after {
   top: auto;
   right: auto;
-  bottom: 19%;
-  left: 10%;
+  bottom: 21%;
+  left: 12%;
   background: #10b981;
-  box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.12);
+  box-shadow:
+    0 0 10px rgba(16, 185, 129, 0.8),
+    0 0 0 4px rgba(16, 185, 129, 0.18);
 }
 
 .doorway-builder-card {
+  background: #ffffff;
   box-shadow:
     14px 14px 0 #0c0c0a,
-    0 30px 80px rgba(12, 12, 10, 0.15);
-  transition: transform 300ms ease, box-shadow 300ms ease;
+    0 24px 60px -15px rgba(16, 185, 129, 0.12),
+    0 10px 30px -10px rgba(12, 12, 10, 0.08);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .doorway-builder-card:focus-within {
   transform: translateY(-3px);
   box-shadow:
-    14px 17px 0 #0c0c0a,
-    0 36px 90px rgba(12, 12, 10, 0.18);
+    16px 16px 0 #0c0c0a,
+    0 30px 70px -15px rgba(16, 185, 129, 0.2),
+    0 15px 35px -10px rgba(12, 12, 10, 0.12);
 }
 
 .doorway-input {
@@ -473,8 +495,28 @@
   to { transform: translate3d(1.25rem, 0.75rem, 0) scale(1.04); }
 }
 
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(5px); }
+}
+
+.animate-float-slow {
+  animation: float-slow 5s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: float-reverse 6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .doorway-form-glow { animation: none; }
+  .doorway-form-glow,
+  .animate-float-slow,
+  .animate-float-reverse { animation: none; }
   .doorway-building { animation: none; opacity: 1; transform: none; }
 }
 
