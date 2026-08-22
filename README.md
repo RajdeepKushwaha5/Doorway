@@ -26,35 +26,54 @@ NOTICE is the incident-to-verified-repair layer for Bright Data Scraper Studio. 
 
 ## For judges
 
-The shortest product walkthrough takes about two minutes.
-
-1. Describe a student profile on the home page. Doorway turns verified Scraper Studio rows into
-   an isometric world and ranks every visible opportunity with an explainable score.
-2. Open an opportunity. Its source, deadline, funding, eligibility and verification method remain
-   visible beside the application link.
-3. Open the Trust Engine at `/engine`. The controlled fixture demonstrates the failure that
-   ordinary schema checks miss: a plausible field can be structurally valid and semantically wrong.
-4. Run the collector. Scraper Studio supplies the structured row, Web Unlocker supplies an
-   independent selector-free reading, and NOTICE either records a genuine source change or
-   quarantines the broken field.
-5. Trigger Self-Healing. The proposed template is replayed against the incident and the regression
-   corpus before Doorway allows the opportunity back into the public world.
-
-Mutating routes require `NOTICE_ADMIN_TOKEN`. The controlled source identifies itself as a fixture
-on the page and in every seeded opportunity; it is never presented as a real institution.
-
-From a clone, with no Bright Data account and no credentials:
+Nothing below needs a Bright Data account. The first two run offline.
 
 ```bash
-npm install && npm test          # 342 tests, no network
+npm install && npm test      # 613 tests, no network, no credentials
+npm run blindspot:proof      # replays the blind spot this system was built around
 ```
 
-With an API key, to reproduce the claims in this README:
+`blindspot:proof` reproduces, with no network call, the failure that shaped the
+design: a page whose apply button was removed, a collector that kept reporting
+the old URL, and every sensor agreeing because none of them was watching that
+field. It prints the run before the fix and after it, side by side.
+
+**The two minute walkthrough, on the deployed site:**
+
+1. **`/proof`** hands you the fault switch. Four faults, each stating the
+   verdict a correct system should reach *before* you run it, so the
+   demonstration can fail in front of you. Break the page, run the collector,
+   and watch what a student is served while the source is wrong.
+2. **`/engine`** has the Foundry. Paste any public funding page and watch a
+   Scraper Studio collector be built for it: the page is read first, the agent
+   names the dates it found and says which one it refuses to use, and only then
+   is the brief written. Roughly two minutes.
+3. **The home page** turns verified rows into a personalised world. Open any
+   opportunity and build its application plan, which is where a verified fact
+   becomes something to act on and where a source change visibly rewrites what
+   a student has to do.
+4. **`/verify`** re-derives an evidence certificate in your own browser with no
+   network call, because a verifier that asks our server whether our document is
+   valid proves nothing.
+
+**What to look for, in one sentence each:**
+
+| | |
+|---|---|
+| The scraper designed in Scraper Studio | Every collector page shows the field contract behind it: what each field means, which labels are refused, and why a field is protected |
+| Driven from a coding agent | The Foundry composes the brief from the page and names the label it will not take the date from, which is the difference between the right date and a date |
+| What it did when the site changed | Six verdicts, not one. It distinguishes a source that changed from an extractor that broke, and refuses to repair a collector that was right |
+| What the output powered | An application plan that gets harder when a source adds a requirement, and that never loses a requirement because an extractor drifted |
+
+Mutating routes require `NOTICE_ADMIN_TOKEN`. The controlled fixture identifies
+itself as a fixture on the page and in every record it produces; it is never
+presented as a real institution.
+
+With an API key, to reproduce the live claims:
 
 ```bash
-npm run blindspot -- c_msvllpds1n1dcoz8qx   # every conventional check passes a wrong row
-npm run benchmark                            # the Drift Discrimination Score table
-npm run demo:reset                           # put the fixture and the fleet back
+npm run benchmark            # the Drift Discrimination Score table
+npm run demo:reset           # put the fixture and the fleet back
 ```
 
 ---
@@ -89,7 +108,7 @@ committed in [`docs/evidence/`](docs/evidence/) rather than retyped here.
 
 ### 1. Every safeguard you already have passes a wrong row
 
-`npm run blindspot -- c_msvllpds1n1dcoz8qx` triggers the real Scraper Studio
+`npm run blindspot -- c_mt36mo6tj37dmjgqh` triggers the real Scraper Studio
 collector, reads the row back from `/dca/dataset`, and runs nine genuine checks
 against it — a real Zod schema, a range check with a lower bound, type, null,
 presence, retry. Verbatim from
@@ -381,19 +400,39 @@ else exists to decide whether to trust what it returns.
 
 ### The scrapers were built from a sentence, through the CLI
 
-Both collectors were created from a coding agent's terminal, not by hand:
+Every collector was created from a coding agent's terminal, not by hand:
 
 ```bash
-npx -p @brightdata/cli bdata scraper create   "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"   "Extract the book title, the price excluding tax as a number, and the availability text"
+npx -p @brightdata/cli bdata scraper create   "https://doorway-lab.onrender.com/opportunity/ai-fellowship"   "Extract the opportunity title, the provider, the funding level, and the date
+   applications close. Take the closing date from the label 'Application
+   deadline'. Never take it from 'Early interest deadline'. Also extract the URL
+   of the apply link."
 ```
 
-Bright Data's AI pipeline runs eight stages and returns a collector id. Elapsed
-time was about three minutes.
+The refusal is the half that matters. A brief naming only the field to extract
+produces a scraper that takes the first plausible date in the DOM, which on a
+funding page is routinely the wrong one by seventeen days.
+
+Bright Data's AI pipeline runs through `user_intent_analyzer`,
+`output_schema_generator`, `code_generator`, `preview_runner` and
+`collector_mainatiner`, then returns a collector id. Measured elapsed time on
+this page: **97 and 116 seconds** across two runs. Bright Data's own
+documentation allows up to twenty five minutes for a complex site, so anything
+built on this has to be a job with a stream rather than a request that waits.
+
+Doorway does this itself, at runtime, from the Foundry on `/engine`. It reads
+the page through Web Unlocker first and composes the brief from what is
+actually there, because a scraper built from a guess about a URL is a scraper
+nobody can defend.
 
 | Collector | Target | Fields |
 |---|---|---|
-| `c_msvllpds1n1dcoz8qx` | DriftMart, the controlled fixture | `product_name`, `price`, `availability` |
-| `c_msvk2zahnc2mizts6` | `books.toscrape.com`, a site we do not control | `book_title`, `price_excl_tax`, `availability` |
+| `c_mt36mo6tj37dmjgqh` | Doorway Lab, the controlled fixture | `title`, `deadline_raw`, `funding_level`, `application_url` |
+| `c_mt3uuz5c3gmgatqsn` | `cprgindia.org`, a site we do not control | `title`, `deadline_raw`, `funding_level` |
+| `c_mt3s9p6m112ldkx8mh` | `research.adobe.com`, a site we do not control | `title`, `deadline_raw`, `funding_coverage` |
+| `c_mt44fc4f2loq3t8phs` | `latrobe.edu.au`, a site we do not control | `title`, `deadline_raw` |
+| `c_mt44l71t10f3gdtrs7` | `wemakedevs.org`, a site we do not control | `title`, `deadline_raw` |
+| `c_mt44nnhx3cd5t6wy1` | `devpost.com`, a site we do not control | `title`, `deadline_raw` |
 
 Neither is from the Scrapers Library. Real output from both is in
 [examples/](examples/).
@@ -581,7 +620,7 @@ by being registered.
 - uses: RajdeepKushwaha5/Doorway/actions/verify@main
   with:
     api-base: https://doorway-api-4ftn.onrender.com
-    collector: c_msvk2zahnc2mizts6
+    collector: c_mt3uuz5c3gmgatqsn
 ```
 
 A pipeline already refuses to ship on a failing test or a type error. It will
@@ -727,7 +766,7 @@ During the run recorded in [`examples/`](examples/), the account dashboard showe
 You do not have to take that on trust. One command reproduces it end to end:
 
 ```bash
-npm run blindspot -- c_msvllpds1n1dcoz8qx
+npm run blindspot -- c_mt36mo6tj37dmjgqh
 ```
 
 It switches the fixture to a drifted layout, triggers the real Scraper Studio collector, reads the row back, and runs every check a careful team would already have written against it:
@@ -880,7 +919,7 @@ policy_20140 Residential Failed (bad_endpoint): Requested site is not available
 for immediate residential (no KYC) access mode in accordance with robots.txt.
 ```
 
-Recorded because it is worth knowing before you plan a target list, and because it is the platform behaving well rather than badly: the refusal is explicit, it cites `robots.txt`, and it points at the form that lifts it. Bright Data's own product marketer described the same policy in the launch webinar — *"we purposefully block by default... we want to understand what is the purpose and then enable it to your account."* We did not pursue it, so the fleet stays on `books.toscrape.com` and a fixture we own.
+Recorded because it is worth knowing before you plan a target list, and because it is the platform behaving well rather than badly: the refusal is explicit, it cites `robots.txt`, and it points at the form that lifts it. Bright Data's own product marketer described the same policy in the launch webinar — *"we purposefully block by default... we want to understand what is the purpose and then enable it to your account."* We did not pursue it, so the fleet stays on long-tail funding pages that permit it and a fixture we own.
 
 **8. An empty result is a completed run, not a pending one.** Bright Data's own Python boilerplate treats a non-empty array as the completion signal, so a legitimate zero-row result reads as "still building" and times out.
 
@@ -909,7 +948,7 @@ interface.
 
 **The worker's own orchestration has no dedicated tests.** Ticking, job
 claiming, scheduling and automatic promotion are exercised incidentally by the
-pipeline suites rather than directly. The 331 tests cover detection,
+pipeline suites rather than directly. The  tests cover detection,
 classification, gating and the API well; they cover worker restart mid-repair
 and duplicate job claims not at all.
 
@@ -1008,7 +1047,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      # 342 tests, no network required
+npm test                      #  tests, no network required
 npm run seed                  # repeat-safe local Doorway world and NOTICE incident
 npm run dev                   # API :4000, dashboard :3000, controlled source :3002
 
@@ -1073,7 +1112,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 342 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it:  tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 
