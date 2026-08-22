@@ -440,3 +440,116 @@ describe('titles carrying markdown', () => {
     expect(titleFrom('# **Oxford Fellowship**\n\nbody', 'x')).toBe('Oxford Fellowship');
   });
 });
+
+/**
+ * A scholarship and a hackathon have nothing in common as search problems.
+ *
+ * Searching for hackathons asked for a "fully funded hackathon" restricted to
+ * .gov.in and .edu. Hackathons are free to enter, pay in prizes, and are
+ * published on Devpost and Devfolio rather than by ministries, so the search
+ * returned almost nothing and a student saw two results.
+ */
+describe('searching for hackathons', () => {
+  const profile: DoorwayProfile = {
+    country: 'India',
+    educationLevel: 'Undergraduate',
+    interests: ['artificial intelligence'],
+    skills: [],
+    opportunityTypes: ['hackathon'],
+    fundingRequirement: 'full',
+    locations: [],
+  };
+
+  const queries = buildQueries(profile);
+
+  it('never asks for a funded hackathon', () => {
+    expect(queries.every((q) => !/fully funded|funded/i.test(q.text))).toBe(true);
+  });
+
+  it('looks where hackathons are actually published', () => {
+    const primary = queries.find((q) => q.officialOnly);
+    expect(primary?.text).toContain('devpost.com');
+    expect(primary?.text).toContain('devfolio.co');
+    expect(primary?.text).not.toContain('.gov.in');
+  });
+
+  it('asks for the ones still ahead', () => {
+    expect(queries.some((q) => /upcoming/i.test(q.text))).toBe(true);
+  });
+
+  it('still asks for funding on the types where money is the point', () => {
+    const scholarships = buildQueries({ ...profile, opportunityTypes: ['scholarship'] });
+    expect(scholarships.some((q) => /fully funded/i.test(q.text))).toBe(true);
+    expect(scholarships.find((q) => q.officialOnly)?.text).toContain('.gov.in');
+  });
+
+  /*
+   * A platform's index lists hundreds; the listing one directory deeper is the
+   * thing a student enters.
+   */
+  it('tells a platform index apart from a listing on it', () => {
+    expect(looksLikeIndex('Hackathons', '', 'https://devpost.com/hackathons')).toBe(true);
+    expect(looksLikeIndex('Hackathons', '', 'https://unstop.com/hackathons/')).toBe(true);
+    expect(looksLikeIndex('AI Agents Hackathon', '', 'https://devpost.com/ai-agents-2026')).toBe(
+      false,
+    );
+  });
+});
+
+describe('platform shelves versus what is on them', () => {
+  /*
+   * devpost.com/c/artificial-intelligence came back titled "The home for AI
+   * hackathons" with a marketing line as its provider. It is the shelf.
+   */
+  it('drops category pages', () => {
+    expect(looksLikeIndex('The home for AI hackathons', '', 'https://devpost.com/c/artificial-intelligence')).toBe(true);
+    expect(looksLikeIndex('x', '', 'https://unstop.com/tag/ai')).toBe(true);
+  });
+
+  /*
+   * Five hackathons on Devpost are five hackathons, not one site's opinion of
+   * one. Capping primary sources at two was why a search opened four pages.
+   */
+  it('lets a primary source contribute more than an aggregator', () => {
+    const platform = Array.from({ length: 6 }, (_, i) => ({
+      url: `https://devpost.com/h${String(i)}`,
+      host: 'devpost.com',
+      official: true,
+      title: 't',
+      description: 'd',
+      query: 'q',
+    }));
+    const blog = Array.from({ length: 6 }, (_, i) => ({
+      url: `https://blog.test/${String(i)}`,
+      host: 'blog.test',
+      official: false,
+      title: 't',
+      description: 'd',
+      query: 'q',
+    }));
+
+    const merged = mergeResults([platform, blog], { perHost: 2, perPrimaryHost: 5, limit: 20 });
+    expect(merged.filter((r) => r.host === 'devpost.com')).toHaveLength(5);
+    expect(merged.filter((r) => r.host === 'blog.test')).toHaveLength(2);
+  });
+});
+
+describe('hackathon titles from live runs', () => {
+  it('drops a section prefix and a trailing colon', () => {
+    expect(titleFrom('# About ET AI Hackathon 2026\n\nbody', 'x')).toBe('ET AI Hackathon 2026');
+    expect(titleFrom('# Smart Horizon:\n\nbody', 'x')).toBe('Smart Horizon');
+  });
+});
+
+describe('money a hackathon actually offers', () => {
+  /*
+   * Hackathons pay in prizes. Every one of them reported "not stated" while the
+   * page announced a prize pool in its heading.
+   */
+  it('reads a prize pool as the money on offer', () => {
+    expect(scanForFunding('Silver Jubilee Celebrations Prize Pool: INR 23,75,000')).toContain(
+      '23,75,000',
+    );
+    expect(scanForFunding('Over $10,000 in prizes await the winners')).toContain('10,000');
+  });
+});

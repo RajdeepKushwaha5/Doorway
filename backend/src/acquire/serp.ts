@@ -155,9 +155,19 @@ export async function search(
  */
 export function mergeResults(
   batches: readonly SerpResult[][],
-  options: { perHost?: number; limit?: number } = {},
+  options: { perHost?: number; perPrimaryHost?: number; limit?: number } = {},
 ): SerpResult[] {
   const perHost = options.perHost ?? 2;
+  /*
+   * A platform may contribute more than an aggregator.
+   *
+   * The per-host cap exists so one site with good search presence cannot make a
+   * student's results into its own opinion. That reasoning does not apply to
+   * the places where a type is actually published: five hackathons on Devpost
+   * are five different hackathons, not one site's take on the same one, and
+   * capping them at two was why a search for hackathons opened four pages.
+   */
+  const perPrimaryHost = options.perPrimaryHost ?? 5;
   const limit = options.limit ?? 12;
 
   const seen = new Set<string>();
@@ -195,7 +205,7 @@ export function mergeResults(
   const take = (result: SerpResult): boolean => {
     if (seen.has(result.url)) return false;
     const used = byHost.get(result.host) ?? 0;
-    if (used >= perHost) return false;
+    if (used >= (result.official ? perPrimaryHost : perHost)) return false;
 
     seen.add(result.url);
     byHost.set(result.host, used + 1);

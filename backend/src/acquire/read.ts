@@ -12,6 +12,7 @@ import {
   scanForFunding,
   saysClosed,
 } from './plausible.js';
+import { deadlineHasPassed } from './dates.js';
 
 /**
  * Read one discovered page and try to make an opportunity out of it.
@@ -170,6 +171,27 @@ export function looksLikeIndex(title: string, markdown: string, url = ''): boole
     return true;
   }
 
+  /*
+   * A platform's index of hackathons is not a hackathon.
+   *
+   * devpost.com/hackathons and unstop.com/hackathons list hundreds; the
+   * individual listing one directory deeper is the thing a student enters.
+   * These platforms are primary sources, so they are searched deliberately, and
+   * their front doors have to be told apart from their rooms.
+   */
+  if (/\/(?:hackathons|opportunities|competitions|challenges|events|jobs)\/?$/.test(slug)) {
+    return true;
+  }
+
+  /*
+   * A category is not an event either.
+   *
+   * devpost.com/c/artificial-intelligence came back titled "The home for AI
+   * hackathons" with a marketing line as its provider. It is the shelf, not
+   * anything on it.
+   */
+  if (/\/(?:c|category|categories|tag|tags|topics?|browse|search)\//.test(slug)) return true;
+
   const lower = title.toLowerCase();
   if (INDEX_HINTS.some((hint) => lower.includes(hint))) return true;
   if (INDEX_SHAPES.some((shape) => shape.test(title))) return true;
@@ -232,6 +254,11 @@ function tidyTitle(value: string): string {
     // machinery.
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/[*_`]/g, '')
+    // "About ET AI Hackathon 2026" is a section heading wearing the name. The
+    // name is the part after it.
+    .replace(/^(?:about|welcome to|introducing)\s+/i, '')
+    // "Smart Horizon:" is a title whose subtitle was on the next line.
+    .replace(/\s*[:;,]\s*$/, '')
     .replace(/\s*\.{2,}\s*$/, '')
     .replace(/\s*[|–—-]\s*$/, '')
     .trim();
@@ -395,6 +422,18 @@ export async function readCandidate(
 
   // Rejected values are missing values, and the draft must say so rather than
   // reporting the field as found because a label matched.
+  /*
+   * A date in the past is a shut door, whether or not the page says so.
+   *
+   * A live search returned "AI Hackathon in India" with a deadline of 7
+   * November 2025 and served it as something to apply to, nine months after it
+   * ended. Detecting the words "applications are closed" catches the pages that
+   * bother to say it; most simply publish a date, leave the page up forever,
+   * and leave the reader to do the subtraction. That subtraction is exactly
+   * what software should be doing on their behalf.
+   */
+  if (deadlineHasPassed(deadlineRaw)) return null;
+
   const resolved: Record<string, string | null> = {
     deadline_raw: deadlineRaw,
     funding_level: fundingLevel,
@@ -423,7 +462,12 @@ export async function readCandidate(
    * badly laid out.
    */
   const namesAnOpportunity =
-    /\b(fellowship|scholarship|internship|grant|programme|program|bursary|award)\b/i.test(title);
+    // Hackathons were missing from this list entirely, so every one of them
+    // failed the test for being an opportunity at all. A page called
+    // "Innovation Challenge 2026" matched none of these words and was dropped.
+    /\b(fellowship|scholarship|internship|grant|programme|program|bursary|award|hackathon|challenge|competition|datathon|ideathon)\b/i.test(
+      title,
+    );
   const offersAWayIn = /\[[^\]]*\b(apply|application|register|submit)\b[^\]]*\]\(/i.test(markdown);
 
   if (deadlineRaw === null && fundingLevel === null && !(namesAnOpportunity && offersAWayIn)) {

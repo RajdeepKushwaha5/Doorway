@@ -104,7 +104,7 @@ export function plausibleDeadline(raw: string): string | null {
 }
 
 /** Currency markers that appear on funding pages, symbol or code. */
-const MONEY = /(?:₹|\$|£|€|¥)\s?[\d,.]+|\b(?:INR|USD|GBP|EUR|CAD|AUD|SGD)\b\s?[\d,.]*|\b\d[\d,.]*\s?(?:lakh|lakhs|crore|per month|per annum|pa|p\.a\.|monthly|stipend)\b/i;
+const MONEY = /(?:₹|\$|£|€|¥)\s?[\d,.]+|\b(?:INR|USD|GBP|EUR|CAD|AUD|SGD)\b\s?[\d,.]*|\b\d[\d,.]*\s?(?:lakh|lakhs|crore|per month|per annum|pa|p\.a\.|monthly|stipend|in prizes|in prize money)\b/i;
 
 /** Phrases that state coverage without naming a number. */
 const COVERAGE =
@@ -217,7 +217,11 @@ export function scanForDeadline(markdown: string): string | null {
 }
 
 const FUNDING_WORDS =
-  /\b(stipend|scholarship|fellowship|grant|award|funding|funded|tuition|allowance|honorarium|bursary)\b/i;
+  // A hackathon pays in prizes, which answers the same question a student is
+  // asking and uses a different word entirely. Leaving it out meant every
+  // hackathon reported its money as "not stated" while the page announced a
+  // prize pool in the heading.
+  /\b(stipend|scholarship|fellowship|grant|award|funding|funded|tuition|allowance|honorarium|bursary|prizes?|winnings)\b/i;
 
 /**
  * Find a statement about money anywhere on the page.

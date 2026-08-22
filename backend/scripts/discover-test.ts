@@ -16,7 +16,7 @@ const PROFILE: DoorwayProfile = {
   educationLevel: 'Undergraduate',
   interests: ['artificial intelligence'],
   skills: [],
-  opportunityTypes: ['scholarship', 'fellowship', 'internship', 'research-program'],
+  opportunityTypes: ['hackathon'],
   fundingRequirement: 'full',
   locations: [],
 };
