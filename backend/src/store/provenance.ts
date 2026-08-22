@@ -32,8 +32,25 @@ export const collectorProvenanceSchema = z.object({
    *
    * Capped at the same 500 characters the CLI accepts, so what is stored is
    * what was actually sent rather than a tidied version of it.
+   *
+   * Optional, because the collectors built before any of this existed had
+   * their briefs typed into a terminal and never kept, and Bright Data does
+   * not expose them for reading back. A record can therefore describe what a
+   * collector watches and why without claiming a sentence nobody has. Writing
+   * a plausible one after the fact would be manufacturing exactly the kind of
+   * confident, unverified claim this project exists to catch.
    */
-  description: z.string().min(1).max(500),
+  description: z.string().min(1).max(500).optional(),
+
+  /**
+   * Whether this was assembled after the fact rather than recorded at the time.
+   *
+   * A reconstruction is real evidence and is not the same evidence. It says
+   * what the page shows now and what the collector is configured to protect;
+   * it cannot say what its author was thinking. Marked so a reader can tell
+   * the two apart without having to infer it from a missing field.
+   */
+  reconstructed: z.boolean().optional(),
 
   /**
    * What the agent saw that led to those choices.

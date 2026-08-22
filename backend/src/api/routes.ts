@@ -36,6 +36,7 @@ import {
   type DoorwayWorld,
 } from '../doorway/index.js';
 import { discover, type OpportunityDraft } from '../acquire/index.js';
+import { composeBrief } from '../acquire/compose.js';
 import { manufactureCollector } from '../pipeline/manufacture.js';
 import { DiscoveryBudget } from '../acquire/budget.js';
 import { crawl } from '../crawl/crawler.js';
@@ -1129,6 +1130,60 @@ export function buildRouter(deps: ApiDeps): Router {
    * real account, and a public route that manufactures scrapers on demand ends
    * exactly one way.
    */
+  /*
+   * Reconstruct how an existing collector reads its page.
+   *
+   * The collectors built before provenance was kept had their briefs typed
+   * into a terminal, and Bright Data does not expose them for reading back, so
+   * the original sentence is gone. Inventing a plausible one would be
+   * manufacturing the exact kind of confident, unverified claim this project
+   * exists to catch.
+   *
+   * What can honestly be recorded is what the page shows now and what the
+   * collector is configured to protect. That is real evidence, it is checkable
+   * against the page, and it is not the same as knowing what its author meant,
+   * so it is stored marked as a reconstruction with no brief attached.
+   */
+  router.post('/api/collectors/:id/provenance/reconstruct', async ({ params, request }) => {
+    assertAdmin(request);
+    const collector = await requireCollector(store, params['id']);
+
+    if (deps.fetchMarkdown === undefined) {
+      throw new HttpError(503, 'no Web Unlocker is configured, so the page cannot be read');
+    }
+    const url = collector.watchUrls[0];
+    if (url === undefined) {
+      throw new HttpError(400, 'this collector watches no URL, so there is no page to read');
+    }
+
+    const { markdown } = await deps.fetchMarkdown(url);
+    const brief = composeBrief(markdown, url);
+
+    /*
+     * Reasons are kept only for fields this collector actually protects.
+     * Explaining the protection of something it does not protect would
+     * describe a different collector.
+     */
+    const protectedBecause: Record<string, string> = {};
+    for (const [field, reason] of Object.entries(brief.protectedBecause)) {
+      if (collector.protectedFields.includes(field)) protectedBecause[field] = reason;
+    }
+
+    const updated: CollectorRecord = {
+      ...collector,
+      provenance: {
+        sourceUrl: url,
+        reconstructed: true,
+        observations: brief.observations,
+        protectedBecause,
+        createdBy: 'operator',
+        createdAt: collector.createdAt,
+      },
+    };
+    await store.saveCollector(updated);
+    return updated;
+  });
+
   router.post('/api/collectors/manufacture', async ({ body, request }) => {
     assertAdmin(request);
 

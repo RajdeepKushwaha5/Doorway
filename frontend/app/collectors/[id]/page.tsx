@@ -133,19 +133,45 @@ export default async function CollectorPage({ params }: { params: Promise<{ id: 
           </p>
         ) : (
           <div className="space-y-4 border border-muted/30 p-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted">
-                The brief given to Scraper Studio
+            {/*
+              * A reconstruction says so, in the place the brief would be.
+              *
+              * These collectors were built before any of this was kept, and
+              * Bright Data does not expose the original sentence for reading
+              * back. What follows is what the page shows now and what this
+              * collector protects, which is real and checkable and is not the
+              * same as knowing what its author meant.
+              */}
+            {collector.provenance.description === undefined ? (
+              <div className="border-l-2 border-muted/40 pl-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted">
+                  Reconstructed, not recorded
+                </div>
+                <p className="mt-1 font-mono text-xs leading-relaxed text-muted">
+                  This collector predates provenance being kept, and the brief it was built from
+                  was not stored. Nothing here guesses at it. What follows was read from the page
+                  and from what this collector is configured to protect.
+                </p>
               </div>
-              <p className="mt-1 font-mono text-xs leading-relaxed">
-                {collector.provenance.description}
-              </p>
-            </div>
+            ) : (
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted">
+                  {collector.provenance.reconstructed === true
+                    ? 'Brief, reconstructed after the fact'
+                    : 'The brief given to Scraper Studio'}
+                </div>
+                <p className="mt-1 font-mono text-xs leading-relaxed">
+                  {collector.provenance.description}
+                </p>
+              </div>
+            )}
 
             {collector.provenance.observations.length > 0 ? (
               <div>
                 <div className="text-[11px] uppercase tracking-wide text-muted">
-                  What the agent saw before choosing
+                  {collector.provenance.reconstructed === true
+                    ? 'What the page shows now'
+                    : 'What the agent saw before choosing'}
                 </div>
                 <ul className="mt-1 space-y-0.5 font-mono text-xs leading-relaxed text-muted">
                   {collector.provenance.observations.map((line) => (

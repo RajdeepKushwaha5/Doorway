@@ -906,3 +906,58 @@ describe('manufacturing a collector over HTTP', () => {
     expect(((await response.json()) as { error: string }).error).toContain('Web Unlocker');
   });
 });
+
+describe('reconstructing provenance for an older collector', () => {
+  /*
+   * The briefs for collectors built before any of this existed were typed into
+   * a terminal and never kept, and Bright Data does not expose them for
+   * reading back. Inventing a plausible one would be manufacturing the exact
+   * confident, unverified claim this project exists to catch.
+   */
+  it('refuses an anonymous caller', async () => {
+    const response = await fetch(`${base}/api/collectors/anything/provenance/reconstruct`, {
+      method: 'POST',
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('is 404 for a collector that does not exist', async () => {
+    const response = await fetch(`${base}/api/collectors/nope/provenance/reconstruct`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}` },
+    });
+    expect(response.status).toBe(404);
+  });
+
+  it('says so when there is no Web Unlocker to read the page with', async () => {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brightDataCollectorId: 'c_recon1',
+        name: 'Older collector',
+        targetDomain: 'example.test',
+        watchUrls: ['https://example.test/fellowship'],
+        witnessSpecs: [
+          {
+            path: 'deadline_raw',
+            meaning: 'when applications close',
+            labels: ['deadline'],
+            excludeLabels: [],
+            kind: 'text',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+    const collector = (await created.json()) as { id: string };
+
+    const response = await fetch(
+      `${base}/api/collectors/${collector.id}/provenance/reconstruct`,
+      { method: 'POST', headers: { authorization: `Bearer ${TOKEN}` } },
+    );
+    // This harness injects no fetchMarkdown, so the honest answer is that the
+    // page cannot be read rather than a reconstruction assembled from nothing.
+    expect(response.status).toBe(503);
+  });
+});

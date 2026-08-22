@@ -461,7 +461,10 @@ export interface Mission {
  */
 export interface CollectorProvenance {
   sourceUrl: string;
-  description: string;
+  /** Absent when the original brief was never recorded. */
+  description?: string;
+  /** True when this was assembled after the fact rather than kept at the time. */
+  reconstructed?: boolean;
   observations: string[];
   protectedBecause: Record<string, string>;
   createdBy: 'coding_agent' | 'operator';
