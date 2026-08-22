@@ -13,6 +13,7 @@ function collector(overrides: Partial<CollectorSummary> = {}): CollectorSummary 
   return {
     id: 'col-1',
     brightDataCollectorId: 'c_trust1',
+    createdAt: '2026-08-01T00:00:00.000Z',
     name: 'DriftMart headphones',
     targetDomain: 'driftmart.test',
     status: 'active',

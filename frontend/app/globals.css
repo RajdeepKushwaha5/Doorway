@@ -1032,6 +1032,55 @@ h6,
 }
 
 /* ------------------------------------------------------------------ */
+/* GitHub Universe Wonderland-Style Bento Footer Tiles                */
+/* ------------------------------------------------------------------ */
+
+.bento-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.bento-tile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 12px 28px -10px rgba(16, 185, 129, 0.2);
+}
+
+.bento-tile-green {
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  color: #ffffff;
+}
+
+.bento-tile-green:hover {
+  background: linear-gradient(135deg, #047857 0%, #10b981 100%);
+}
+
+.bento-tile-black {
+  background-color: #0c0c0a;
+  color: #ffffff;
+}
+
+.bento-tile-black:hover {
+  background-color: #171717;
+}
+
+.bento-tile-surface {
+  background-color: #f4f4f5;
+  color: #18181b;
+}
+
+.bento-tile-surface:hover {
+  background-color: #ffffff;
+}
+
+/* ------------------------------------------------------------------ */
 /* Education & Career Opportunity Brand Mask (Sarvam-Style)           */
 /* ------------------------------------------------------------------ */
 

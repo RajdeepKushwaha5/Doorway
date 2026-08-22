@@ -172,6 +172,15 @@ export interface WitnessFieldSpec {
 export interface CollectorSummary {
   id: string;
   brightDataCollectorId: string;
+  /**
+   * When this collector was registered.
+   *
+   * Present so a caller can break a tie deterministically. More than one
+   * collector can legitimately watch the same page, and picking whichever the
+   * API happened to return first meant the fault switch could operate a
+   * different collector than the console named.
+   */
+  createdAt: string;
   name: string;
   targetDomain: string;
   status: 'active' | 'paused';

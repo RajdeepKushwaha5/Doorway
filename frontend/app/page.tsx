@@ -145,20 +145,29 @@ export async function NoticeEnginePage() {
    * fault switch posts to. If the console can change that page, it is watching
    * the collector that reads it.
    */
-  const fixtureCollector = collectors.find(
-    (collector) =>
-      /*
-       * "Research" contains "search".
-       *
-       * This exclusion exists to skip the interaction collector, which drives a
-       * search box rather than reading a static page. Written as a substring it
-       * also excluded "Doorway Lab, AI Research Fellowship", so the console
-       * reported no fixture registered while the fleet listed one, and the
-       * cause was five letters in the middle of a word.
-       */
-      !/search/i.test(collector.name) &&
-      (collector.watchUrls ?? []).some((url) => url.toLowerCase().startsWith(labUrl)),
-  );
+  /*
+   * "Research" contains "search".
+   *
+   * The exclusion below skips the interaction collector, which drives a search
+   * box rather than reading a static page. Written as a substring it also
+   * excluded "Doorway Lab, AI Research Fellowship", so the console reported no
+   * fixture registered while the fleet listed one. The comment describing that
+   * fix sat here for a while before the regex actually carried it.
+   *
+   * Oldest first, because more than one collector can legitimately watch the
+   * fixture. A second was registered to verify a repair, and `find` would have
+   * handed the fault switch to whichever came back first. The standing fixture
+   * is the one that has been there longest, and a console that silently
+   * operates a different collector than the one it names is worse than one
+   * that cannot find any.
+   */
+  const fixtureCollector = collectors
+    .filter(
+      (collector) =>
+        !/search/i.test(collector.name) &&
+        (collector.watchUrls ?? []).some((url) => url.toLowerCase().startsWith(labUrl)),
+    )
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
 
   // The interaction collector, which drives the search box rather than reading
   // a static page. Found by name because that is what distinguishes it; there
