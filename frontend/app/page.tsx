@@ -115,9 +115,49 @@ export async function NoticeEnginePage() {
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
 
+  /*
+   * The fixture, found by where it actually lives.
+   *
+   * This matched on the literal string "driftmart", which was the fixture's
+   * hostname until the service was renamed. The collector went on being
+   * registered and the control room went on reporting that it was not, because
+   * the one place that looks for it was looking for a name nothing has any
+   * more. The panel told visitors to register a collector that was sitting in
+   * the fleet listing directly below it.
+   *
+   * The host is configuration, so ask configuration.
+   */
+  const labUrl = (process.env['DRIFTMART_URL'] ?? 'http://localhost:3002')
+    .replace(/\/+$/, '')
+    .toLowerCase();
+
+  /*
+   * The collector that reads the page this console can break.
+   *
+   * Matched on its watch URL rather than its hostname, because the hostname
+   * arrives from a second environment variable and the two have to agree for
+   * the panel to work. They did not: the lookup wanted the literal string
+   * "driftmart", which was the fixture's name until the service was renamed, so
+   * the console told visitors to register a collector that was listed in the
+   * fleet directly below it.
+   *
+   * One variable decides where the fixture is, and it is the same one the
+   * fault switch posts to. If the console can change that page, it is watching
+   * the collector that reads it.
+   */
   const fixtureCollector = collectors.find(
     (collector) =>
-      collector.targetDomain.includes('driftmart') && !collector.name.toLowerCase().includes('search'),
+      /*
+       * "Research" contains "search".
+       *
+       * This exclusion exists to skip the interaction collector, which drives a
+       * search box rather than reading a static page. Written as a substring it
+       * also excluded "Doorway Lab, AI Research Fellowship", so the console
+       * reported no fixture registered while the fleet listed one, and the
+       * cause was five letters in the middle of a word.
+       */
+      !/search/i.test(collector.name) &&
+      (collector.watchUrls ?? []).some((url) => url.toLowerCase().startsWith(labUrl)),
   );
 
   // The interaction collector, which drives the search box rather than reading
@@ -125,7 +165,10 @@ export async function NoticeEnginePage() {
   // is nothing structural on the record that says "this one clicks things".
   const searchCollector = collectors.find(
     (collector) =>
-      collector.targetDomain.includes('driftmart') && collector.name.toLowerCase().includes('search'),
+      // Same two faults as the lookup above: a hostname that no longer exists,
+      // and "search" as a substring, which "Research" satisfies.
+      /search/i.test(collector.name) &&
+      (collector.watchUrls ?? []).some((url) => url.toLowerCase().startsWith(labUrl)),
   );
 
   // Counted, never floored. An earlier version used Math.max(length, 3), which
@@ -385,10 +428,14 @@ function globeMarkers(
           label: collector.targetDomain,
           ok: collector.openIncidents === 0,
         }))
-      : [
-          { label: 'books.toscrape.com', ok: true },
-          { label: 'driftmart', ok: true },
-          { label: 'scraper studio', ok: true },
+      : // Only reached when no collector is registered, so the globe has nothing
+        // real to plot. These name the sources this deployment is configured to
+        // watch rather than two hosts from a retail demonstration that no
+        // longer exists.
+        [
+          { label: 'cprgindia.org', ok: true },
+          { label: 'latrobe.edu.au', ok: true },
+          { label: 'wemakedevs.org', ok: true },
         ];
 
   return sources.slice(0, 4).map((source, index) => ({

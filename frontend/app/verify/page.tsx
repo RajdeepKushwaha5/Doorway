@@ -41,7 +41,7 @@ export default function VerifyPage() {
         <div className="mt-8 rounded-lg border border-surface-border bg-surface-soft/40 p-5 font-mono text-[12px] leading-relaxed text-muted">
           <p className="text-ivory">Get one:</p>
           <pre className="mt-2 overflow-x-auto">
-            curl https://notice-api-0vfo.onrender.com/api/incidents/&lt;incident-id&gt;/certificate
+            curl https://doorway-api-4ftn.onrender.com/api/incidents/&lt;incident-id&gt;/certificate
           </pre>
           <p className="mt-3">
             Or open any incident from the control room and use its Certificate link. Then edit a

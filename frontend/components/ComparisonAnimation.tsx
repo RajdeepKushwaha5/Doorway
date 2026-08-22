@@ -20,7 +20,7 @@ export function ComparisonAnimation() {
     return () => clearInterval(interval);
   }, []);
 
-  const typedText = step >= 1 ? '$25.00 (Deposit Captured)' : 'Extracting CSS selector...';
+  const typedText = step >= 1 ? '1 September 2026 (early-interest date)' : 'Extracting CSS selector...';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_120px_1fr] gap-5 items-stretch">
@@ -47,14 +47,14 @@ export function ComparisonAnimation() {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              driftmart-3ut8.onrender.com/product/headphones
+              doorway-lab.onrender.com/opportunity/ai-fellowship
             </span>
           </div>
 
           {/* Animated Browser Content */}
           <div className="p-5 font-mono text-[12px] space-y-3 flex-1 flex flex-col justify-center">
             <div className="text-gray-400 text-[10px] uppercase tracking-wider font-semibold">
-              DOM Selector: div.price-container &gt; span
+              DOM Selector: dl.facts &gt; dd.deadline
             </div>
 
             <div className="relative border border-gray-200 rounded-md p-3 bg-gray-50 flex items-center justify-between">
@@ -181,12 +181,12 @@ export function ComparisonAnimation() {
             <div className="space-y-2 text-[12px] pt-1">
               <div className="flex items-center justify-between p-2 rounded bg-white/80 border border-emerald-100">
                 <span className="text-gray-600">Scraper Studio Extractor:</span>
-                <span className="text-red-600 font-bold">$25.00</span>
+                <span className="text-red-600 font-bold">1 Sept 2026</span>
               </div>
 
               <div className="flex items-center justify-between p-2 rounded bg-white/80 border border-emerald-100">
                 <span className="text-gray-600">Web Unlocker Markdown:</span>
-                <span className="text-emerald-700 font-bold">$249.00</span>
+                <span className="text-emerald-700 font-bold">18 Sept 2026</span>
               </div>
             </div>
 
@@ -199,7 +199,7 @@ export function ComparisonAnimation() {
                 EXTRACTOR_DRIFT DISAGREEMENT
               </div>
               <div className="text-neutral-300 text-[10.5px]">
-                Rule: Extractor changed while Markdown stayed $249.00. Extractor selector drifted to deposit field.
+                Rule: the markdown still reads 18 September under the label &quot;Application deadline&quot;. The extractor drifted onto the early-interest date above it.
               </div>
             </div>
           </div>

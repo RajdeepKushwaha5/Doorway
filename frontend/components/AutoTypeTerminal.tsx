@@ -27,10 +27,10 @@ const SCENARIOS = [
     json: `VERIFIED. Two independent Bright Data sensors agree on this right now.\nconfidence    0.95\n\n{\n  "book_title": "A Light in the Attic",\n  "price_excl_tax": 51.77\n}`,
   },
   {
-    prompt: 'Catch a layout change that returns a valid number from the wrong field',
-    command: 'npm run blindspot -- c_msvllpds1n1dcoz8qx',
-    witness: 'Purchase price: **$249** read from line 15 · collector said **$25**',
-    json: `{\n  "verdict": "extractor_drift",\n  "collector": 25,\n  "witness": 249,\n  "confidence": 0.85,\n  "action": "quarantined"\n}`,
+    prompt: 'Catch a layout change that returns a valid date from the wrong field',
+    command: 'npm run blindspot -- c_mt36mo6tj37dmjgqh',
+    witness: 'Application deadline: **18 September 2026** read from line 15 · collector said **1 September 2026**',
+    json: `{\n  "verdict": "extractor_drift",\n  "collector": "1 September 2026",\n  "witness": "18 September 2026",\n  "confidence": 0.85,\n  "action": "quarantined"\n}`,
   },
 ];
 

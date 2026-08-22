@@ -112,7 +112,7 @@ async function mutate<T>(
  */
 export async function setFixtureModeAction(mode: string): Promise<ActionResult> {
   const token = process.env['DRIFTMART_ADMIN_TOKEN'];
-  const fixture = (process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com').replace(
+  const fixture = (process.env['DRIFTMART_URL'] ?? 'https://doorway-lab.onrender.com').replace(
     /\/+$/,
     '',
   );
@@ -186,7 +186,7 @@ export async function getConsoleCapabilitiesAction(): Promise<{
  * fixture sets no CORS headers.
  */
 export async function getFixtureModeAction(): Promise<string | null> {
-  const fixture = (process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com').replace(
+  const fixture = (process.env['DRIFTMART_URL'] ?? 'https://doorway-lab.onrender.com').replace(
     /\/+$/,
     '',
   );
@@ -345,7 +345,7 @@ export async function getProofScenariosAction(): Promise<{
   fixtureUrl: string;
 }> {
   const fixtureUrl = (
-    process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com'
+    process.env['DRIFTMART_URL'] ?? 'https://doorway-lab.onrender.com'
   ).replace(/\/+$/, '');
 
   try {

@@ -39,8 +39,8 @@ const BLANK_FIELD: FieldSpec = {
 /** The DriftMart fixture, which is what most first runs point at. */
 const EXAMPLE = {
   name: 'DriftMart headphones',
-  targetDomain: 'driftmart-3ut8.onrender.com',
-  watchUrl: 'https://driftmart-3ut8.onrender.com/product/headphones',
+  targetDomain: 'doorway-lab.onrender.com',
+  watchUrl: 'https://doorway-lab.onrender.com/opportunity/ai-fellowship',
   fields: [
     {
       path: 'name',

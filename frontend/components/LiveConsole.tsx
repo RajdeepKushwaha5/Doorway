@@ -443,7 +443,7 @@ export function LiveConsole({
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  <span className="truncate">driftmart-3ut8.onrender.com/product/headphones</span>
+                  <span className="truncate">doorway-lab.onrender.com/opportunity/ai-fellowship</span>
                 </div>
               </div>
 

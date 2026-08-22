@@ -28,24 +28,44 @@ interface CollectorCardData {
  */
 const COLLECTORS_DATA: CollectorCardData[] = [
   {
-    domain: 'driftmart-3ut8.onrender.com',
-    subDomain: 'c_msvllpds1n1dcoz8qx',
-    icon: 'store',
-    endpointCount: '03',
-    description:
-      'The controlled fixture. Serves the same product at seven layouts on demand, so drift can be caused rather than waited for.',
-    endpoints: ['product_name', 'price', 'availability'],
-    tags: ['fixture', 'selector_drift', 'genuine_price_change', 'silent_zero'],
-  },
-  {
-    domain: 'books.toscrape.com',
-    subDomain: 'c_msvk2zahnc2mizts6',
+    domain: 'cprgindia.org',
+    subDomain: 'c_mt3uuz5c3gmgatqsn',
     icon: 'book',
     endpointCount: '03',
     description:
-      'A third-party site we do not control, monitored live. Last verified reading was £51.77, in stock, 22 available.',
-    endpoints: ['book_title', 'price_excl_tax', 'availability'],
-    tags: ['live', 'third-party', 'price', 'stock'],
+      'A fellowship page nobody here controls, watched continuously. Two sensors agree on its closing date before a student is shown it.',
+    endpoints: ['deadline_raw', 'funding_level', 'eligibility'],
+    tags: ['live', 'third-party', 'fellowship', 'two-sensor'],
+  },
+  {
+    domain: 'latrobe.edu.au',
+    subDomain: 'c_mt44fc4f2loq3t8phs',
+    icon: 'book',
+    endpointCount: '03',
+    description:
+      'A university scholarship, open until July 2027. Its funding is a fee reduction rather than a cash award, which is the kind of thing a schema alone would flatten.',
+    endpoints: ['deadline_raw', 'funding_level', 'title'],
+    tags: ['live', 'university', 'scholarship', 'two-sensor'],
+  },
+  {
+    domain: 'wemakedevs.org',
+    subDomain: 'c_mt44l71t10f3gdtrs7',
+    icon: 'store',
+    endpointCount: '03',
+    description:
+      'A hackathon whose page states its window in prose rather than a field. The witness reads the same page as markdown and has to agree on the day.',
+    endpoints: ['deadline_raw', 'funding_level', 'title'],
+    tags: ['live', 'hackathon', 'prizes', 'two-sensor'],
+  },
+  {
+    domain: 'doorway-lab.onrender.com',
+    subDomain: 'c_mt36mo6tj37dmjgqh',
+    icon: 'store',
+    endpointCount: '03',
+    description:
+      'The controlled fixture. Serves the same opportunity at several layouts on demand, so drift can be caused rather than waited for.',
+    endpoints: ['deadline_raw', 'funding_level', 'application_url'],
+    tags: ['fixture', 'deadline_drift', 'deadline_extended', 'sponsored_opportunity'],
   },
   {
     domain: 'Scraper Studio',
@@ -53,7 +73,7 @@ const COLLECTORS_DATA: CollectorCardData[] = [
     icon: 'cube',
     endpointCount: '05',
     description:
-      'Both collectors were built from one sentence through the CLI, and every observation and repair is driven over this API.',
+      'Every collector here was built from one sentence through the CLI, and every observation and repair is driven over this API.',
     endpoints: [
       'trigger',
       'dataset',
@@ -90,7 +110,7 @@ const COLLECTORS_DATA: CollectorCardData[] = [
   },
   {
     domain: 'Verified feed',
-    subDomain: 'notice-api-0vfo.onrender.com',
+    subDomain: 'doorway-api-4ftn.onrender.com',
     icon: 'building',
     endpointCount: '05',
     description:
@@ -118,13 +138,13 @@ const COLLECTORS_DATA: CollectorCardData[] = [
 
 /** Every one of these matches at least one card, so no suggestion dead-ends. */
 const POPULAR_TAGS = [
-  'driftmart',
-  'books.toscrape.com',
-  'selector_drift',
-  'genuine_price_change',
+  'fellowship',
+  'scholarship',
+  'hackathon',
+  'two-sensor',
+  'deadline_drift',
   'witness',
   'self-healing',
-  'mcp',
   'quarantine',
 ];
 
@@ -231,7 +251,7 @@ export function SearchAndCollectorCarousel() {
             </div>
           ) : (
             <div className="p-8 border border-dashed border-gray-300 rounded-xl text-center font-mono text-gray-500 bg-gray-50/50">
-              No collectors found matching &quot;{query}&quot;. Try searching for &quot;driftmart&quot;, &quot;books&quot;, or &quot;zillow&quot;.
+              No sources found matching &quot;{query}&quot;. Try &quot;fellowship&quot;, &quot;hackathon&quot;, or &quot;witness&quot;.
             </div>
           )}
         </div>
