@@ -380,7 +380,7 @@ export async function getProofScenariosAction(): Promise<{
  * reason. Returns null when nothing is served yet, which is itself a state the
  * page explains.
  */
-export async function getProofOpportunityAction(): Promise<{
+export interface ProofOpportunity {
   collectorId: string;
   title: string;
   deadlineRaw: string | null;
@@ -390,7 +390,24 @@ export async function getProofOpportunityAction(): Promise<{
   confirmedBy: string;
   fieldsDegraded: string[];
   lastVerifiedAt: string;
-} | null> {
+}
+
+/**
+ * What is served, or why nothing is.
+ *
+ * This returned a bare null for both "the world is empty" and "the call
+ * failed", and the page then explained the absence to the visitor as the
+ * honest empty state Doorway deliberately ships. On a cold start that
+ * sentence was reassuring the reader about a swallowed network error. The two
+ * causes are now distinguishable, because a page whose argument is that this
+ * system does not report what it has not checked cannot do that about itself.
+ */
+export type ProofOpportunityResult =
+  | { state: 'ok'; opportunity: ProofOpportunity }
+  | { state: 'empty' }
+  | { state: 'unreachable'; detail: string };
+
+export async function getProofOpportunityAction(): Promise<ProofOpportunityResult> {
   try {
     /*
      * The walkthrough needs the fixture specifically, not whatever is first.
@@ -424,8 +441,10 @@ export async function getProofOpportunityAction(): Promise<{
         ? undefined
         : opportunities.find((entry) => hostOf(entry.sourceUrl) === fixtureHost)) ??
       opportunities[0];
-    if (first === undefined) return null;
+    if (first === undefined) return { state: 'empty' };
     return {
+      state: 'ok',
+      opportunity: {
       // The walkthrough runs the collector behind the record it is showing.
       // Picking by fixture hostname instead looked equivalent and was not:
       // when the source sits behind a tunnel its host is not the fixture's,
@@ -440,9 +459,13 @@ export async function getProofOpportunityAction(): Promise<{
       confirmedBy: first.trust.confirmedBy,
       fieldsDegraded: first.trust.fieldsDegraded,
       lastVerifiedAt: first.trust.lastVerifiedAt,
+      },
     };
-  } catch {
-    return null;
+  } catch (err) {
+    return {
+      state: 'unreachable',
+      detail: err instanceof Error ? err.message : 'the backend did not answer',
+    };
   }
 }
 

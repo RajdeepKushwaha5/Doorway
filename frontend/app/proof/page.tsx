@@ -10,6 +10,15 @@ import type { CollectorSummary } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+/*
+ * Room to wake the backend.
+ *
+ * The API sleeps on its free plan and the first read is what wakes it. The
+ * default budget is shorter than that takes, which turned a cold visit into a
+ * page with nothing on it.
+ */
+export const maxDuration = 60;
+
 /**
  * The front door for anyone who wants to check the claim rather than read it.
  *
@@ -26,11 +35,16 @@ export const dynamic = 'force-dynamic';
  */
 
 export default async function ProofPage() {
-  const [{ mode, scenarios }, capabilities, opportunity] = await Promise.all([
+  const [{ mode, scenarios }, capabilities, served] = await Promise.all([
     getProofScenariosAction(),
     getConsoleCapabilitiesAction(),
     getProofOpportunityAction(),
   ]);
+
+  const opportunity = served.state === 'ok' ? served.opportunity : null;
+  // Told apart, because "nothing is served" and "we could not ask" are
+  // different facts and only one of them is about Doorway.
+  const unreachable = served.state === 'unreachable' ? served.detail : null;
 
   let collectors: CollectorSummary[] = [];
   let offline = false;
@@ -95,6 +109,7 @@ export default async function ProofPage() {
         <ProofWalkthrough
           collectorId={collector?.id ?? null}
           watchUrl={watchUrl}
+          unreachable={unreachable}
           initialMode={mode}
           scenarios={scenarios}
           opportunity={opportunity}

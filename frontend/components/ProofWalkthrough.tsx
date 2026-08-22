@@ -129,12 +129,15 @@ export function ProofWalkthrough({
   opportunity,
   canRun,
   canSwitch,
+  unreachable,
 }: {
   collectorId: string | null;
   watchUrl: string | null;
   initialMode: string | null;
   scenarios: ProofScenario[];
   opportunity: ServedOpportunity | null;
+  /** Why nothing could be read, when the backend did not answer. */
+  unreachable?: string | null;
   canRun: boolean;
   canSwitch: boolean;
 }) {
@@ -184,11 +187,28 @@ export function ProofWalkthrough({
         blurb="This is a real record, produced by a real Bright Data collector reading a real page. Note the deadline."
       >
         {opportunity === null ? (
-          <p className="font-mono text-[13px] leading-relaxed text-gray-600">
-            Nothing is being served yet. Run the collector once and this fills in. Doorway does not
-            seed itself with examples, so an empty world here is the honest state rather than a
-            broken one.
-          </p>
+          unreachable === null || unreachable === undefined ? (
+            <p className="font-mono text-[13px] leading-relaxed text-gray-600">
+              Nothing is being served yet. Run the collector once and this fills in. Doorway does
+              not seed itself with examples, so an empty world here is the honest state rather than
+              a broken one.
+            </p>
+          ) : (
+            <div className="border-l-2 border-amber-500 bg-amber-50/60 px-5 py-4">
+              <div className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-amber-700 font-bold">
+                Could not read the world
+              </div>
+              <p className="mt-2 font-mono text-[13px] leading-relaxed text-gray-700">
+                The backend did not answer, so this is not an empty world, it is an unanswered
+                question, and the two are shown differently on purpose. The API sleeps after
+                fifteen minutes idle on its free plan and the first request wakes it, which takes
+                about thirty seconds. Reload and it should fill in.
+              </p>
+              <p className="mt-2 font-mono text-[11.5px] leading-relaxed text-gray-500">
+                {unreachable}
+              </p>
+            </div>
+          )
         ) : (
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="min-w-0">
@@ -366,7 +386,13 @@ export function ProofWalkthrough({
         )}
 
         {blocked ? (
-          <Locked what="No collector is registered on this deployment, so there is nothing to run." />
+          <Locked
+            what={
+              unreachable === null || unreachable === undefined
+                ? 'No collector is registered on this deployment, so there is nothing to run.'
+                : 'The backend did not answer, so there is nothing to run against yet. This is a sleeping service rather than a missing collector. Reload once it has woken.'
+            }
+          />
         ) : (
           <DecisionStream
             collectorId={collectorId}
