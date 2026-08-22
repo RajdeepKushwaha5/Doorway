@@ -1,8 +1,8 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { OpportunityIndex, seedIndex } from './index-store.js';
+import { OpportunityIndex } from './index-store.js';
 import type { OpportunityDraft } from '../acquire/read.js';
 
 /**
@@ -109,89 +109,5 @@ describe('the opportunity index', () => {
     const missing = new OpportunityIndex(join(directory, 'nope', 'index.json'));
     expect(await missing.all()).toEqual([]);
     expect((await missing.stats()).total).toBe(0);
-  });
-});
-
-/**
- * The index has to survive a deploy.
- *
- * The target has no persistent disk, so every restart begins empty and the
- * first student of the day gets the product at its worst. Crawling on boot
- * would fix that and spend hundreds of paid requests each time the instance
- * wakes, which on a free tier is often.
- */
-describe('shipping the index with the code', () => {
-  let directory: string;
-
-  const record = (title: string): OpportunityDraft => ({
-    sourceUrl: `https://a.test/${title}`,
-    host: 'a.test',
-    title,
-    provider: 'A',
-    type: 'fellowship',
-    summary: '',
-    deadlineRaw: null,
-    fundingLevel: null,
-    eligibility: null,
-    official: true,
-    foundVia: 'crawl',
-    missing: [],
-    sensorCount: 1,
-    corroboration: 'text_only',
-    structuredDeadline: null,
-    readAt: new Date().toISOString(),
-  });
-
-  beforeEach(async () => {
-    directory = await mkdtemp(join(tmpdir(), 'doorway-seed-'));
-  });
-
-  afterEach(async () => {
-    await rm(directory, { recursive: true, force: true });
-  });
-
-  it('fills an empty index from a shipped file', async () => {
-    const seedPath = join(directory, 'seed.json');
-    await writeFile(seedPath, JSON.stringify([record('One'), record('Two')]), 'utf8');
-
-    const index = new OpportunityIndex(join(directory, 'live.json'));
-    const result = await seedIndex(index, seedPath);
-
-    expect(result.reason).toBe('seeded');
-    expect(result.seeded).toBe(2);
-    expect(await index.all()).toHaveLength(2);
-  });
-
-  /*
-   * The shipped copy is a cache, and a cache must never overwrite the thing it
-   * caches. A live crawl that has found something newer keeps it.
-   */
-  it('never overwrites an index a real crawl has filled', async () => {
-    const seedPath = join(directory, 'seed.json');
-    await writeFile(seedPath, JSON.stringify([record('Shipped')]), 'utf8');
-
-    const index = new OpportunityIndex(join(directory, 'live.json'));
-    await index.merge([record('Found live')]);
-
-    const result = await seedIndex(index, seedPath);
-    expect(result.reason).toBe('already-populated');
-    expect(result.seeded).toBe(0);
-
-    const all = await index.all();
-    expect(all).toHaveLength(1);
-    expect(all[0]?.title).toBe('Found live');
-  });
-
-  /* An API that refuses to boot over a missing cache would be a strange
-   * thing to build. */
-  it('starts fine with no seed file, or a broken one', async () => {
-    const index = new OpportunityIndex(join(directory, 'live.json'));
-    expect((await seedIndex(index, join(directory, 'absent.json'))).reason).toBe('no-seed-file');
-
-    const broken = join(directory, 'broken.json');
-    await writeFile(broken, '{ not json at all', 'utf8');
-    expect((await seedIndex(index, broken)).reason).toBe('no-seed-file');
-
-    expect((await seedIndex(index, undefined)).reason).toBe('no-seed-file');
   });
 });

@@ -141,39 +141,37 @@ if you have budget you are willing to lose.
 
 ---
 
-## Keeping the index alive across deploys
+## The index, and why nothing is shipped in it
 
-Free plans have no persistent disk, so the crawled index dies at every restart
-and every wake from idle. A deploy would otherwise come up knowing nothing, and
-the first visitor of the day would meet the product at its worst.
+The index is a cache of what live crawls have found. It is filled at runtime and
+never committed, so nothing a visitor sees was baked into the build.
 
-So the index ships with the code. `seed-index.json` is loaded at startup, but
-only into an empty index, so it can never overwrite what a live crawl has since
-found.
+That is a deliberate choice with a cost. Free plans have no persistent disk, so
+a restart empties the index and the next visitor gets a slower first search
+until crawls refill it. Shipping a copy would fix that and would mean serving a
+snapshot: deadlines pass and pages change between a commit and somebody reading
+it, and presenting month-old crawl output as current results is the exact
+failure this product exists to argue against.
 
-**To refresh it**, from your machine:
+An empty index is honest and the page says so. The live search runs on every
+request regardless, so a student always gets live results; the index only makes
+them faster and fuller.
 
-```bash
-npm run index:fill --workspace backend -- 160     # crawls across 13 subject areas
-npm run index:export --workspace backend          # writes seed-index.json
-git add seed-index.json && git commit && git push
-```
-
-`index:fill` spends roughly one Web Unlocker request per page fetched, so the
-command above costs about 2,200 requests. Check what you have left first:
+**To fill a running instance**, crawl it through its own API:
 
 ```bash
-curl -s -H "Authorization: Bearer $BRIGHTDATA_API_KEY" \
-  https://api.brightdata.com/customer/balance
+curl -X POST -H "authorization: Bearer $NOTICE_ADMIN_TOKEN"      -H "content-type: application/json"      -d '{"country":"India","educationLevel":"Undergraduate",
+          "interests":["artificial intelligence"],"skills":[],
+          "opportunityTypes":["scholarship","fellowship","internship","hackathon"],
+          "fundingRequirement":"any","locations":[],
+          "maxFetches":300,"concurrency":60}'      https://<your-api>.onrender.com/api/crawl
 ```
 
-`index:export` drops records whose deadline has passed on the way out. A stale
-opportunity is worse than a missing one, and there is no sense carrying dead
-ones into a deploy.
+That is live data in a live index. `npm run index:fill --workspace backend`
+does the same locally across thirteen subject areas, for development.
 
-Two variables control where the files live, both optional:
+Each fetch is one Web Unlocker request, so check what is left first:
 
-| Variable | Default | What it is |
-|---|---|---|
-| `DOORWAY_INDEX_FILE` | `data/opportunity-index.json` | the live, working index |
-| `DOORWAY_INDEX_SEED` | `../seed-index.json` | the shipped copy loaded when empty |
+```bash
+curl -s -H "Authorization: Bearer $BRIGHTDATA_API_KEY"   https://api.brightdata.com/customer/balance
+```
