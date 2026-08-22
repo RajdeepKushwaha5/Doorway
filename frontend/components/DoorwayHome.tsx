@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
 import { LiveDiscovery } from '@/components/LiveDiscovery';
 import Link from 'next/link';
-import { findOpportunitiesAction } from '@/app/actions';
+import { collectFindAction, startFindAction } from '@/app/actions';
+import { apiBase } from '@/lib/env';
 import type {
   DoorwayMatch,
   DoorwayProfile,
@@ -50,7 +51,6 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
    */
   const [world, setWorld] = useState<DoorwayWorld | null>(initialWorld);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
 
   /* How many pages the live search opened, so the result can explain itself. */
   const [searched, setSearched] = useState<number | null>(null);
@@ -66,21 +66,85 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
    * the button that would have filled it. Two actions to get one answer, and
    * the first one looked like the product had no data.
    */
+  /* Lines from the search itself, shown while it runs. */
+  const [lines, setLines] = useState<{ step: string; line: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const streamRef = useRef<EventSource | null>(null);
+
+  // A search still running when the component goes away leaves an open
+  // connection the browser keeps reconnecting.
+  useEffect(
+    () => () => {
+      streamRef.current?.close();
+      streamRef.current = null;
+    },
+    [],
+  );
+
   const submit = (): void => {
     const next = { ...profile, interests: splitList(interest) };
     setProfile(next);
     setError(null);
     setLiveNote(null);
-    startTransition(async () => {
-      const result = await findOpportunitiesAction(next);
-      if (result.ok) {
-        setWorld(result.data);
-        setSearched(result.data.searched);
-        setLiveNote(result.data.liveMessage ?? null);
-      } else {
-        setError(result.error);
+    setLines([]);
+    setBusy(true);
+
+    void (async () => {
+      const started = await startFindAction(next);
+      if (!started.ok) {
+        setError(started.error);
+        setBusy(false);
+        return;
       }
-    });
+
+      const { findId } = started.data;
+
+      const finish = async (): Promise<void> => {
+        const collected = await collectFindAction(findId);
+        if (collected.ok && collected.data.world !== null) {
+          setWorld(collected.data.world);
+          setSearched(collected.data.world.searched);
+          setLiveNote(collected.data.world.liveMessage ?? null);
+        } else if (!collected.ok) {
+          setError(collected.error);
+        }
+        setBusy(false);
+      };
+
+      /*
+       * Nothing to watch when the live half did not run.
+       *
+       * Over the cap, or discovery unconfigured: the answer is already settled
+       * on the server and opening a stream would wait on events that will never
+       * come.
+       */
+      if (!started.data.live) {
+        await finish();
+        return;
+      }
+
+      const source = new EventSource(
+        `${apiBase()}/api/observations/${encodeURIComponent(findId)}/events`,
+      );
+      streamRef.current = source;
+
+      source.onmessage = (event: MessageEvent<string>) => {
+        try {
+          setLines((previous) => [...previous, JSON.parse(event.data) as { step: string; line: string }]);
+        } catch {
+          // A malformed frame is not worth ending the search over.
+        }
+      };
+
+      // EventSource reports a normal server-side close as an error, so this
+      // covers both "finished" and "connection dropped". Asking the server
+      // which it was is more reliable than guessing.
+      source.onerror = () => {
+        source.close();
+        streamRef.current = null;
+        void finish();
+      };
+    })();
   };
 
   return (
@@ -295,11 +359,11 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={pending || profile.opportunityTypes.length === 0}
+                  disabled={busy || profile.opportunityTypes.length === 0}
                   className="flex min-h-14 w-full items-center justify-between bg-emerald-500 hover:bg-emerald-400 px-5 font-neuebit text-[13px] uppercase tracking-[0.14em] text-black font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span>{pending ? 'Searching the live web' : 'Find my opportunities'}</span>
-                  <span>{pending ? '···' : '↗'}</span>
+                  <span>{busy ? 'Searching the live web' : 'Find my opportunities'}</span>
+                  <span>{busy ? '···' : '↗'}</span>
                 </button>
                 {error !== null ? (
                   <p className="border-l-2 border-red-600 pl-3 font-mono text-[11px] text-red-700">
@@ -312,7 +376,7 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
         </div>
       </section>
 
-      <WorldSection world={world} pending={pending} searched={searched} liveNote={liveNote} />
+      <WorldSection world={world} pending={busy} lines={lines} searched={searched} liveNote={liveNote} />
       <HowItLives />
     </div>
   );
@@ -347,11 +411,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function WorldSection({
   world,
   pending,
+  lines,
   searched,
   liveNote,
 }: {
   world: DoorwayWorld | null;
   pending: boolean;
+  /** The live run's own lines, shown while it is still going. */
+  lines: { step: string; line: string }[];
   /** Pages the live search opened, so the result can account for itself. */
   searched: number | null;
   /** Why the live half did not run, when it did not. */
@@ -447,7 +514,7 @@ function WorldSection({
           </p>
         ) : null}
 
-        {pending ? <SearchingState /> : null}
+        {pending ? <SearchingState lines={lines} /> : null}
         {!pending && world === null ? <EmptyWorld initial /> : null}
         {!pending && world !== null && matches.length === 0 ? <EmptyWorld initial={false} /> : null}
         {!pending && matches.length > 0 ? (
@@ -472,30 +539,91 @@ function WorldSection({
  * that long reads as a hang. Saying what is happening, in order, is both more
  * honest and more interesting than pretending it is instant.
  */
-function SearchingState() {
-  const steps = [
-    'Asking the web what exists for you',
-    'Opening the pages worth opening',
-    'Reading each one the way a person would',
-    'Checking what we can against what we already knew',
-  ];
+/**
+ * The minute the search takes, shown as the search.
+ *
+ * This used to be four sentences that were true in general and connected to
+ * nothing in particular. They were the same four whatever you searched for,
+ * they did not move, and after twenty seconds of not moving they read as a
+ * hang.
+ *
+ * These lines are the actual run: the queries that went out, each host as it is
+ * opened, and each page that turned out to be a listing rather than an
+ * opportunity. It answers "why is this taking a minute" with the reason, which
+ * is more interesting than any animation and has the useful property of being
+ * true.
+ *
+ * The counters matter as much as the log. A number going up is the difference
+ * between waiting and watching.
+ */
+function SearchingState({ lines }: { lines: { step: string; line: string }[] }) {
+  const opened = lines.filter((l) => l.step === 'reading').length;
+  const kept = lines.filter((l) => l.step === 'read').length;
+  const dropped = lines.filter((l) => l.step === 'skipped').length;
+  const searching = lines.some((l) => l.step === 'searching');
+
+  /* Newest first: the interesting line is the one that just arrived. */
+  const recent = [...lines].reverse().slice(0, 7);
+
   return (
     <div className="mt-12 border border-black">
-      <div className="border-b border-black px-6 py-4 font-neuebit text-[11px] uppercase tracking-[0.16em]">
-        Searching the live web, about a minute
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          </span>
+          <span className="font-neuebit text-[11px] uppercase tracking-[0.16em]">
+            {searching ? 'Reading the live web' : 'Asking the web what exists'}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-px border border-gray-200 bg-gray-200">
+          {[
+            ['Opened', opened],
+            ['Worth keeping', kept],
+            ['Not opportunities', dropped],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="min-w-[104px] bg-white px-3 py-2 text-center">
+              <div className="font-mondwest text-2xl leading-none tabular-nums">{value}</div>
+              <div className="mt-1 font-neuebit text-[9px] uppercase tracking-[0.12em] text-gray-500">
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <ul className="divide-y divide-gray-200">
-        {steps.map((step, index) => (
-          <li
-            key={step}
-            className="flex items-center gap-3 px-6 py-4 font-mono text-[13px] text-gray-700"
-            style={{ animation: `doorway-rise 420ms ease-out ${String(index * 120)}ms both` }}
-          >
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
-            {step}
-          </li>
-        ))}
-      </ul>
+
+      {lines.length === 0 ? (
+        <p className="px-6 py-8 font-mono text-[13px] text-gray-500">
+          Writing the searches for what you asked for...
+        </p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {recent.map((entry, index) => (
+            <li
+              key={`${entry.line}-${String(index)}`}
+              className={`flex items-start gap-3 px-6 py-2.5 font-mono text-[12.5px] ${
+                entry.step === 'read'
+                  ? 'text-emerald-700'
+                  : entry.step === 'skipped'
+                    ? 'text-gray-400'
+                    : entry.step === 'error'
+                      ? 'text-red-600'
+                      : 'text-gray-700'
+              }`}
+              style={index === 0 ? { animation: 'doorway-rise 260ms ease-out both' } : undefined}
+            >
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-current opacity-50" />
+              <span className="min-w-0 break-words">{entry.line}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="border-t border-gray-200 px-6 py-3 font-mono text-[11.5px] leading-relaxed text-gray-500">
+        Pages that turn out to be listings, articles about opportunities, or rounds that have
+        already closed are dropped rather than padded into your results.
+      </p>
     </div>
   );
 }

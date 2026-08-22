@@ -567,9 +567,9 @@ export interface FoundWorld extends DoorwayWorld {
   discoveryId?: string;
 }
 
-export async function findOpportunitiesAction(
+export async function startFindAction(
   profile: DoorwayProfile,
-): Promise<ActionResult<FoundWorld>> {
+): Promise<ActionResult<{ findId: string; live: boolean }>> {
   try {
     const response = await fetch(`${serverApiBase()}/api/doorway/find`, {
       method: 'POST',
@@ -577,25 +577,22 @@ export async function findOpportunitiesAction(
       body: JSON.stringify(profile),
       cache: 'no-store',
     });
+    const body = (await response.json().catch(() => null)) as {
+      findId?: unknown;
+      live?: unknown;
+      error?: unknown;
+    } | null;
 
-    const payload = (await response.json().catch(() => null)) as
-      | FoundWorld
-      | { error?: string }
-      | null;
-
-    if (!response.ok) {
+    if (!response.ok || body === null || typeof body.findId !== 'string') {
       return {
         ok: false,
         error:
-          payload !== null && 'error' in payload && typeof payload.error === 'string'
-            ? payload.error
-            : `the search failed with ${String(response.status)}`,
+          body !== null && typeof body.error === 'string'
+            ? body.error
+            : `the search could not be started (${String(response.status)})`,
       };
     }
-    if (payload === null || !('matches' in payload)) {
-      return { ok: false, error: 'the server returned something that is not a world' };
-    }
-    return { ok: true, data: payload };
+    return { ok: true, data: { findId: body.findId, live: body.live === true } };
   } catch (caught) {
     return {
       ok: false,
@@ -603,3 +600,31 @@ export async function findOpportunitiesAction(
     };
   }
 }
+
+/** Collect a finished search. Reports "running" rather than guessing. */
+export async function collectFindAction(
+  id: string,
+): Promise<ActionResult<{ status: string; world: FoundWorld | null }>> {
+  try {
+    const response = await fetch(
+      `${serverApiBase()}/api/doorway/find/${encodeURIComponent(id)}`,
+      { cache: 'no-store' },
+    );
+    if (!response.ok) return { ok: false, error: 'that search is no longer available' };
+
+    const body = (await response.json()) as { status?: unknown; world?: unknown };
+    return {
+      ok: true,
+      data: {
+        status: typeof body.status === 'string' ? body.status : 'unknown',
+        world: (body.world as FoundWorld | undefined) ?? null,
+      },
+    };
+  } catch (caught) {
+    return {
+      ok: false,
+      error: caught instanceof Error ? caught.message : 'the service could not be reached',
+    };
+  }
+}
+

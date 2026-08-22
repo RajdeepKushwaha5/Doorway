@@ -29,6 +29,7 @@ import {
   draftToOpportunity,
   opportunitiesFromSnapshots,
   profileSchema,
+  type DoorwayWorld,
 } from '../doorway/index.js';
 import { discover, type OpportunityDraft } from '../acquire/index.js';
 import { DiscoveryBudget } from '../acquire/budget.js';
@@ -71,6 +72,18 @@ export const registerCollectorSchema = z.object({
     .default(null),
 });
 
+/**
+ * A world, plus how it was arrived at.
+ *
+ * The extra fields let the page account for a short list: whether the live
+ * search ran, how many pages it opened, and why it did not when it did not.
+ */
+interface FoundWorld extends DoorwayWorld {
+  live: boolean;
+  searched: number;
+  liveMessage?: string;
+}
+
 export interface ApiDeps {
   store: Store;
   client: BrightDataClient;
@@ -105,6 +118,8 @@ export function buildRouter(deps: ApiDeps): Router {
   // Finished discoveries, so a client that missed the stream can still read
   // what was found. Bounded, and never the durable record of anything.
   const discoveries = new Map<string, OpportunityDraft[]>();
+  // Finished searches, so a client that missed the stream still gets an answer.
+  const finds = new Map<string, FoundWorld>();
   const { store, client } = deps;
   const witnessDeps = {
     ...(deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown }),
@@ -824,6 +839,19 @@ export function buildRouter(deps: ApiDeps): Router {
    * Discovery is best-effort. If the search fails, the watched sources still
    * come back, because half an answer beats an error page.
    */
+  /*
+   * Start looking, and hand back somewhere to watch.
+   *
+   * This used to hold the request open for the whole search and return the
+   * finished world, which meant the stream id arrived only once there was
+   * nothing left to watch. The page filled the minute with a fixed list of four
+   * sentences that were true in general and connected to nothing in particular.
+   *
+   * Returning immediately lets the browser follow the actual work: the queries
+   * that went out, each host as it is opened, and each page that turned out to
+   * be a listing rather than an opportunity. That is a better answer to "why is
+   * this taking a minute" than any animation, because it is the reason.
+   */
   router.post('/api/doorway/find', async ({ body, request }) => {
     const parsed = profileSchema.safeParse(body);
     if (!parsed.success) {
@@ -839,8 +867,20 @@ export function buildRouter(deps: ApiDeps): Router {
     ]);
     const watched = opportunitiesFromSnapshots(snapshots, collectors, incidents);
 
+    const id = randomUUID();
+
+    const settle = (world: FoundWorld): void => {
+      finds.set(id, world);
+      // Bounded: a demonstration surface, never the record of anything.
+      if (finds.size > 50) {
+        const oldest = finds.keys().next().value;
+        if (oldest !== undefined) finds.delete(oldest);
+      }
+    };
+
     if (deps.discovery === undefined) {
-      return { ...buildWorld(profile, watched), live: false, searched: 0 };
+      settle({ ...buildWorld(profile, watched), live: false, searched: 0 });
+      return { findId: id, live: false };
     }
 
     const forwarded = request.headers['x-forwarded-for'];
@@ -851,55 +891,75 @@ export function buildRouter(deps: ApiDeps): Router {
 
     const decision = budget.take(caller);
     if (!decision.allowed) {
-      // Over the cap is not an error here. The watched sources are still worth
+      // Over the cap is not an error. The watched sources are still worth
       // returning, and the world says the live half did not run.
-      return {
+      settle({
         ...buildWorld(profile, watched),
         live: false,
         searched: 0,
-        liveMessage: decision.reason,
-      };
+        ...(decision.reason === null ? {} : { liveMessage: decision.reason }),
+      });
+      return { findId: id, live: false };
     }
 
-    const observationId = broker.start('discovery', profile.interests.join(', '));
-    const emit = broker.emitterFor(observationId);
+    // The stream is keyed by the same id, so the browser can open it the moment
+    // this response lands.
+    broker.start('live search', profile.interests.join(', '), id);
+    const emit = broker.emitterFor(id);
 
-    let found: Awaited<ReturnType<typeof discover>> | null = null;
-    try {
-      found = await discover(deps.discovery, profile, {
-        // Twelve pages across three types returned a single result for a
-        // realistic profile. The cost is linear and the ceiling in
-        // DiscoveryBudget is what protects the account, so the search is
-        // wider rather than the filters looser.
-        maxPages: 18,
-        maxTypes: 4,
-        onEvent: (event) => {
-          emit({
-            step: event.step,
-            line: event.line,
-            ...(event.detail === undefined ? {} : { detail: event.detail }),
-          });
-        },
+    void discover(deps.discovery, profile, {
+      maxPages: 18,
+      maxTypes: 4,
+      onEvent: (event) => {
+        emit({
+          step: event.step,
+          line: event.line,
+          ...(event.detail === undefined ? {} : { detail: event.detail }),
+        });
+      },
+    })
+      .then((found) => {
+        const live = found.drafts.map(draftToOpportunity);
+        // Watched first: a record two sensors agreed on outranks one read once,
+        // and ordering says so before any badge is read.
+        settle({
+          ...buildWorld(profile, [...watched, ...live]),
+          live: true,
+          searched: found.considered,
+        });
+      })
+      .catch((error: unknown) => {
+        emit({
+          step: 'error',
+          line: `failed           ${error instanceof Error ? error.message : String(error)}`,
+        });
+        settle({
+          ...buildWorld(profile, watched),
+          live: false,
+          searched: 0,
+          liveMessage:
+            'The live search could not be completed, so this shows only the sources we watch continuously.',
+        });
+      })
+      .finally(() => {
+        broker.finish(id);
       });
-    } catch (error: unknown) {
-      emit({
-        step: 'error',
-        line: `failed           ${error instanceof Error ? error.message : String(error)}`,
-      });
-    } finally {
-      broker.finish(observationId);
-    }
 
-    const live = (found?.drafts ?? []).map(draftToOpportunity);
+    return { findId: id, live: true };
+  });
 
-    // Watched first. A record two sensors agreed on outranks one read once, and
-    // ordering is the quietest way to say so before anybody reads a badge.
-    return {
-      ...buildWorld(profile, [...watched, ...live]),
-      live: found !== null,
-      searched: found?.considered ?? 0,
-      discoveryId: observationId,
-    };
+  /**
+   * Collect a finished search.
+   *
+   * Separate from the stream because the stream is a log and this is the
+   * answer. A client that missed the stream entirely still gets the world.
+   */
+  router.get('/api/doorway/find/:id', async ({ params }) => {
+    const id = params['id'] ?? '';
+    const world = finds.get(id);
+    if (world !== undefined) return { status: 'done' as const, world };
+    if (broker.has(id)) return { status: 'running' as const };
+    throw new HttpError(404, 'no such search');
   });
 
   router.post('/api/doorway/world', async ({ body }) => {

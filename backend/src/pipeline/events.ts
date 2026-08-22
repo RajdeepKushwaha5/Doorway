@@ -87,8 +87,15 @@ export class ObservationBroker {
     this.#now = now;
   }
 
-  start(collectorId: string, url: string): string {
-    const id = randomUUID();
+  /**
+   * Begin a watchable run.
+   *
+   * `id` may be supplied so a caller can hand the browser somewhere to watch
+   * before the work finishes. A search takes a minute, and a caller that has to
+   * wait for this to return an id can only offer the stream once there is
+   * nothing left to see.
+   */
+  start(collectorId: string, url: string, id: string = randomUUID()): string {
     this.#observations.set(id, {
       id,
       collectorId,
