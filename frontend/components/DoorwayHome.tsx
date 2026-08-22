@@ -6,6 +6,7 @@ import { fundingLabel } from '@/lib/funding';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
 import { LiveDiscovery } from '@/components/LiveDiscovery';
+import { ArchitectureFlowVisualizer } from '@/components/ArchitectureFlowVisualizer';
 import Link from 'next/link';
 import { collectFindAction, startFindAction } from '@/app/actions';
 import { apiBase } from '@/lib/env';
@@ -379,6 +380,7 @@ export function DoorwayHome({
 
       <WorldSection world={world} pending={busy} lines={lines} searched={searched} liveNote={liveNote} />
       <HowItLives />
+      <ArchitectureFlowVisualizer />
     </div>
   );
 }
