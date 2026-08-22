@@ -129,3 +129,63 @@ describe('why the url shape is not optional here', () => {
     );
   });
 });
+
+describe('links as pages actually write them', () => {
+  /*
+   * Taken verbatim from the first live run against the fixture.
+   *
+   * The strategy first shipped matching only absolute URLs. The page renders
+   * "[Start application](/opportunity/ai-fellowship/apply)", so the witness
+   * found nothing, requiredOnPage turned that silence into a disagreement, and
+   * a page where nothing was wrong was quarantined on a baseline run. A false
+   * accusation is worse than the blind spot it replaced, because it teaches an
+   * operator to stop believing incidents.
+   */
+  const PAGE = 'https://doorway-lab.onrender.com/opportunity/ai-fellowship';
+  const REAL_MARKDOWN = [
+    '# Open AI Research Fellowship',
+    '',
+    'Application deadline',
+    '',
+    '18 September 2026',
+    '',
+    '[Start application](/opportunity/ai-fellowship/apply)',
+  ].join('\n');
+
+  it('resolves a relative href against the page it was read from', () => {
+    const found = extractField(REAL_MARKDOWN, APPLY_SPEC, PAGE);
+    expect(found?.value).toBe('https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply');
+  });
+
+  it('still reads an absolute href', () => {
+    expect(extractField(WITH_LINK, APPLY_SPEC, PAGE)?.value).toBe(
+      'https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply',
+    );
+  });
+
+  it('agrees with the collector once the relative link resolves', () => {
+    const found = extractField(REAL_MARKDOWN, APPLY_SPEC, PAGE);
+    const summary = reconcile(
+      { application_url: 'https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply' },
+      {
+        url: PAGE,
+        fetchedAt: new Date().toISOString(),
+        contentHash: 'h',
+        excerpt: '',
+        values: found === null ? [] : [found],
+        notFound: [],
+        shape: { headings: [], labels: [], lines: 0, links: 0, tables: 0, images: 0, words: 0 },
+      },
+      [APPLY_SPEC],
+    );
+    expect(summary.agreed).toContain('application_url');
+    expect(summary.disagreed).toHaveLength(0);
+  });
+
+  it('refuses hrefs that are not somewhere a student can apply', () => {
+    for (const href of ['#apply', 'mailto:apply@example.org', 'javascript:void(0)']) {
+      const markdown = `[Apply now](${href})`;
+      expect(extractField(markdown, APPLY_SPEC, PAGE)).toBeNull();
+    }
+  });
+});

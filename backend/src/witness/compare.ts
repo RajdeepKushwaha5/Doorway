@@ -57,7 +57,7 @@ export function observeMarkdown(
   specs: readonly WitnessFieldSpec[],
   fetchedAt: string,
 ): WitnessObservation {
-  const { values, notFound } = extractFields(markdown, specs);
+  const { values, notFound } = extractFields(markdown, specs, url);
   return {
     url,
     fetchedAt,

@@ -78,7 +78,11 @@ function stripMarkdown(raw: string): string {
  * When a site ships JSON-LD, it is the publisher's own machine-readable claim
  * about the page and outranks anything inferred from prose.
  */
-function fromJsonLd(lines: readonly string[], spec: WitnessFieldSpec): WitnessValue | null {
+function fromJsonLd(
+  lines: readonly string[],
+  spec: WitnessFieldSpec,
+  _baseUrl?: string,
+): WitnessValue | null {
   const blob = lines.join('\n');
   const blocks = blob.match(/\{[\s\S]*?\}/g);
   if (blocks === null) return null;
@@ -120,7 +124,11 @@ function fromJsonLd(lines: readonly string[], spec: WitnessFieldSpec): WitnessVa
 }
 
 /** Strategy 2: `Label: value` on a single line. */
-function fromLabelledLine(lines: readonly string[], spec: WitnessFieldSpec): WitnessValue | null {
+function fromLabelledLine(
+  lines: readonly string[],
+  spec: WitnessFieldSpec,
+  _baseUrl?: string,
+): WitnessValue | null {
   for (const [index, rawLine] of lines.entries()) {
     const line = normalizeText(rawLine);
     if (line === '') continue;
@@ -256,7 +264,11 @@ function fromLabelledLine(lines: readonly string[], spec: WitnessFieldSpec): Wit
 }
 
 /** Strategy 3: a markdown table row whose first cell is the label. */
-function fromTableRow(lines: readonly string[], spec: WitnessFieldSpec): WitnessValue | null {
+function fromTableRow(
+  lines: readonly string[],
+  spec: WitnessFieldSpec,
+  _baseUrl?: string,
+): WitnessValue | null {
   for (const [index, rawLine] of lines.entries()) {
     if (!rawLine.includes('|')) continue;
     const line = normalizeText(rawLine);
@@ -290,6 +302,7 @@ function fromTableRow(lines: readonly string[], spec: WitnessFieldSpec): Witness
 function fromHeadingAdjacent(
   lines: readonly string[],
   spec: WitnessFieldSpec,
+  _baseUrl?: string,
 ): WitnessValue | null {
   for (const [index, rawLine] of lines.entries()) {
     if (!rawLine.trimStart().startsWith('#')) continue;
@@ -335,7 +348,11 @@ function fromHeadingAdjacent(
  * witness confidently reports the wrong number and corroborates a broken
  * collector.
  */
-function fromBareCurrency(lines: readonly string[], spec: WitnessFieldSpec): WitnessValue | null {
+function fromBareCurrency(
+  lines: readonly string[],
+  spec: WitnessFieldSpec,
+  _baseUrl?: string,
+): WitnessValue | null {
   if (spec.kind !== 'money' && spec.kind !== 'number') return null;
 
   const candidates: { value: unknown; line: string; lineNumber: number }[] = [];
@@ -389,21 +406,53 @@ function fromBareCurrency(lines: readonly string[], spec: WitnessFieldSpec): Wit
  * Matched on the link text first, then on the surrounding line, because
  * "Apply now" is the label far more often than the word appears beside it.
  */
+/**
+ * A link as an absolute URL, or null when it cannot be one.
+ *
+ * Anchors, mailto and javascript hrefs are not places a student can apply, so
+ * they are refused rather than resolved into something that looks like a page.
+ */
+function absolute(href: string, baseUrl?: string): string | null {
+  if (/^(#|mailto:|tel:|javascript:)/i.test(href)) return null;
+  try {
+    return new URL(href, baseUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
 function fromMarkdownLink(
   lines: readonly string[],
   spec: WitnessFieldSpec,
+  baseUrl?: string,
 ): WitnessValue | null {
   if (spec.shape !== 'url') return null;
 
-  const link = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+  /*
+   * Relative hrefs are the common case, not the exception.
+   *
+   * This first shipped matching only absolute URLs, and the very first live
+   * run against the fixture proved that wrong: the page renders
+   * "[Start application](/opportunity/ai-fellowship/apply)". The witness found
+   * nothing, `requiredOnPage` turned that silence into a disagreement, and a
+   * page where nothing was wrong was quarantined. A false accusation here is
+   * worse than the blind spot it replaced, because it teaches an operator to
+   * distrust incidents.
+   */
+  const link = /\[([^\]]*)\]\(([^\s)]+)\)/g;
 
   for (const [index, line] of lines.entries()) {
     link.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = link.exec(line)) !== null) {
       const text = (match[1] ?? '').trim();
-      const href = match[2] ?? '';
-      if (href === '') continue;
+      const rawHref = (match[2] ?? '').trim();
+      if (rawHref === '') continue;
+
+      // Resolved against the page, so the witness produces the same absolute
+      // form the collector reports and the two are actually comparable.
+      const href = absolute(rawHref, baseUrl);
+      if (href === null) continue;
 
       // The label may sit in the link text or in the words around it.
       const labelled =
@@ -439,10 +488,15 @@ const STRATEGIES = [
  *   it. Null is a legitimate and useful answer: it makes the comparison
  *   `incomparable`, which quarantines rather than accusing the collector.
  */
-export function extractField(markdown: string, spec: WitnessFieldSpec): WitnessValue | null {
+export function extractField(
+  markdown: string,
+  spec: WitnessFieldSpec,
+  /** The page this markdown came from, so relative links resolve. */
+  baseUrl?: string,
+): WitnessValue | null {
   const lines = markdown.split(/\r?\n/);
   for (const strategy of STRATEGIES) {
-    const found = strategy(lines, spec);
+    const found = strategy(lines, spec, baseUrl);
     if (found === null) continue;
     /*
      * A value has to look like the thing the spec asked for.
@@ -479,12 +533,13 @@ function satisfiesShape(value: unknown, spec: WitnessFieldSpec): boolean {
 export function extractFields(
   markdown: string,
   specs: readonly WitnessFieldSpec[],
+  baseUrl?: string,
 ): { values: WitnessValue[]; notFound: string[] } {
   const values: WitnessValue[] = [];
   const notFound: string[] = [];
 
   for (const spec of specs) {
-    const found = extractField(markdown, spec);
+    const found = extractField(markdown, spec, baseUrl);
     if (found === null) notFound.push(spec.path);
     else values.push(found);
   }
