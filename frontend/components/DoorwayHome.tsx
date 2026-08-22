@@ -36,7 +36,14 @@ function splitList(str: string): string[] {
   return str.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
-export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWorld | null }) {
+export function DoorwayHome({
+  initialWorld = null,
+  indexStats = null,
+}: {
+  initialWorld?: DoorwayWorld | null;
+  /** What the index holds, read on the server. Null when it cannot be reached. */
+  indexStats?: { total: number; hosts: number; withDeadline: number } | null;
+}) {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [interest, setInterest] = useState('Artificial intelligence');
   /*
@@ -233,50 +240,64 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
               <span>First reading · pulls the details</span>
             </div>
 
-            {/* Top Telemetry & Sensor Radar Ribbon */}
-            <div className="relative z-10 mb-2 w-full max-w-[620px]">
-              <div className="flex items-center justify-between gap-2 rounded-md border border-black/10 bg-white/85 px-3.5 py-2 backdrop-blur-md shadow-sm font-mono text-[11px]">
-                <div className="flex items-center gap-2">
+            {/*
+              One strip, and every number on it is real.
+
+              This was two rows of invented telemetry: a ribbon reading
+              "dev.pipeline() active" and a file explorer showing
+              c_fellowship.json 200 OK, witness_extract.md PROVED and
+              sha256.cert. No such files exist, nothing returned that status,
+              and nothing was proved. Decorative fiction on a product whose
+              entire argument is that a system should never assert what it has
+              not checked, placed directly above the button that does the
+              checking.
+
+              What replaces it is what the index actually holds. Those numbers
+              are more impressive than the invented ones were, and a reader can
+              go and verify every one of them.
+            */}
+            <div className="relative z-10 mb-3 w-full max-w-[620px]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-black/10 bg-white/85 px-4 py-2.5 backdrop-blur-md shadow-sm">
+                <span className="flex items-center gap-2">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                   </span>
-                  <span className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-gray-800 font-bold">
-                    Live search
+                  <span className="font-neuebit text-[10.5px] uppercase tracking-[0.14em] text-gray-800 font-bold">
+                    Already found
                   </span>
-                </div>
-                <div className="hidden sm:flex items-center gap-2 overflow-hidden text-[10.5px] text-gray-500">
-                  <span className="h-1 w-1 rounded-full bg-gray-300" />
-                  <span className="truncate">dev.pipeline() active</span>
-                  <span className="h-1 w-1 rounded-full bg-gray-300" />
-                  {/*
-                    This said "100% Evidence Gated", which was not true of the
-                    same page it sat on: results found live are deliberately
-                    unverified and labelled as such a screen below. A claim that
-                    is false about half the product is the exact failure this
-                    project exists to argue against, and putting it in the hero
-                    was the worst available place for it.
-                  */}
-                  <span className="text-emerald-700 font-semibold">Every result says how far we checked it</span>
-                </div>
-                <div className="flex items-center gap-1 font-neuebit text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-500/30 px-2 py-0.5 rounded font-bold shrink-0">
-                  Live Feed
-                </div>
-              </div>
-            </div>
+                </span>
 
-            {/* Interactive File Explorer Strip (GitHub Universe Motif) */}
-            <div className="relative z-10 mb-3 w-full max-w-[620px] flex items-center gap-2 overflow-x-auto text-[10.5px] font-mono">
-              <span className="text-gray-400 font-bold font-neuebit uppercase tracking-wider text-[9px] shrink-0">SOURCE STREAMS:</span>
-              <span className="inline-flex items-center gap-1 bg-white/90 border border-emerald-500/40 text-emerald-800 px-2 py-0.5 rounded shadow-2xs font-semibold shrink-0">
-                <span>📄</span> c_fellowship.json <span className="text-[8.5px] bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded font-bold">200 OK</span>
-              </span>
-              <span className="inline-flex items-center gap-1 bg-white/75 border border-black/10 text-gray-700 px-2 py-0.5 rounded shadow-2xs shrink-0">
-                <span>📝</span> witness_extract.md <span className="text-[8.5px] bg-gray-100 text-gray-700 px-1 py-0.2 rounded font-bold">PROVED</span>
-              </span>
-              <span className="inline-flex items-center gap-1 bg-white/75 border border-black/10 text-gray-700 px-2 py-0.5 rounded shadow-2xs shrink-0">
-                <span>🔐</span> sha256.cert
-              </span>
+                {indexStats === null || indexStats.total === 0 ? (
+                  /*
+                   * An empty index says so.
+                   *
+                   * A fresh deploy has crawled nothing, and inventing a number
+                   * to fill the space is the exact habit this replaced.
+                   */
+                  <span className="font-mono text-[11px] text-gray-500">
+                    Nothing searched yet. Press the button and we will go and look.
+                  </span>
+                ) : (
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-gray-600">
+                    <span>
+                      <strong className="text-gray-900 tabular-nums">{indexStats.total}</strong>{' '}
+                      opportunities
+                    </span>
+                    <span className="h-1 w-1 rounded-full bg-gray-300" />
+                    <span>
+                      <strong className="text-gray-900 tabular-nums">{indexStats.hosts}</strong> sites
+                    </span>
+                    <span className="h-1 w-1 rounded-full bg-gray-300" />
+                    <span>
+                      <strong className="text-gray-900 tabular-nums">
+                        {indexStats.withDeadline}
+                      </strong>{' '}
+                      with a stated deadline
+                    </span>
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="doorway-builder-card blueprint-card relative z-10 min-w-0 w-full max-w-[620px] border border-black bg-white">

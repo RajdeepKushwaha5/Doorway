@@ -646,3 +646,43 @@ export async function collectFindAction(
   }
 }
 
+
+/**
+ * What the index actually holds, for the hero to say something true.
+ *
+ * The strip above the form used to show `c_fellowship.json 200 OK`,
+ * `witness_extract.md PROVED` and `sha256.cert`. None of those files exist,
+ * nothing returned that status, and nothing was proved. It was decorative
+ * telemetry on a product whose entire argument is that a system should never
+ * assert what it has not checked.
+ *
+ * These numbers are the real ones, and they are more impressive than the
+ * invented ones were.
+ */
+export async function getIndexStatsAction(): Promise<{
+  total: number;
+  hosts: number;
+  withDeadline: number;
+} | null> {
+  try {
+    const response = await fetch(`${serverApiBase()}/api/crawl`, { cache: 'no-store' });
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as {
+      total?: unknown;
+      hosts?: unknown;
+      withDeadline?: unknown;
+    };
+    const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+
+    return {
+      total: count(body.total),
+      hosts: count(body.hosts),
+      withDeadline: count(body.withDeadline),
+    };
+  } catch {
+    // Unreachable is a real answer. The hero shows nothing rather than a
+    // plausible-looking number, which is the whole point of this change.
+    return null;
+  }
+}

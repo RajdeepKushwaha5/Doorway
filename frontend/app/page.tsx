@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { getConsoleCapabilitiesAction, getFixtureModeAction } from '@/app/actions';
 import type { CollectorSummary, Incident } from '@/lib/types';
 import { DoorwayHome } from '@/components/DoorwayHome';
+import { getIndexStatsAction } from '@/app/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,7 +84,13 @@ export default async function HomePage() {
    */
   // Do not preload watched fixtures or cached results into a student's map.
   // The first result they see must be the answer to the profile they submitted.
-  return <DoorwayHome initialWorld={null} />;
+  //
+  // The index totals are a different matter: they describe what has already
+  // been crawled rather than what this student asked for, and the hero says so
+  // in those words. Read on the server so the strip is filled on arrival.
+  const indexStats = await getIndexStatsAction();
+
+  return <DoorwayHome initialWorld={null} indexStats={indexStats} />;
 }
 
 export async function NoticeEnginePage() {
