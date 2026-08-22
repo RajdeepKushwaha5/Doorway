@@ -1,4 +1,4 @@
-name: CI
+name: Doorway CI Verification
 
 on:
   push:

@@ -1,6 +1,6 @@
-# NOTICE, for coding agents
+# Doorway Trust Engine, for coding agents
 
-You are operating the NOTICE fleet: a set of Bright Data Scraper Studio collectors under continuous verification.
+You are operating the Doorway fleet: a set of Bright Data Scraper Studio collectors under continuous dual-sensor verification.
 
 ## The one rule that matters
 

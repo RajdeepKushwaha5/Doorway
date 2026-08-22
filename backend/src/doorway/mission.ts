@@ -65,8 +65,18 @@ export interface Mission {
   readiness: {
     held: number;
     total: number;
-    /** Whole percent, floored. Zero requirements reads as complete. */
+    /** Whole percent, floored. Meaningless unless `stated` is true. */
     percent: number;
+    /**
+     * Whether the source published a document list at all.
+     *
+     * Without this a page that named no requirements produced "100 percent
+     * ready", which is a claim about a list nobody has seen. Not knowing what
+     * a programme asks for is not the same as having everything it asks for,
+     * and telling a student they are finished on that basis is the exact
+     * overstatement this system exists to refuse.
+     */
+    stated: boolean;
   };
 
   deadline: {
@@ -174,7 +184,8 @@ export function buildMission(input: MissionInput): Mission {
       // No stated requirements is not the same as no progress. A source that
       // lists none has asked for nothing, and the honest reading of that is
       // complete rather than zero.
-      percent: total === 0 ? 100 : Math.floor((heldCount / total) * 100),
+      percent: total === 0 ? 0 : Math.floor((heldCount / total) * 100),
+      stated: total > 0,
     },
     deadline: { raw: opportunity.deadlineRaw, at, safety, daysRemaining },
     blockers,
@@ -310,7 +321,7 @@ function decideState(input: {
       state: 'eligible',
       reason:
         total === 0
-          ? 'Confirmed by two sensors. This source publishes no document list.'
+          ? 'Confirmed by two sensors. This source publishes no document list, so what it asks for is unknown.'
           : `Confirmed by two sensors. ${total - heldCount} of ${total} documents still to gather.`,
     };
   }

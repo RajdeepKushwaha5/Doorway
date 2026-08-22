@@ -766,7 +766,7 @@ describe('the mission route', () => {
       documents: { name: string; status: string }[];
     };
 
-    expect(mission.readiness).toEqual({ held: 2, total: 3, percent: 66 });
+    expect(mission.readiness).toEqual({ held: 2, total: 3, percent: 66, stated: true });
     expect(mission.state).toBe('eligible');
     expect(mission.documents.find((d) => d.name === 'Research statement')?.status).toBe('missing');
   });

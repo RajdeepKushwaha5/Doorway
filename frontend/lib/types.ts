@@ -440,7 +440,7 @@ export interface Mission {
   state: 'discovered' | 'verified' | 'eligible' | 'application_ready' | 'blocked' | 'submitted';
   stateReason: string;
   documents: MissionDocument[];
-  readiness: { held: number; total: number; percent: number };
+  readiness: { held: number; total: number; percent: number; stated: boolean };
   deadline: {
     raw: string | null;
     at: number | null;

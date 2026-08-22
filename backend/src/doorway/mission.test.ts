@@ -51,7 +51,7 @@ describe('building a mission', () => {
       now: NOW,
     });
 
-    expect(mission.readiness).toEqual({ held: 2, total: 4, percent: 50 });
+    expect(mission.readiness).toEqual({ held: 2, total: 4, percent: 50, stated: true });
     expect(mission.state).toBe('eligible');
   });
 
@@ -80,13 +80,25 @@ describe('building a mission', () => {
     expect(mission.state).toBe('application_ready');
   });
 
-  it('treats a source that asks for nothing as complete, not as zero', () => {
+  it('does not claim readiness for a list nobody published', () => {
+    /*
+     * This used to report 100 percent, which is a claim about a document list
+     * that was never seen. Not knowing what a programme asks for is not the
+     * same as having everything it asks for.
+     */
     const mission = buildMission({
       opportunity: opportunity({ requiredDocuments: [] }),
       now: NOW,
     });
-    expect(mission.readiness.percent).toBe(100);
+    expect(mission.readiness.stated).toBe(false);
     expect(mission.state).toBe('eligible');
+    expect(mission.stateReason).toContain('unknown');
+  });
+
+  it('marks readiness as stated once the source names its documents', () => {
+    const mission = buildMission({ opportunity: opportunity(), held: ['Resume'], now: NOW });
+    expect(mission.readiness.stated).toBe(true);
+    expect(mission.readiness.percent).toBe(25);
   });
 });
 

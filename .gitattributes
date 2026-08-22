@@ -1,4 +1,4 @@
-# Normalise line endings.
+# Normalise line endings across platforms for Doorway repository.
 #
 # Development happens on Windows and the build hosts are Linux. Without this,
 # every checkout rewrites line endings and git reports whole files as modified

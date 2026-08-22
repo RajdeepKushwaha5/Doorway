@@ -122,8 +122,17 @@ export function ApplicationMission({ opportunityId }: { opportunityId: string })
           <div className="font-neuebit text-[10px] uppercase tracking-[0.14em] text-gray-400">
             Application readiness
           </div>
+          {/*
+            * No percentage for a list nobody published.
+            *
+            * This printed "100%" when a source named no documents, which is a
+            * claim about requirements that were never seen. Not knowing what a
+            * programme asks for is not the same as having everything it asks
+            * for, and it is the one number on this panel a student would act
+            * on.
+            */}
           <div className="mt-1 font-mondwest text-[38px] leading-none tabular-nums">
-            {readiness.percent}%
+            {readiness.stated ? `${String(readiness.percent)}%` : 'not stated'}
           </div>
         </div>
         <div className="text-right">
@@ -138,12 +147,14 @@ export function ApplicationMission({ opportunityId }: { opportunityId: string })
         </div>
       </div>
 
-      <div className="mx-4 mt-3 h-1 bg-gray-200">
-        <div
-          className={`h-1 transition-all duration-500 ${mission.state === 'blocked' ? 'bg-red-500' : 'bg-emerald-500'}`}
-          style={{ width: `${String(readiness.percent)}%` }}
-        />
-      </div>
+      {readiness.stated ? (
+        <div className="mx-4 mt-3 h-1 bg-gray-200">
+          <div
+            className={`h-1 transition-all duration-500 ${mission.state === 'blocked' ? 'bg-red-500' : 'bg-emerald-500'}`}
+            style={{ width: `${String(readiness.percent)}%` }}
+          />
+        </div>
+      ) : null}
 
       {/* Dates. The safety date is this system's opinion and is labelled as one. */}
       <div className="mt-4 grid grid-cols-2 gap-px border-y border-gray-200 bg-gray-200">
@@ -236,7 +247,9 @@ export function ApplicationMission({ opportunityId }: { opportunityId: string })
 
       <div className="flex items-center justify-between gap-4 border-t border-gray-200 px-4 py-3 font-mono text-[10px] text-gray-400">
         <span>
-          {readiness.held} of {readiness.total} documents in hand
+          {readiness.stated
+            ? `${String(readiness.held)} of ${String(readiness.total)} documents in hand`
+            : 'the source published no document list'}
         </span>
         <span>confirmed by {mission.confirmedBy.replace(/_/g, ' ')}</span>
       </div>

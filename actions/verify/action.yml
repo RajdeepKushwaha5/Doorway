@@ -1,8 +1,8 @@
-name: 'NOTICE data verification gate'
+name: 'Doorway data verification gate'
 description: >-
   Fail a build when the web data it depends on is not currently verified by two
-  independent Bright Data sensors.
-author: 'NOTICE'
+  independent Bright Data sensors with the Doorway Trust Engine.
+author: 'Doorway'
 
 branding:
   icon: 'shield'

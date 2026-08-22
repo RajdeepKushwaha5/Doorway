@@ -1,4 +1,4 @@
-# Architecture
+# Doorway Architecture & Dual-Sensor Flow
 
 One rule decides everything in this system:
 

@@ -1,6 +1,6 @@
 ---
 name: notice
-description: Operate a fleet of Bright Data Scraper Studio collectors under continuous verification. Use when asked to check collectors, investigate scraper output that looks wrong, decide whether a website changed or a scraper broke, run Self-Healing safely, or approve a proposed repair. Also use when asked about silent data corruption, extractor drift, or why a collector's output cannot be trusted.
+description: Operate a fleet of Bright Data Scraper Studio collectors under continuous dual-sensor verification with the Doorway Trust Engine. Use when asked to check collectors, investigate scraper output that looks wrong, decide whether a website changed or a scraper broke, run Self-Healing safely, or approve a proposed repair.
 ---
 
 # NOTICE
