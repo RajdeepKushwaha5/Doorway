@@ -31,31 +31,6 @@ const DEFAULT_PROFILE: DoorwayProfile = {
   locations: [],
 };
 
-function CliPill({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = () => {
-    void navigator.clipboard.writeText(command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      title="Click to copy CLI command"
-      className="group inline-flex items-center gap-2 rounded border border-gray-300 bg-gray-50/80 px-3.5 py-2.5 font-mono text-[11px] text-gray-700 hover:border-emerald-500 hover:bg-white transition-all text-left"
-    >
-      <span className="text-emerald-600 font-bold">$</span>
-      <span className="font-semibold text-gray-800">{command}</span>
-      <span className="ml-1 rounded bg-gray-200 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-gray-600 group-hover:bg-emerald-100 group-hover:text-emerald-800 font-bold transition-colors">
-        {copied ? 'Copied ✓' : 'Copy ↗'}
-      </span>
-    </button>
-  );
-}
-
 function splitList(str: string): string[] {
   return str.split(',').map((s) => s.trim()).filter(Boolean);
 }
@@ -128,9 +103,12 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
 
             <div className="mt-9 grid gap-px border border-gray-200 bg-gray-200 sm:grid-cols-3 blueprint-card">
               {[
-                ['01', 'discover-sources/', 'Official long-tail sources'],
-                ['02', 'structure-collectors/', 'Scraper Studio collectors'],
-                ['03', 'prove-truth/', 'Two-sensor verification'],
+                // Said in the reader's words, not ours. Path-style labels
+                // like prove-truth/ read as a developer's filesystem, and the
+                // person this is for is a student looking for a scholarship.
+                ['01', 'We look', 'Past the aggregators, at the pages that publish the money'],
+                ['02', 'We read', 'Each page, the way a person would read it'],
+                ['03', 'We check', 'Twice, so a wrong deadline does not reach you'],
               ].map(([number, title, copy]) => (
                 <div key={number} className="bg-white p-4 group hover:bg-neutral-50 transition-colors">
                   <div className="flex items-center justify-between">
@@ -160,7 +138,16 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                 <span>Break the page and watch</span>
                 <span>↗</span>
               </Link>
-              <CliPill command="bdata scraper run c_mt36mo6tj37dmjgqh" />
+              {/*
+                Dropped from the hero.
+
+                A copyable `bdata scraper run c_...` is a lovely detail for
+                somebody who already knows what this is, and noise to everybody
+                else. It sat beside the one link a first-time visitor should
+                take, competing with it. The engine page is where a reader who
+                wants the command line goes, and it is still linked from the
+                nav.
+              */}
             </div>
           </div>
 
@@ -175,11 +162,11 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
             {/* Ambient Floating Orbit Sensors */}
             <div className="pointer-events-none absolute top-7 right-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-white/90 px-3 py-1 font-mono text-[10px] text-emerald-800 shadow-sm backdrop-blur-sm animate-float-slow">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>dev.witness() · Web Unlocker</span>
+              <span>Second reading · checks the first</span>
             </div>
             <div className="pointer-events-none absolute top-14 left-8 z-0 hidden xl:flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-3 py-1 font-mono text-[10px] text-gray-700 shadow-sm backdrop-blur-sm animate-float-reverse">
               <span className="h-1.5 w-1.5 rounded-full bg-black" />
-              <span>dev.collector() · Scraper Studio</span>
+              <span>First reading · pulls the details</span>
             </div>
 
             {/* Top Telemetry & Sensor Radar Ribbon */}
@@ -191,14 +178,22 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                   </span>
                   <span className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-gray-800 font-bold">
-                    Opportunity Radar
+                    Live search
                   </span>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 overflow-hidden text-[10.5px] text-gray-500">
                   <span className="h-1 w-1 rounded-full bg-gray-300" />
                   <span className="truncate">dev.pipeline() active</span>
                   <span className="h-1 w-1 rounded-full bg-gray-300" />
-                  <span className="text-emerald-700 font-semibold">100% Evidence Gated</span>
+                  {/*
+                    This said "100% Evidence Gated", which was not true of the
+                    same page it sat on: results found live are deliberately
+                    unverified and labelled as such a screen below. A claim that
+                    is false about half the product is the exact failure this
+                    project exists to argue against, and putting it in the hero
+                    was the worst available place for it.
+                  */}
+                  <span className="text-emerald-700 font-semibold">Every result says how far we checked it</span>
                 </div>
                 <div className="flex items-center gap-1 font-neuebit text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-500/30 px-2 py-0.5 rounded font-bold shrink-0">
                   Live Feed
@@ -317,11 +312,7 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
         </div>
       </section>
 
-      <WorldSection
-        world={world}
-        pending={pending}
-        profile={{ ...profile, interests: splitList(interest) }}
-      />
+      <WorldSection world={world} pending={pending} searched={searched} liveNote={liveNote} />
       <HowItLives />
     </div>
   );
@@ -338,63 +329,174 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+/**
+ * Where the answer lands.
+ *
+ * Written for somebody who has never been told what this is. Nothing here
+ * assumes the reader knows what a collector is, what a sensor is, or why two of
+ * them matter. The result is a list of opportunities with a plain sentence
+ * saying where each one came from and how far it can be trusted; the isometric
+ * view sits above it as a way of seeing the same set at a glance, not as the
+ * only way to read it.
+ *
+ * The section used to open with "01 / Opportunity world" and count "Sources",
+ * "Matches" and "Verified". Every one of those is this project's vocabulary
+ * rather than a student's, and a heading that has to be decoded is a heading
+ * that has already lost the reader.
+ */
 function WorldSection({
   world,
   pending,
-  profile,
+  searched,
+  liveNote,
 }: {
   world: DoorwayWorld | null;
   pending: boolean;
-  profile: DoorwayProfile;
+  /** Pages the live search opened, so the result can account for itself. */
+  searched: number | null;
+  /** Why the live half did not run, when it did not. */
+  liveNote: string | null;
 }) {
+  const matches = world?.matches ?? [];
+  const confirmed = matches.filter((m) => m.opportunity.trust.status === 'verified').length;
+  const justFound = matches.filter((m) => m.opportunity.trust.status === 'discovered').length;
+  const closing = world?.stats.closingSoon ?? 0;
+
   return (
     <section id="world" className="border-b border-gray-200 bg-white">
-      <div className="mx-auto max-w-[1400px] px-6 py-20 lg:px-12">
+      <div className="mx-auto max-w-[1400px] px-6 py-16 lg:px-12">
         <div className="flex flex-col justify-between gap-7 border-b border-black pb-8 md:flex-row md:items-end">
-          <div>
-            <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-emerald-600 font-bold">
-              01 / Opportunity world
-            </div>
-            <h2 className="mt-4 max-w-[850px] font-mondwest text-[clamp(48px,6vw,82px)] leading-[0.9] tracking-[-0.03em]">
-              Every building is a real door you can open.
+          <div className="max-w-[860px]">
+            <h2 className="font-mondwest text-[clamp(38px,5vw,68px)] leading-[0.92] tracking-[-0.03em]">
+              {matches.length === 0
+                ? 'Your opportunities appear here.'
+                : `${String(matches.length)} ${matches.length === 1 ? 'opportunity' : 'opportunities'} for you.`}
             </h2>
+
+            {/*
+              One sentence accounting for the result.
+
+              A reader who sees four cards has no idea whether that is all there
+              was, or all we bothered to look at. Saying how many pages were
+              opened turns a short list from a disappointment into a filter
+              doing its job.
+            */}
+            {matches.length > 0 ? (
+              <p className="mt-4 max-w-[720px] font-mono text-[13px] leading-relaxed text-gray-600">
+                {confirmed > 0 ? (
+                  <>
+                    <strong>{confirmed}</strong> we check continuously and can vouch for.{' '}
+                  </>
+                ) : null}
+                {justFound > 0 ? (
+                  <>
+                    <strong>{justFound}</strong> found on the live web just now and read once, so
+                    open the source before you plan around a date.{' '}
+                  </>
+                ) : null}
+                {searched !== null && searched > 0 ? (
+                  <>
+                    Searched {searched} pages; the rest were listings and articles about
+                    opportunities rather than opportunities.
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+
+            {liveNote !== null ? (
+              <p className="mt-4 max-w-[720px] border border-amber-500/40 bg-amber-50 p-3 font-mono text-[12.5px] leading-relaxed text-amber-900">
+                {liveNote}
+              </p>
+            ) : null}
           </div>
-          <div className="grid grid-cols-2 gap-px border border-gray-200 bg-gray-200 sm:grid-cols-4">
-            {[
-              ['Sources', world?.stats.sources ?? 0],
-              ['Matches', world?.stats.opportunities ?? 0],
-              ['Verified', world?.stats.verified ?? 0],
-              ['Closing', world?.stats.closingSoon ?? 0],
-            ].map(([label, value]) => (
-              <div key={label} className="min-w-[105px] bg-white p-3">
-                <div className="font-mondwest text-3xl">{value}</div>
-                <div className="font-neuebit text-[9px] uppercase tracking-[0.14em] text-gray-500">
-                  {label}
+
+          {matches.length > 0 ? (
+            <div className="grid grid-cols-3 gap-px border border-gray-200 bg-gray-200">
+              {[
+                ['Confirmed', confirmed, 'Two independent readings agreed'],
+                ['Just found', justFound, 'Read once, not verified yet'],
+                ['Closing soon', closing, 'Within 30 days'],
+              ].map(([label, value, hint]) => (
+                <div key={String(label)} className="min-w-[112px] bg-white p-3" title={String(hint)}>
+                  <div className="font-mondwest text-3xl">{value}</div>
+                  <div className="font-neuebit text-[9px] uppercase tracking-[0.14em] text-gray-500">
+                    {label}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        {pending ? <WorldSkeleton /> : null}
+        {/*
+          What you are looking at before you have asked for anything.
+
+          The server renders the sources under continuous observation so the
+          page is not bare on arrival. There are very few of those, so without
+          this line a visitor lands on one or two records, assumes that is the
+          whole product, and never presses the button that would have searched
+          the live web for them. Saying which state you are in costs one
+          sentence and is the difference between a demo that looks empty and one
+          that looks ready.
+        */}
+        {!pending && searched === null && matches.length > 0 ? (
+          <p className="mt-8 border border-black bg-[#f6f4ef] px-5 py-4 font-mono text-[13px] leading-relaxed">
+            This is what we already watch and can vouch for. Press{' '}
+            <strong>Find my opportunities</strong> above and we will search the live web for
+            everything else that fits.
+          </p>
+        ) : null}
+
+        {pending ? <SearchingState /> : null}
         {!pending && world === null ? <EmptyWorld initial /> : null}
-        {!pending && world !== null && world.matches.length === 0 ? <EmptyWorld initial={false} /> : null}
-        {!pending && world !== null && world.matches.length > 0 ? (
+        {!pending && world !== null && matches.length === 0 ? <EmptyWorld initial={false} /> : null}
+        {!pending && matches.length > 0 ? (
           <>
-            <IsometricWorld matches={world.matches} />
+            <IsometricWorld matches={matches} />
             <div className="doorway-city mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {world.matches.map((match, index) => (
+              {matches.map((match, index) => (
                 <OpportunityBuilding key={match.opportunity.id} match={match} index={index} />
               ))}
             </div>
           </>
         ) : null}
-
-        <div className="mt-16">
-          <LiveDiscovery profile={profile} />
-        </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * What a minute of waiting looks like.
+ *
+ * The search really does go out and read a dozen pages, and a bare spinner for
+ * that long reads as a hang. Saying what is happening, in order, is both more
+ * honest and more interesting than pretending it is instant.
+ */
+function SearchingState() {
+  const steps = [
+    'Asking the web what exists for you',
+    'Opening the pages worth opening',
+    'Reading each one the way a person would',
+    'Checking what we can against what we already knew',
+  ];
+  return (
+    <div className="mt-12 border border-black">
+      <div className="border-b border-black px-6 py-4 font-neuebit text-[11px] uppercase tracking-[0.16em]">
+        Searching the live web, about a minute
+      </div>
+      <ul className="divide-y divide-gray-200">
+        {steps.map((step, index) => (
+          <li
+            key={step}
+            className="flex items-center gap-3 px-6 py-4 font-mono text-[13px] text-gray-700"
+            style={{ animation: `doorway-rise 420ms ease-out ${String(index * 120)}ms both` }}
+          >
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+            {step}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -500,17 +602,39 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * The first thing most people will read, and the last one anybody writes.
+ *
+ * It used to say the world "has not been built yet" and instruct the reader to
+ * complete a profile so Doorway could "ask the backend for records that came
+ * through verified Scraper Studio collectors". That sentence is addressed to
+ * whoever wrote it. A student reading it learns nothing about what to do, and
+ * three of its nouns are ours.
+ *
+ * Both states now say the one thing worth saying: what to press, and what will
+ * happen when you do.
+ */
 function EmptyWorld({ initial }: { initial: boolean }) {
   return (
-    <div className="doorway-grid relative mt-12 flex min-h-[360px] items-center justify-center overflow-hidden border border-gray-200 bg-[#f6f4ef] px-6 text-center">
-      <div className="relative z-10 max-w-[580px] bg-white p-8 shadow-[10px_10px_0_#10b981]">
-        <div className="font-mondwest text-4xl">
-          {initial ? 'Your world has not been built yet.' : 'No verified doors match yet.'}
+    <div className="doorway-grid relative mt-12 flex min-h-[320px] items-center justify-center overflow-hidden border border-gray-200 bg-[#f6f4ef] px-6 text-center">
+      <div className="relative z-10 max-w-[600px] bg-white p-8 shadow-[10px_10px_0_#10b981]">
+        <div className="font-mondwest text-[clamp(28px,4vw,40px)] leading-tight">
+          {initial ? 'Tell us what you are looking for.' : 'Nothing matched that.'}
         </div>
-        <p className="mt-4 font-mono text-[11px] leading-6 text-gray-500">
-          {initial
-            ? 'Complete the profile above. Doorway will ask the backend for records that came through verified Scraper Studio collectors.'
-            : 'Doorway does not fill an empty map with invented opportunities. Add an official opportunity collector or broaden the profile, then build again.'}
+        <p className="mt-4 font-mono text-[13px] leading-relaxed text-gray-600">
+          {initial ? (
+            <>
+              Fill in the short form above and press <strong>Find my opportunities</strong>. We
+              search the live web for scholarships, fellowships and grants that fit, read each
+              promising page, and show you what we found. It takes about a minute.
+            </>
+          ) : (
+            <>
+              We searched and did not find a single opportunity page matching that. Most results
+              for funding terms are listicles and landing pages, and we drop those rather than pad
+              the list. Try broadening what you want to work on, or asking for another type.
+            </>
+          )}
         </p>
       </div>
     </div>
