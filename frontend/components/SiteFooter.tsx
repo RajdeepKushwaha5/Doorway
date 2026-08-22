@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { BrightDataBadge } from '@/components/BrightDataLogo';
 import { NoticeLogo } from '@/components/NoticeLogo';
+import { FooterGlyphGrid } from '@/components/FooterGlyphGrid';
 import { api } from '@/lib/api';
 
 export async function SiteFooter() {
@@ -283,9 +284,10 @@ export async function SiteFooter() {
           </div>
         </div>
 
-        {/* Giant Animated Brand Wordmark (Sarvam-Inspired Smooth Sans Cutout) */}
-        <div className="doorway-footer-brand-container">
-          <div className="doorway-footer-brand-mask select-none" aria-label="doorway">
+        {/* Giant Animated Brand Wordmark with Interactive Glyph Hover Matrix */}
+        <div className="doorway-footer-brand-container relative">
+          <FooterGlyphGrid />
+          <div className="doorway-footer-brand-mask select-none relative z-10" aria-label="doorway">
             doorway
           </div>
         </div>
