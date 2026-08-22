@@ -196,49 +196,95 @@ export function inferType(title: string, fallback: OpportunityType, url = ''): O
   return fallback;
 }
 
+/** Section headings and site furniture, never the name of an opportunity. */
+const GENERIC_TITLE =
+  /^(fellowship|scholarship|internship|grant|overview|about|home|apply|programme|program|opportunities|awards?)s?$/i;
+
+/** A heading that instructs the reader rather than naming anything. */
+const IMPERATIVE_TITLE = /^(explore|discover|learn|see|browse|find|meet|read|join|start|get)\b/i;
+
 /**
- * Take the page's own heading as the title when it has one.
+ * Words that leave a title hanging mid-phrase.
  *
- * A search result title is written by the search engine and often carries the
- * site name, a separator and a truncation ellipsis. The page's first heading
- * is what the body offering the money actually called it.
+ * A search engine truncates wherever it runs out of room, so removing its
+ * ellipsis routinely exposes the join: "Google DeepMind Artificial Intelligence
+ * Scholarship in ..." becomes "... Scholarship in", which reads like a sentence
+ * somebody was interrupted saying.
+ */
+const DANGLING = /\s+(?:in|for|at|to|of|on|with|and|the|a|an|by|from)$/i;
+
+/** Strip a search engine's truncation and whatever it left behind. */
+function tidyTitle(value: string): string {
+  let out = value
+    .replace(/\s*\.{2,}\s*$/, '')
+    .replace(/\s*[|–—-]\s*$/, '')
+    .trim();
+  // Repeat: removing one dangling word can expose another.
+  while (DANGLING.test(out)) out = out.replace(DANGLING, '').trim();
+  return out;
+}
+
+/**
+ * The best name available for this opportunity.
+ *
+ * Two candidates, and neither is reliably better. The page's own heading is
+ * what the body offering the money called it, which is usually right and
+ * sometimes is the site's masthead: Adobe's fellowship page is headed simply
+ * "Adobe India". The search engine's title is often the fuller name with the
+ * site glued on: "Adobe India AI Research Fellowship".
+ *
+ * So take both and prefer whichever is more specific, rather than declaring one
+ * source authoritative and living with its bad days. A student scanning a list
+ * of results needs to be able to tell which one is which, and "Adobe India"
+ * and "Fellowships" both fail that at a glance.
  */
 export function titleFrom(markdown: string, fallback: string): string {
-  // Section headings, not the name of anything. A page whose first heading is
-  // "Fellowship" has told the reader nothing they can recognise later.
-  const GENERIC =
-    /^(fellowship|scholarship|internship|grant|overview|about|home|apply|programme|program)s?$/i;
+  const searchTitle = tidyTitle(fallback);
+  const [searchHead = searchTitle] = searchTitle.split(/\s+[|–—]\s+/);
+  const cleanedSearch = tidyTitle(searchHead);
 
+  let heading: string | null = null;
   for (const line of markdown.split(/\r?\n/).slice(0, 60)) {
-    const heading = /^#{1,2}\s+(.{6,120})$/.exec(line.trim());
-    const found = heading?.[1]?.trim();
+    const match = /^#{1,2}\s+(.{4,120})$/.exec(line.trim());
+    const found = match?.[1]?.trim();
     if (found === undefined) continue;
-    if (GENERIC.test(found)) continue;
+    if (GENERIC_TITLE.test(found)) continue;
     // A heading that is a question belongs to an FAQ further down the page.
     if (found.endsWith('?')) continue;
-    /*
-     * An instruction to the reader is not the name of anything.
-     *
-     * research.google came back from a production run titled "Explore our many
-     * areas of focus", which is the first heading on the page and is marketing
-     * furniture. A student scanning a list of results cannot tell what that
-     * one is.
-     */
-    if (/^(explore|discover|learn|see|browse|find|meet|read|join|start|get)\b/i.test(found)) {
-      continue;
-    }
-    return found;
+    // research.google was titled "Explore our many areas of focus" from a live
+    // run, which is marketing furniture rather than a name.
+    if (IMPERATIVE_TITLE.test(found)) continue;
+    heading = tidyTitle(found);
+    break;
   }
+
   /*
-   * Falling back to the search engine's title, cleaned.
+   * A heading that is the opening of the fuller name is the shorter of two
+   * right answers.
    *
-   * It arrives as "Fellowships | Wadhwani School of Data Science and
-   * Artificial ...", which is the site name and a truncation glued to the real
-   * name. Cut at the first pipe and drop the ellipsis: what is left is what
-   * the page is called.
+   * "Adobe India" is a prefix of "Adobe India AI Research Fellowship". Keeping
+   * the prefix loses the only words that say what the page is for.
    */
-  const [head = fallback] = fallback.split(/\s+[|–—]\s+/);
-  return head.replace(/\s*\.{2,}\s*$/, '').trim();
+  if (heading !== null && cleanedSearch.toLowerCase().startsWith(heading.toLowerCase())) {
+    return cleanedSearch.length > heading.length ? cleanedSearch : heading;
+  }
+
+  if (heading !== null) return heading;
+
+  /*
+   * Neither source gave a specific name, so keep the site with it.
+   *
+   * wsai.iitm.ac.in yields "Fellowships" from its heading and "Fellowships |
+   * Wadhwani School of Data Science and Artificial ..." from search. Cutting at
+   * the pipe leaves "Fellowships", which is indistinguishable from every other
+   * fellowships page in a list. The half being discarded is the half that says
+   * whose they are.
+   */
+  if (GENERIC_TITLE.test(cleanedSearch) && searchTitle !== cleanedSearch) {
+    return tidyTitle(searchTitle.replace(/\s+\|\s+/, ' — '));
+  }
+
+  return cleanedSearch === '' ? searchTitle : cleanedSearch;
 }
 
 interface ReadConfig {

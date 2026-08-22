@@ -267,11 +267,18 @@ describe('tidying what the page gave us', () => {
     );
   });
 
-  it("cuts the site name and truncation off a search engine's title", () => {
-    // No heading in the body, so the fallback is used.
+  it("drops a search engine's truncation but keeps what names the page", () => {
+    // This used to assert 'Fellowships', which is the whole problem: one word
+    // shared by every fellowships page on the web. The site is the half that
+    // says whose they are, so it stays when nothing more specific exists.
     expect(
       titleFrom('body text with no heading at all', 'Fellowships | Wadhwani School of Data ...'),
-    ).toBe('Fellowships');
+    ).toBe('Fellowships — Wadhwani School of Data');
+
+    // A specific name still loses the site and the ellipsis.
+    expect(
+      titleFrom('body with no heading', 'Oxford Schmidt AI Fellowship | Oxford ...'),
+    ).toBe('Oxford Schmidt AI Fellowship');
   });
 });
 
@@ -288,6 +295,72 @@ describe('titles from production pages', () => {
 
   it('still takes a real heading', () => {
     expect(titleFrom('# Oxford Schmidt AI in Science Fellowship\n\nbody', 'x')).toBe(
+      'Oxford Schmidt AI in Science Fellowship',
+    );
+  });
+});
+
+describe('naming a discovered opportunity', () => {
+  /*
+   * Adobe's fellowship page is headed simply "Adobe India". The full name only
+   * appears in the search engine's title. Keeping the heading loses the only
+   * words that say what the page is for, and a student scanning a list cannot
+   * tell "Adobe India" apart from anything else.
+   */
+  it('prefers the fuller name when the heading is its opening', () => {
+    expect(
+      titleFrom('# Adobe India\n\nbody text here', 'Adobe India AI Research Fellowship'),
+    ).toBe('Adobe India AI Research Fellowship');
+  });
+
+  /*
+   * wsai.iitm.ac.in gives "Fellowships" from both its heading and the head of
+   * its search title. Cutting at the pipe leaves a word indistinguishable from
+   * every other fellowships page; the half being discarded is the half that
+   * says whose they are.
+   */
+  it('keeps the site when neither source gives a specific name', () => {
+    expect(
+      titleFrom(
+        '# Fellowships\n\nbody',
+        'Fellowships | Wadhwani School of Data Science and Artificial Intelligence',
+      ),
+    ).toBe('Fellowships — Wadhwani School of Data Science and Artificial Intelligence');
+  });
+
+  it('keeps a specific heading over the search title', () => {
+    expect(
+      titleFrom('# Oxford Schmidt AI in Science Fellowship\n\nbody', 'Something Else | Oxford'),
+    ).toBe('Oxford Schmidt AI in Science Fellowship');
+  });
+
+  it('still drops marketing headings and questions', () => {
+    expect(titleFrom('# Explore our many areas of focus\n\n## Google PhD Fellowship\n\nx', 'f')).toBe(
+      'Google PhD Fellowship',
+    );
+  });
+});
+
+describe('titles a search engine truncated', () => {
+  /*
+   * Search engines cut wherever they run out of room, so removing the ellipsis
+   * exposes the join. A live run produced "Google DeepMind Artificial
+   * Intelligence Scholarship in", which reads like somebody was interrupted.
+   */
+  it('drops a word left hanging by the truncation', () => {
+    expect(
+      titleFrom('body with no heading', 'Google DeepMind Artificial Intelligence Scholarship in ...'),
+    ).toBe('Google DeepMind Artificial Intelligence Scholarship');
+  });
+
+  it('keeps trimming when one removal exposes another', () => {
+    expect(titleFrom('body with no heading', 'The Fellowship for the ...')).toBe(
+      'The Fellowship',
+    );
+  });
+
+  it('leaves a complete title alone', () => {
+    expect(titleFrom('body with no heading', 'Oxford Schmidt AI in Science Fellowship')).toBe(
       'Oxford Schmidt AI in Science Fellowship',
     );
   });
