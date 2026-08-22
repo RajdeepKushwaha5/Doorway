@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -156,5 +156,91 @@ describe('repeat-safe runtime records', () => {
       targetUrls: ['https://example.com/corrected'],
       rows: [{ title: 'Corrected' }],
     });
+  });
+});
+
+/**
+ * A seed pointing at the wrong host is worse than no seed at all.
+ *
+ * The file used to hardcode the fixture's hostname. A fresh deploy came up
+ * seeding collectors aimed at the previous deployment: they registered
+ * cleanly, reported healthy, and watched a host that had nothing to do with
+ * that instance. An empty dashboard announces itself. This does not.
+ */
+describe('seed file substitution', () => {
+  it('fills host placeholders from the environment', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'notice-seed-env-'));
+    const store = new FileStore(join(directory, 'store.json'));
+    const file = join(directory, 'seed.json');
+
+    await writeFile(
+      file,
+      JSON.stringify([
+        {
+          brightDataCollectorId: 'c_test',
+          name: 'lab',
+          targetDomain: '${TEST_LAB_HOST}',
+          schedule: null,
+          watchUrls: ['${TEST_LAB_URL}/opportunity/ai-fellowship'],
+          witnessSpecs: [],
+          invariants: [],
+          protectedFields: [],
+          goldenCases: [],
+        },
+      ]),
+      'utf8',
+    );
+
+    process.env['TEST_LAB_URL'] = 'https://lab.example';
+    process.env['TEST_LAB_HOST'] = 'lab.example';
+    try {
+      const result = await seedCollectors(store, file);
+      expect(result.seeded).toBe(1);
+
+      const [collector] = await store.listCollectors();
+      expect(collector?.watchUrls[0]).toBe('https://lab.example/opportunity/ai-fellowship');
+      expect(collector?.targetDomain).toBe('lab.example');
+    } finally {
+      delete process.env['TEST_LAB_URL'];
+      delete process.env['TEST_LAB_HOST'];
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  /*
+   * An unset variable is left visible rather than blanked. A URL still showing
+   * ${DOORWAY_LAB_URL} is obviously unconfigured; https:///opportunity/... looks
+   * like a bug somewhere else entirely.
+   */
+  it('leaves an unset variable visible instead of blanking it', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'notice-seed-env2-'));
+    const store = new FileStore(join(directory, 'store.json'));
+    const file = join(directory, 'seed.json');
+
+    await writeFile(
+      file,
+      JSON.stringify([
+        {
+          brightDataCollectorId: 'c_test',
+          name: 'lab',
+          targetDomain: 'example.test',
+          schedule: null,
+          watchUrls: ['${DEFINITELY_NOT_SET_ANYWHERE}/page'],
+          witnessSpecs: [],
+          invariants: [],
+          protectedFields: [],
+          goldenCases: [],
+        },
+      ]),
+      'utf8',
+    );
+
+    try {
+      await seedCollectors(store, file);
+      const [collector] = await store.listCollectors();
+      expect(collector?.watchUrls[0]).toBe('${DEFINITELY_NOT_SET_ANYWHERE}/page');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

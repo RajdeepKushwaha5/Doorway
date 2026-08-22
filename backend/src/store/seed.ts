@@ -51,7 +51,27 @@ export async function seedCollectors(
 
   let entries: SeedEntry[];
   try {
-    const parsed: unknown = JSON.parse(await readFile(path, 'utf8'));
+    /*
+     * Hosts are configuration, not content.
+     *
+     * The seed file used to hardcode the fixture's hostname, so a fresh deploy
+     * came up seeding collectors that pointed at the previous deployment. They
+     * registered cleanly and every one of them was aimed at a host that had
+     * nothing to do with this instance, which is a worse failure than an empty
+     * dashboard because it looks like a working one.
+     *
+     * `${VAR}` is substituted from the environment before parsing. An unset
+     * variable is left as-is rather than replaced with an empty string: a URL
+     * with a visible `${DOORWAY_LAB_URL}` in it is obviously unconfigured,
+     * whereas `https:///opportunity/ai-fellowship` looks like a bug somewhere
+     * else entirely.
+     */
+    const raw = (await readFile(path, 'utf8')).replace(
+      /\$\{([A-Z0-9_]+)\}/g,
+      (whole, name: string) => process.env[name] ?? whole,
+    );
+
+    const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return { seeded: 0, reason: 'unreadable' };
     entries = parsed as SeedEntry[];
   } catch {

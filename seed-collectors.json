@@ -1,182 +1,55 @@
 [
   {
-    "brightDataCollectorId": "c_msvllpds1n1dcoz8qx",
-    "name": "DriftMart headphones",
-    "targetDomain": "driftmart-3ut8.onrender.com",
+    "brightDataCollectorId": "c_mt36mo6tj37dmjgqh",
+    "name": "Doorway Lab, AI Research Fellowship",
+    "targetDomain": "${DOORWAY_LAB_HOST}",
     "schedule": "every 6 hours",
-    "watchUrls": [
-      "https://driftmart-3ut8.onrender.com/product/headphones",
-      "https://driftmart-3ut8.onrender.com/fixtures/baseline",
-      "https://driftmart-3ut8.onrender.com/fixtures/genuine_price_change"
-    ],
+    "watchUrls": ["${DOORWAY_LAB_URL}/opportunity/ai-fellowship"],
     "witnessSpecs": [
       {
-        "path": "price",
-        "meaning": "The purchase price of the product, not a refundable deposit, shipping fee or sponsored listing price.",
-        "labels": [
-          "price",
-          "purchase price"
-        ],
-        "excludeLabels": [
-          "deposit",
-          "refundable",
-          "security",
-          "sponsored"
-        ],
-        "kind": "money",
+        "path": "deadline_raw",
+        "meaning": "The date applications close, not an early-interest date, a notification date or a results date.",
+        "labels": ["application deadline", "deadline", "applications close", "closing date"],
+        "excludeLabels": ["early interest", "notification", "posted", "announced", "result"],
+        "kind": "text",
         "allowed": []
       },
       {
-        "path": "availability",
-        "meaning": "Whether the product can be bought right now.",
-        "labels": [
-          "availability",
-          "stock"
-        ],
-        "excludeLabels": [],
+        "path": "funding_level",
+        "meaning": "How much of the cost the award covers.",
+        "labels": ["funding", "award", "stipend"],
+        "excludeLabels": ["sponsored", "advertisement"],
+        "kind": "text",
+        "allowed": []
+      },
+      {
+        "path": "title",
+        "meaning": "The name of the opportunity being offered.",
+        "labels": ["fellowship", "scholarship", "programme", "program"],
+        "excludeLabels": ["sponsored"],
         "kind": "text",
         "allowed": []
       }
     ],
     "invariants": [
-      {
-        "kind": "required",
-        "field": "price"
-      },
-      {
-        "kind": "range",
-        "field": "price",
-        "min": 1
-      },
-      {
-        "kind": "required",
-        "field": "product_name"
-      }
+      { "kind": "required", "field": "title" },
+      { "kind": "required", "field": "application_url" }
     ],
-    "protectedFields": [
-      "price",
-      "product_name"
-    ],
+    "protectedFields": ["deadline_raw", "application_url"],
     "goldenCases": [
       {
         "label": "baseline",
-        "url": "https://driftmart-3ut8.onrender.com/fixtures/baseline",
-        "expected": {
-          "price": 249
-        }
-      }
-    ],
-    "currency": "USD"
-  },
-  {
-    "brightDataCollectorId": "c_msvk2zahnc2mizts6",
-    "name": "Books to Scrape",
-    "targetDomain": "books.toscrape.com",
-    "schedule": "every 6 hours",
-    "watchUrls": [
-      "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
-      "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html",
-      "https://books.toscrape.com/catalogue/soumission_998/index.html",
-      "https://books.toscrape.com/catalogue/sharp-objects_997/index.html",
-      "https://books.toscrape.com/catalogue/sapiens-a-brief-history-of-humankind_996/index.html"
-    ],
-    "witnessSpecs": [
-      {
-        "path": "price_excl_tax",
-        "meaning": "The price of the book excluding tax, not the tax amount and not a shipping fee.",
-        "labels": [
-          "price",
-          "price excl"
-        ],
-        "excludeLabels": [
-          "shipping",
-          "sponsored",
-          "incl"
-        ],
-        "kind": "money",
-        "allowed": []
+        "url": "${DOORWAY_LAB_URL}/fixtures/baseline",
+        "expected": { "deadline_raw": "18 September 2026" }
       },
       {
-        "path": "availability",
-        "meaning": "Whether the book can be bought right now.",
-        "labels": [
-          "availability",
-          "stock"
-        ],
-        "excludeLabels": [],
-        "kind": "text",
-        "allowed": []
+        "label": "deadline extended, genuinely",
+        "url": "${DOORWAY_LAB_URL}/fixtures/deadline_extended",
+        "expected": { "deadline_raw": "30 September 2026" }
       }
     ],
-    "invariants": [
-      {
-        "kind": "required",
-        "field": "price_excl_tax"
-      },
-      {
-        "kind": "range",
-        "field": "price_excl_tax",
-        "min": 1
-      },
-      {
-        "kind": "required",
-        "field": "book_title"
-      }
-    ],
-    "protectedFields": [
-      "price_excl_tax",
-      "book_title"
-    ],
-    "goldenCases": [],
-    "currency": "GBP"
-  },
-  {
-    "brightDataCollectorId": "c_mszt6dg019q6p244j6",
-    "name": "DriftMart search (interaction)",
-    "targetDomain": "driftmart-3ut8.onrender.com",
-    "currency": "USD",
-    "watchUrls": [
-      "https://driftmart-3ut8.onrender.com/search?q=Nova"
-    ],
-    "witnessSpecs": [
-      {
-        "path": "price",
-        "meaning": "The purchase price of the product the search returned, not a featured or sponsored product.",
-        "labels": [
-          "price"
-        ],
-        "excludeLabels": [
-          "deposit",
-          "refundable",
-          "sponsored",
-          "featured"
-        ],
-        "kind": "money",
-        "allowed": []
-      }
-    ],
-    "invariants": [
-      {
-        "kind": "required",
-        "field": "price"
-      },
-      {
-        "kind": "range",
-        "field": "price",
-        "min": 1
-      },
-      {
-        "kind": "required",
-        "field": "product_name"
-      }
-    ],
-    "protectedFields": [
-      "price",
-      "product_name"
-    ],
-    "goldenCases": [],
-    "schedule": null,
     "autoPromote": "never",
-    "freshnessMinutes": null
+    "freshnessMinutes": 1440,
+    "currency": "INR"
   }
 ]

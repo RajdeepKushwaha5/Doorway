@@ -75,6 +75,17 @@ services:
       # keep two sensors comparable rather than to localise anything.
       - key: DISCOVERY_COUNTRY
         value: in
+      # Where the seeded opportunity collector points.
+      #
+      # The seed file used to hardcode the fixture's hostname, so a fresh
+      # deploy came up seeding collectors aimed at the previous deployment.
+      # They registered cleanly and watched a host with nothing to do with this
+      # instance, which looks like a working dashboard and is worse than an
+      # empty one. Change both if you rename the lab service.
+      - key: DOORWAY_LAB_URL
+        value: https://doorway-lab.onrender.com
+      - key: DOORWAY_LAB_HOST
+        value: doorway-lab.onrender.com
       # Set to the deployed dashboard origin once Vercel has given you one.
       - key: NOTICE_CORS_ORIGIN
         sync: false
