@@ -126,17 +126,46 @@ export function reconcile(
      * Only for specs that declared themselves dates. Everything else compares
      * exactly as before.
      */
+    /*
+     * A link the page no longer offers is a disagreement, not a shrug.
+     *
+     * Everywhere else, a value the witness could not find is incomparable:
+     * one sensor read it, the other could not, and accusing the collector on
+     * that basis would quarantine the web. For a field the page is required to
+     * show, silence means something. The collector claimed an application URL
+     * that the listing had stopped publishing anywhere, the value was well
+     * formed and even resolved, and because nothing compared it the run came
+     * back healthy while the listing had no way to apply.
+     */
+    const witnessMissing = witnessValue === undefined;
     const agreement =
-      spec.shape === 'date'
-        ? compareDates(collectorValue, witnessValue?.value ?? null)
-        : compareValues(collectorValue, witnessValue?.value ?? null);
+      spec.requiredOnPage === true && witnessMissing && collectorValue !== null
+        ? ({
+            kind: 'disagree',
+            note: 'the collector reported a value but the page does not show one, and this field must appear on the page',
+          } as ValueAgreement)
+        : spec.shape === 'date'
+          ? compareDates(collectorValue, witnessValue?.value ?? null)
+          : compareValues(collectorValue, witnessValue?.value ?? null);
 
     comparisons.push({
       path: spec.path,
       collectorValue,
       witnessValue: witnessValue?.value ?? null,
       agreement,
-      witnessConfidence: witnessValue?.confidence ?? 0,
+      /*
+       * A confident absence, when absence is the finding.
+       *
+       * Confidence here is the weight behind a disagreement, and a missing
+       * witness value normally carries none because nothing was read. When the
+       * page is required to show a field, the witness reading the page and
+       * finding no such link is itself the evidence, so it is scored as one.
+       * Left at zero it would report drift and rate it worthless, and the
+       * classifier would round the whole run back to inconclusive.
+       */
+      witnessConfidence:
+        witnessValue?.confidence ??
+        (spec.requiredOnPage === true && collectorValue !== null ? 0.8 : 0),
       evidence: witnessValue?.evidence ?? null,
     });
   }

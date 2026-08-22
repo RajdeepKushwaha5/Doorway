@@ -13,7 +13,14 @@ export default function VerifyPage() {
     <div className="bg-surface pt-10">
       <div className="section-index mx-auto max-w-5xl">
         <span>INDEPENDENT VERIFIER</span>
-        <span>OFFLINE</span>
+        {/*
+          * Every other page puts a bracketed page label in this slot, and this
+          * one put a word the rest of the site uses for a status. "OFFLINE"
+          * was meant as a property of the verifier, that it needs no network,
+          * and it reads as a report that something is down, directly above a
+          * live API URL. Say the property instead.
+          */}
+        <span>[ IN YOUR BROWSER ]</span>
       </div>
 
       <div className="mx-auto max-w-5xl px-6 pb-24 pt-10 lg:px-8">

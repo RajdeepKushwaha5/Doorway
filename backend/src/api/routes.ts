@@ -46,7 +46,8 @@ import { OpportunityIndex } from '../crawl/index-store.js';
  */
 const CANDIDATE_RUN_TIMEOUT_MS = 600_000;
 
-export const registerCollectorSchema = z.object({
+const collectorFieldsSchema = z
+  .object({
   brightDataCollectorId: z.string().regex(/^c_[a-z0-9]+$/i, 'expected a c_... collector id'),
   name: z.string().min(1),
   targetDomain: z.string().min(1),
@@ -73,6 +74,49 @@ export const registerCollectorSchema = z.object({
     .transform((code) => code.toUpperCase())
     .nullable()
     .default(null),
+  });
+
+/**
+ * Fields nobody but a single sensor would read.
+ *
+ * Returned rather than thrown so both the register and the update route can
+ * ask the same question, the second about the record it is about to save
+ * rather than about the patch it received.
+ */
+export function unwitnessedProtectedFields(collector: {
+  witnessSpecs: readonly { path: string }[];
+  protectedFields: readonly string[];
+}): string[] {
+  const witnessed = new Set(collector.witnessSpecs.map((spec) => spec.path));
+  return collector.protectedFields.filter((field) => !witnessed.has(field));
+}
+
+export const registerCollectorSchema = collectorFieldsSchema.superRefine((collector, ctx) => {
+    /*
+     * A protected field must be witnessed by somebody.
+     *
+     * These two lists were declared independently and never checked against
+     * each other, and the gap was invisible because both were populated and
+     * neither was wrong on its own. The fixture protected `application_url`
+     * and gave it a required invariant, but left it out of the witness specs,
+     * so no second sensor ever looked at it. `reconcile` iterates the specs,
+     * which meant the field nobody could compare was the field whose loss
+     * makes a listing useless: the collector kept reporting an application URL
+     * for a page that had stopped offering one, every witnessed field agreed,
+     * and the run came back healthy.
+     *
+     * Protecting a field is a statement that publishing it wrong does harm.
+     * A field that matters that much cannot be one only a single sensor reads.
+     */
+  for (const field of unwitnessedProtectedFields(collector)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['protectedFields'],
+      message:
+        `"${field}" is protected but has no witness spec, so only one sensor would ever read it. ` +
+        'Add a witnessSpecs entry for it, or stop protecting it.',
+    });
+  }
 });
 
 /**
@@ -277,7 +321,7 @@ export function buildRouter(deps: ApiDeps): Router {
     assertAdmin(request);
     const collector = await requireCollector(store, params['id']);
 
-    const parsed = registerCollectorSchema
+    const parsed = collectorFieldsSchema
       .partial()
       .omit({ brightDataCollectorId: true })
       .safeParse(body ?? {});
@@ -292,6 +336,25 @@ export function buildRouter(deps: ApiDeps): Router {
     );
 
     const updated: CollectorRecord = { ...collector, ...patch };
+
+    /*
+     * Checked on the result, not on the patch.
+     *
+     * A partial update can create the gap without ever mentioning it: send
+     * witnessSpecs without the application_url entry, leave protectedFields
+     * alone, and the record now protects a field no second sensor reads. The
+     * register route rejects that arrangement, so the update route has to
+     * reject arriving at it.
+     */
+    const unwitnessed = unwitnessedProtectedFields(updated);
+    if (unwitnessed.length > 0) {
+      throw new HttpError(
+        400,
+        `"${unwitnessed[0]}" is protected but has no witness spec, so only one sensor would ever ` +
+          'read it. Add a witnessSpecs entry for it, or stop protecting it.',
+      );
+    }
+
     await store.saveCollector(updated);
     return updated;
   });

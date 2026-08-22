@@ -55,7 +55,24 @@ export const witnessFieldSpecSchema = z.object({
    *
    * Opt-in, so every existing spec behaves exactly as before.
    */
-  shape: z.enum(['date']).optional(),
+  shape: z.enum(['date', 'url']).optional(),
+
+  /**
+   * Whether the page itself must show this, not merely the collector report it.
+   *
+   * Ordinarily a field the witness cannot find is incomparable: one sensor read
+   * it, the other could not, and that is a shrug rather than an accusation.
+   * For a link somebody has to click, it is not a shrug. A collector can report
+   * an application URL that the page no longer offers anywhere, and the reading
+   * is the right shape, resolves to a live page, and is wrong: the listing has
+   * no way to apply and a student is sent to a route the source stopped
+   * publishing.
+   *
+   * When this is set and the collector claims a value the witness cannot find
+   * on the page, that counts as disagreement. Off by default, because for most
+   * fields silence really is silence.
+   */
+  requiredOnPage: z.boolean().optional(),
 });
 
 export type WitnessFieldSpec = z.infer<typeof witnessFieldSpecSchema>;
@@ -67,7 +84,13 @@ export interface EvidenceSpan {
   /** 1-based line number within the fetched markdown. */
   lineNumber: number;
   /** Which extraction strategy produced this, for debugging and for trust. */
-  strategy: 'json-ld' | 'labelled-line' | 'table-row' | 'heading-adjacent' | 'bare-currency';
+  strategy:
+    | 'json-ld'
+    | 'markdown-link'
+    | 'labelled-line'
+    | 'table-row'
+    | 'heading-adjacent'
+    | 'bare-currency';
 }
 
 /** One field, as observed by the witness. */

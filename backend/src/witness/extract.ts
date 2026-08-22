@@ -376,8 +376,56 @@ function fromBareCurrency(lines: readonly string[], spec: WitnessFieldSpec): Wit
   };
 }
 
+/**
+ * A link, read as the thing a student has to click.
+ *
+ * The witness had no notion of a link at all, so the one field whose absence
+ * makes a listing useless was the one field no second sensor could see. A
+ * collector kept reporting an application URL for a page that had stopped
+ * offering one, the value was the right shape and resolved to a live page, and
+ * every other field agreed, so the run came back healthy while the listing was
+ * unusable.
+ *
+ * Matched on the link text first, then on the surrounding line, because
+ * "Apply now" is the label far more often than the word appears beside it.
+ */
+function fromMarkdownLink(
+  lines: readonly string[],
+  spec: WitnessFieldSpec,
+): WitnessValue | null {
+  if (spec.shape !== 'url') return null;
+
+  const link = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+
+  for (const [index, line] of lines.entries()) {
+    link.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = link.exec(line)) !== null) {
+      const text = (match[1] ?? '').trim();
+      const href = match[2] ?? '';
+      if (href === '') continue;
+
+      // The label may sit in the link text or in the words around it.
+      const labelled =
+        lineMatchesAny(text, spec.labels) || lineMatchesAny(line, spec.labels);
+      if (!labelled) continue;
+      if (spec.excludeLabels.length > 0 && lineMatchesAny(line, spec.excludeLabels)) continue;
+
+      return {
+        path: spec.path,
+        value: href,
+        confidence: 0.85,
+        evidence: { line, lineNumber: index + 1, strategy: 'markdown-link' },
+      };
+    }
+  }
+
+  return null;
+}
+
 const STRATEGIES = [
   fromJsonLd,
+  fromMarkdownLink,
   fromLabelledLine,
   fromTableRow,
   fromHeadingAdjacent,
@@ -423,6 +471,7 @@ export function extractField(markdown: string, spec: WitnessFieldSpec): WitnessV
 function satisfiesShape(value: unknown, spec: WitnessFieldSpec): boolean {
   if (spec.shape === undefined) return true;
   if (spec.shape === 'date') return typeof value === 'string' && parseDeadline(value) !== null;
+  if (spec.shape === 'url') return typeof value === 'string' && /^https?:\/\//i.test(value);
   return true;
 }
 

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildRouter } from './routes.js';
+import { buildRouter, registerCollectorSchema, unwitnessedProtectedFields } from './routes.js';
 import { FileStore, ScreenshotStore } from '../store/index.js';
 import type { BrightDataClient } from '../brightdata/index.js';
 import type { IncidentRecord } from '../store/index.js';
@@ -625,5 +625,71 @@ describe('Doorway public world', () => {
       body: JSON.stringify({ country: '', opportunityTypes: [] }),
     });
     expect(response.status).toBe(400);
+  });
+});
+
+describe('a protected field nobody witnesses', () => {
+  /*
+   * The two lists were declared independently and never checked against each
+   * other. Both were populated, neither was wrong alone, and the field whose
+   * loss makes a listing useless was the one no second sensor read.
+   */
+  const base = {
+    brightDataCollectorId: 'c_test123',
+    name: 'Fixture',
+    targetDomain: 'example.test',
+    watchUrls: ['https://example.test/listing'],
+    invariants: [],
+  };
+
+  const deadlineSpec = {
+    path: 'deadline_raw',
+    meaning: 'when applications close',
+    labels: ['deadline'],
+    excludeLabels: [],
+    kind: 'text' as const,
+    allowed: [],
+  };
+
+  it('is refused at registration, naming the field', () => {
+    const parsed = registerCollectorSchema.safeParse({
+      ...base,
+      witnessSpecs: [deadlineSpec],
+      protectedFields: ['deadline_raw', 'application_url'],
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toContain('application_url');
+    }
+  });
+
+  it('is accepted once a witness spec covers it', () => {
+    const parsed = registerCollectorSchema.safeParse({
+      ...base,
+      witnessSpecs: [
+        deadlineSpec,
+        {
+          path: 'application_url',
+          meaning: 'where to apply',
+          labels: ['apply'],
+          excludeLabels: [],
+          kind: 'text' as const,
+          allowed: [],
+          shape: 'url' as const,
+          requiredOnPage: true,
+        },
+      ],
+      protectedFields: ['deadline_raw', 'application_url'],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('reports the gap on a merged record, not only on a patch', () => {
+    expect(
+      unwitnessedProtectedFields({
+        witnessSpecs: [{ path: 'deadline_raw' }],
+        protectedFields: ['application_url'],
+      }),
+    ).toEqual(['application_url']);
   });
 });

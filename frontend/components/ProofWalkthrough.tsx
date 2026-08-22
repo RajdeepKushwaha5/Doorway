@@ -72,12 +72,37 @@ const TRUST_COPY: Record<string, { label: string; tone: string; meaning: string 
  * after a healthy run does not merely overstate the result, it demonstrates the
  * failure the page is here to argue against.
  */
-function outcome(verdict: string): {
+function outcome(
+  verdict: string,
+  expected: readonly string[] | null,
+): {
   heading: string;
   aggregator: string;
   doorway: string;
   next: string;
+  contradicted: boolean;
 } {
+  /*
+   * The page prints a criterion before every run and promises to be held to
+   * it. Nothing was checking. The fixture served application_link_removed, the
+   * stated verdicts were genuine_source_change or extractor_drift, the run
+   * returned healthy, and step 4 congratulated the system for agreeing with an
+   * ordinary aggregator on a page that had lost its apply link.
+   *
+   * A demonstration that states its own failure condition has to notice when
+   * it meets it, or the statement is decoration.
+   */
+  if (verdict !== '' && expected !== null && expected.length > 0 && !expected.includes(verdict)) {
+    return {
+      heading: 'This run did not meet the stated criterion',
+      aggregator:
+        'Not the comparison to draw here. The claim above was that this system would reach one of the stated verdicts, and it did not, so the honest reading is that it failed this case rather than that it beat anything.',
+      doorway: `The criterion printed before the run was ${expected.join(' or ')}, and the run returned ${verdict}. That is the failure this page invited you to look for, shown rather than smoothed over. Treat the result as unproven for this fault.`,
+      next: 'Put the page back to normal. A demonstration that can fail in front of you is only worth anything if it says so when it does.',
+      contradicted: true,
+    };
+  }
+
   if (verdict === '') {
     return {
       heading: 'What each system would do',
@@ -86,6 +111,7 @@ function outcome(verdict: string): {
       doorway:
         'Publishes a reading only when both sensors support it. When they disagree the last confirmed value stays up, the disputed field is named, and the record is marked as held.',
       next: 'Break the page above and run it again to see which of these actually happens. This panel reports the run, not the usual case.',
+      contradicted: false,
     };
   }
 
@@ -97,6 +123,7 @@ function outcome(verdict: string): {
       doorway:
         'Both sensors read the page and agreed on every field, so the reading was published and no repair was proposed. A system that cried drift here would be useless: the next real drift would be ignored too.',
       next: 'Now break the page above and run it again. The interesting claim is not that a clean page passes, it is what happens to a broken one.',
+      contradicted: false,
     };
   }
 
@@ -108,6 +135,7 @@ function outcome(verdict: string): {
       doorway:
         'Both sensors saw the same new value, so the page changed and the collector is fine. Blame was assigned to the source rather than the extractor, and no repair was proposed against a collector that is working. A required field going missing still blocks publication.',
       next: 'Put the page back to normal and run it once more to return the fixture to its baseline.',
+      contradicted: false,
     };
   }
 
@@ -118,6 +146,7 @@ function outcome(verdict: string): {
     doorway:
       'The two sensors did not support the same reading, so it was not published. The last value both confirmed is still shown, the disputed field is named, and the record is marked as held rather than quietly served alongside the rest.',
     next: 'Put the page back to normal and run it once more. The quarantine lifts on its own, because an incident opened by two sensors disagreeing is closed by the two of them agreeing again.',
+    contradicted: false,
   };
 }
 
@@ -158,7 +187,7 @@ export function ProofWalkthrough({
   const [ranVerdict, setRanVerdict] = useState('');
   // Stable, so the stream's effect does not re-fire on every parent render.
   const handleVerdict = useCallback((verdict: string) => setRanVerdict(verdict), []);
-  const told = outcome(ranVerdict);
+  const told = outcome(ranVerdict, chosen?.verdicts ?? null);
   const [pending, startTransition] = useTransition();
 
   const switchTo = (scenario: ProofScenario | null): void => {
@@ -422,7 +451,11 @@ export function ProofWalkthrough({
         blurb="The point is not that an alert fired. It is what a student is served while the source is wrong."
         last
       >
-        <div className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-gray-400 mb-3">
+        <div
+          className={`font-neuebit text-[11px] uppercase tracking-[0.14em] mb-3 ${
+            told.contradicted ? 'text-red-600 font-bold' : 'text-gray-400'
+          }`}
+        >
           {told.heading}
           {ranVerdict === '' ? null : (
             <span className="ml-2 normal-case tracking-normal font-mono text-gray-500">
@@ -441,8 +474,12 @@ export function ProofWalkthrough({
             </p>
           </div>
           <div className="bg-white p-5">
-            <div className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-emerald-600 font-bold">
-              Doorway
+            <div
+              className={`font-neuebit text-[11px] uppercase tracking-[0.14em] font-bold ${
+                told.contradicted ? 'text-red-600' : 'text-emerald-600'
+              }`}
+            >
+              {told.contradicted ? 'What actually happened' : 'Doorway'}
             </div>
             <p className="mt-3 font-mono text-[13px] leading-relaxed text-gray-700">
               {told.doorway}

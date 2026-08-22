@@ -326,6 +326,26 @@
         ],
         "kind": "text",
         "allowed": []
+      },
+      {
+        "path": "application_url",
+        "meaning": "Where a student goes to apply. The page must show this; a listing without one cannot be acted on.",
+        "labels": [
+          "apply",
+          "application",
+          "apply now",
+          "start your application"
+        ],
+        "excludeLabels": [
+          "contact",
+          "enquire",
+          "newsletter",
+          "sponsored"
+        ],
+        "kind": "text",
+        "allowed": [],
+        "shape": "url",
+        "requiredOnPage": true
       }
     ],
     "invariants": [
