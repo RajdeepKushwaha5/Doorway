@@ -25,6 +25,13 @@
 #     quiet period is slow. Warm both URLs before a demo.
 #   - there is no persistent disk, so a redeploy resets the store. Re-seed or
 #     re-run collectors afterwards.
+#
+# Live discovery is public by necessity: it is the route a student uses, and
+# neither they nor anybody judging this can be handed an admin token. It spends
+# real Web Unlocker requests, roughly one per search plus one per page opened,
+# so it is capped per caller and by a global hourly ceiling in the code. The
+# ceiling is what actually protects the account; raise it only if you have
+# budget to lose.
 
 services:
   - type: web
@@ -36,7 +43,10 @@ services:
     buildCommand: npm install && npm run build --workspace backend
     startCommand: npm run start --workspace backend
     healthCheckPath: /api/health
-    autoDeploy: false
+    # Tracks main. The deployed API sat on a build old enough to predate the
+    # Doorway routes entirely, because every deploy had to be remembered by
+    # hand, and nothing about the running service said it was behind.
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 22.11.0
@@ -58,6 +68,13 @@ services:
       # two calls to the same URL.
       - key: BRIGHTDATA_UNLOCKER_COUNTRY
         value: us
+      # Where live discovery appears to search from. Funding pages are
+      # frequently geo-fenced and search results differ by country, so a
+      # student in India asking for Indian scholarships should be searched for
+      # from India. Unrelated to the witness country above, which is pinned to
+      # keep two sensors comparable rather than to localise anything.
+      - key: DISCOVERY_COUNTRY
+        value: in
       # Set to the deployed dashboard origin once Vercel has given you one.
       - key: NOTICE_CORS_ORIGIN
         sync: false
@@ -99,7 +116,7 @@ services:
     rootDir: .
     buildCommand: npm install && npm run build --workspace driftmart
     startCommand: npm run start --workspace driftmart
-    autoDeploy: false
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 22.11.0
