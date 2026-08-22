@@ -1,4 +1,4 @@
-import { fetchWitnessMarkdown } from '../brightdata/unlocker.js';
+import { fetchPageSource, fetchWitnessMarkdown } from '../brightdata/unlocker.js';
 import { extractFields } from '../witness/extract.js';
 import type { WitnessFieldSpec } from '../witness/spec.js';
 import type { OpportunityType } from '../doorway/types.js';
@@ -12,7 +12,8 @@ import {
   scanForFunding,
   saysClosed,
 } from './plausible.js';
-import { deadlineHasPassed } from './dates.js';
+import { deadlineHasPassed, parseDeadline } from './dates.js';
+import { hasStructuredFacts, readStructured, type StructuredFacts } from './structured.js';
 
 /**
  * Read one discovered page and try to make an opportunity out of it.
@@ -96,6 +97,24 @@ export const OPPORTUNITY_SPECS: WitnessFieldSpec[] = [
   },
 ];
 
+/**
+ * How far a discovered record has been corroborated.
+ *
+ * `text_only` is what discovery has always produced: one reading, of the
+ * visible words, once.
+ *
+ * `confirmed` means the page's own structured data said the same thing. That is
+ * a genuinely independent reading, authored separately from the visible text
+ * and extracted by different code, and it is the same kind of corroboration the
+ * witness provides for a watched collector.
+ *
+ * `conflicting` means the two disagree, which is the most important of the
+ * three. A page whose visible deadline and embedded deadline differ is a page
+ * nobody should plan around without opening it, and saying so is worth more
+ * than silently preferring one.
+ */
+export type DraftCorroboration = 'text_only' | 'confirmed' | 'conflicting';
+
 export interface OpportunityDraft {
   sourceUrl: string;
   host: string;
@@ -111,8 +130,12 @@ export interface OpportunityDraft {
   foundVia: string;
   /** Fields the page did not yield, named rather than filled in. */
   missing: string[];
-  /** SHA-free provenance: how many independent reads back this. Always 1 here. */
-  sensorCount: 1;
+  /** How many independent reads back this: one for text, two once confirmed. */
+  sensorCount: 1 | 2;
+  /** What the page's own structured data had to say about it. */
+  corroboration: DraftCorroboration;
+  /** The date the page declared in machine-readable form, when it declared one. */
+  structuredDeadline: string | null;
   readAt: string;
 }
 
@@ -510,6 +533,108 @@ export function readMarkdown(
     foundVia: candidate.query,
     missing,
     sensorCount: 1,
+    corroboration: 'text_only',
+    structuredDeadline: null,
     readAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Ask the page's own structured data whether the words were right.
+ *
+ * Two things at once, and the second is the reason to bother.
+ *
+ * It fills in a deadline the visible text did not yield. Publishers embed
+ * schema.org markup because search engines reward it, so a page whose date is
+ * behind a tab, in an image, or written in a format no scanner handles will
+ * still frequently declare `"registrationDeadline": "2026-07-15"` in its
+ * source.
+ *
+ * And it corroborates one that was. The structured reading is independent in
+ * the way that matters: a different representation of the page, authored
+ * separately from the visible text, extracted by different code. Agreement
+ * between them is the same kind of evidence the witness gives a watched
+ * collector, and it lets a discovered record honestly claim more than "we read
+ * this once".
+ *
+ * Disagreement is not resolved. A page whose visible deadline and embedded
+ * deadline differ is a page nobody should plan around without opening it, and
+ * the record says so rather than quietly preferring whichever is prettier.
+ */
+export async function corroborate(
+  config: ReadConfig,
+  draft: OpportunityDraft,
+  signal?: AbortSignal,
+): Promise<OpportunityDraft> {
+  let html: string;
+  try {
+    const fetched = await fetchPageSource(
+      {
+        apiKey: config.apiKey,
+        zone: config.zone,
+        ...(config.baseUrl === undefined ? {} : { baseUrl: config.baseUrl }),
+        ...(config.country === undefined ? {} : { country: config.country }),
+      },
+      draft.sourceUrl,
+      signal,
+    );
+    html = fetched.html;
+  } catch {
+    // A failed second read leaves the first exactly as it was. It is a bonus,
+    // never a requirement.
+    return draft;
+  }
+
+  return reconcileStructured(draft, readStructured(html));
+}
+
+/**
+ * Set one reading against the other.
+ *
+ * Split from the fetch so the judgement can be tested without the network,
+ * which is the same reason `readMarkdown` is separate from `readCandidate`.
+ * This is the part worth being sure about: it decides whether a record claims
+ * one sensor or two.
+ */
+export function reconcileStructured(
+  draft: OpportunityDraft,
+  facts: StructuredFacts,
+): OpportunityDraft {
+  if (!hasStructuredFacts(facts)) return draft;
+
+  // A date the page declared but never showed in words. Still one reading:
+  // nothing corroborated it, it simply came from somewhere the words were not.
+  if (draft.deadlineRaw === null && facts.deadline !== null) {
+    if (deadlineHasPassed(facts.deadline)) return { ...draft, structuredDeadline: facts.deadline };
+    return {
+      ...draft,
+      deadlineRaw: facts.deadline,
+      structuredDeadline: facts.deadline,
+      corroboration: 'text_only',
+      missing: draft.missing.filter((field) => field !== 'deadline_raw'),
+    };
+  }
+
+  if (draft.deadlineRaw === null || facts.deadline === null) {
+    return { ...draft, structuredDeadline: facts.deadline };
+  }
+
+  /*
+   * Do the two readings mean the same day?
+   *
+   * Compared as dates rather than as strings, because "15th July 2026" and
+   * "2026-07-15" are the same fact written by two different authors for two
+   * different audiences. Comparing the text would call every agreement a
+   * conflict.
+   */
+  const fromText = parseDeadline(draft.deadlineRaw);
+  const fromData = parseDeadline(facts.deadline);
+  const agree = fromText !== null && fromData !== null && fromText === fromData;
+
+  return {
+    ...draft,
+    structuredDeadline: facts.deadline,
+    corroboration: agree ? 'confirmed' : 'conflicting',
+    sensorCount: agree ? 2 : 1,
   };
 }

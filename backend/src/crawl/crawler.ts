@@ -1,5 +1,5 @@
 import { fetchWitnessMarkdown } from '../brightdata/unlocker.js';
-import { readMarkdown, type OpportunityDraft } from '../acquire/read.js';
+import { corroborate, readMarkdown, type OpportunityDraft } from '../acquire/read.js';
 import { buildQueries } from '../acquire/queries.js';
 import { mergeResults, search } from '../acquire/serp.js';
 import type { DoorwayProfile } from '../doorway/types.js';
@@ -248,11 +248,24 @@ export async function crawl(
        */
       const identity = `${draft.host}:${draft.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()}`;
       if (!drafts.has(identity)) {
-        drafts.set(identity, draft);
+        /*
+         * Ask the page's structured data before keeping it.
+         *
+         * One more request per kept page, not per page fetched, so the cost
+         * scales with what is worth keeping rather than with the crawl. It buys
+         * the deadlines the visible text never yielded and, where the text did
+         * yield one, a second independent reading that agrees or does not.
+         */
+        const checked = await corroborate(config, draft, options.signal);
+        drafts.set(identity, checked);
         emit({
           step: 'kept',
-          line: `found            ${draft.title.slice(0, 56)}`,
-          detail: { url: draft.sourceUrl, deadline: draft.deadlineRaw },
+          line: `found            ${checked.title.slice(0, 56)}${checked.corroboration === 'confirmed' ? ' (confirmed)' : checked.corroboration === 'conflicting' ? ' (readings disagree)' : ''}`,
+          detail: {
+            url: checked.sourceUrl,
+            deadline: checked.deadlineRaw,
+            corroboration: checked.corroboration,
+          },
         });
       }
     });

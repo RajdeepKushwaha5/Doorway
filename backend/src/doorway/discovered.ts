@@ -130,13 +130,36 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
     // The page itself is where you apply from when it named no separate form.
     applicationUrl: draft.sourceUrl,
     trust: {
+      /*
+       * Two readings of the same page, when the page corroborated itself.
+       *
+       * A discovered record is normally the weakest claim here: read once, by
+       * one sensor, with no history. When the page's own structured data states
+       * the same closing date the visible words did, that is a second
+       * independent reading, authored separately and extracted by different
+       * code, and the record has earned more than "we read this once".
+       *
+       * It is still not `verified`. That word is reserved for a source under
+       * continuous observation with a learned history behind it, and a page
+       * agreeing with itself is not the same as a page being watched.
+       */
       status: 'discovered',
-      confirmedBy: 'single_sensor',
+      confirmedBy: draft.corroboration === 'confirmed' ? 'two_sensors' : 'single_sensor',
       lastVerifiedAt: draft.readAt,
       incidentId: null,
       // Everything the page did not state, named rather than left to look like
       // an absence of interest.
-      fieldsDegraded: draft.missing,
+      /*
+       * A page that contradicts itself says so here.
+       *
+       * The visible text and the embedded data name different closing dates.
+       * Neither is preferred, because there is no basis to prefer one, and a
+       * student needs to open the page rather than be handed a coin flip.
+       */
+      fieldsDegraded:
+        draft.corroboration === 'conflicting'
+          ? [...new Set([...draft.missing, 'deadline_raw'])]
+          : draft.missing,
     },
   };
 }

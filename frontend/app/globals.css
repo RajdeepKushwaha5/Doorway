@@ -40,6 +40,7 @@
 }
 
 @layer components {
+
   /**
    * A small mono label above a heading. Used to number and name a section, the
    * way a technical document does, so a reader can tell where they are without
@@ -100,7 +101,7 @@
   }
 
   .panel-hover {
-    @apply transition-all duration-300 hover:border-ivory/25 hover:shadow-[0_1px_0_rgba(12,12,10,0.04),0_12px_28px_-18px_rgba(12,12,10,0.35)];
+    @apply transition-all duration-300 hover:border-ivory/25 hover:shadow-[0_1px_0_rgba(12, 12, 10, 0.04), 0_12px_28px_-18px_rgba(12, 12, 10, 0.35)];
   }
 
   /**
@@ -131,12 +132,15 @@
   .prose-notice h1 {
     @apply mt-4 font-display text-5xl text-ivory md:text-6xl;
   }
+
   .prose-notice .lead {
     @apply mt-6 text-base leading-7 text-muted;
   }
+
   .prose-notice h2 {
     @apply mt-12 font-display text-3xl text-ivory;
   }
+
   .prose-notice p:not(.eyebrow):not(.lead) {
     @apply mt-4 text-sm leading-7 text-muted;
   }
@@ -203,12 +207,15 @@
 [data-reveal='left'].is-pending {
   transform: translate3d(-22px, 0, 0);
 }
+
 [data-reveal='right'].is-pending {
   transform: translate3d(22px, 0, 0);
 }
+
 [data-reveal='scale'].is-pending {
   transform: scale(0.98);
 }
+
 [data-reveal].is-visible {
   opacity: 1;
   transform: none;
@@ -217,9 +224,11 @@
 [data-delay='1'] {
   --reveal-delay: 70ms;
 }
+
 [data-delay='2'] {
   --reveal-delay: 140ms;
 }
+
 [data-delay='3'] {
   --reveal-delay: 210ms;
 }
@@ -247,6 +256,7 @@
   .marquee__track {
     animation: none;
   }
+
   [data-reveal].is-pending {
     opacity: 1;
     transform: none;
@@ -449,24 +459,20 @@
 }
 
 .doorway-building-roof {
-  background-image: repeating-linear-gradient(
-    135deg,
-    #f6f4ef 0,
-    #f6f4ef 8px,
-    #fff 8px,
-    #fff 16px
-  );
+  background-image: repeating-linear-gradient(135deg,
+      #f6f4ef 0,
+      #f6f4ef 8px,
+      #fff 8px,
+      #fff 16px);
 }
 
 .doorway-building-broken {
   filter: grayscale(0.8);
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent 0,
-    transparent 8px,
-    rgba(180, 35, 31, 0.06) 8px,
-    rgba(180, 35, 31, 0.06) 16px
-  );
+  background-image: repeating-linear-gradient(-45deg,
+      transparent 0,
+      transparent 8px,
+      rgba(180, 35, 31, 0.06) 8px,
+      rgba(180, 35, 31, 0.06) 16px);
 }
 
 .doorway-trust {
@@ -481,31 +487,67 @@
   text-transform: uppercase;
 }
 
-.doorway-trust-verified { color: #16794a; }
-.doorway-trust-partially_verified { color: #2563eb; }
-.doorway-trust-stale { color: #b45309; }
-.doorway-trust-quarantined { color: #b4231f; }
+.doorway-trust-verified {
+  color: #16794a;
+}
+
+.doorway-trust-partially_verified {
+  color: #2563eb;
+}
+
+.doorway-trust-stale {
+  color: #b45309;
+}
+
+.doorway-trust-quarantined {
+  color: #b4231f;
+}
+
 /* Found live and unverified. Amber rather than green: it is a real find and an
    unchecked one, and the colour should say the second part too. */
-.doorway-trust-discovered { color: #b45309; }
+.doorway-trust-discovered {
+  color: #b45309;
+}
 
 @keyframes doorway-rise {
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 @keyframes doorway-drift {
-  from { transform: translate3d(-1rem, 0, 0) scale(0.96); }
-  to { transform: translate3d(1.25rem, 0.75rem, 0) scale(1.04); }
+  from {
+    transform: translate3d(-1rem, 0, 0) scale(0.96);
+  }
+
+  to {
+    transform: translate3d(1.25rem, 0.75rem, 0) scale(1.04);
+  }
 }
 
 @keyframes float-slow {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-5px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 @keyframes float-reverse {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(5px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(5px);
+  }
 }
 
 .animate-float-slow {
@@ -517,10 +559,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .doorway-form-glow,
   .animate-float-slow,
-  .animate-float-reverse { animation: none; }
-  .doorway-building { animation: none; opacity: 1; transform: none; }
+  .animate-float-reverse {
+    animation: none;
+  }
+
+  .doorway-building {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -583,8 +633,15 @@
 }
 
 @keyframes terminal-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -613,7 +670,7 @@
   @apply mb-7 flex items-start gap-5 border-b border-surface-border pb-5;
 }
 
-.evidence-section__heading > p {
+.evidence-section__heading>p {
   @apply font-display text-3xl text-muted;
 }
 
@@ -633,7 +690,7 @@
   @apply border-t border-surface-border pt-8 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0;
 }
 
-.verified-hero__aside > p {
+.verified-hero__aside>p {
   @apply text-[13px] leading-6 text-muted;
 }
 
@@ -644,15 +701,15 @@
  * they rendered as one run of text reading "QUESTIONWhich product...". Stacking
  * them makes the label an eyebrow rather than the first word of the sentence.
  */
-.verified-hero__aside > div {
+.verified-hero__aside>div {
   @apply mt-6 flex flex-col gap-2 border-t border-surface-border pt-6;
 }
 
-.verified-hero__aside > div > span {
+.verified-hero__aside>div>span {
   @apply font-mono text-[11px] uppercase tracking-eyebrow text-muted;
 }
 
-.verified-hero__aside > div > strong {
+.verified-hero__aside>div>strong {
   @apply text-[15px] font-normal leading-6 text-ivory;
 }
 
@@ -665,11 +722,11 @@
   @apply mt-8 grid items-center gap-5 md:grid-cols-[1fr_auto_1fr_auto_1fr];
 }
 
-.verified-flow > div {
+.verified-flow>div {
   @apply flex items-center gap-3 rounded-card border border-surface-border bg-surface-raised px-5 py-4 text-[13px];
 }
 
-.verified-flow > svg {
+.verified-flow>svg {
   @apply mx-auto hidden text-muted md:block;
 }
 
@@ -757,7 +814,7 @@
 
 .bg-grid-pattern {
   background-image: linear-gradient(to right, rgba(12, 12, 10, 0.04) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(12, 12, 10, 0.04) 1px, transparent 1px);
+    linear-gradient(to bottom, rgba(12, 12, 10, 0.04) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -805,7 +862,7 @@
 @font-face {
   font-family: 'PP Mondwest';
   src: url('/fonts/ppmondwest-regular.otf') format('opentype'),
-       url('/fonts/PP-Mondwest.woff2') format('woff2');
+    url('/fonts/PP-Mondwest.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -814,7 +871,7 @@
 @font-face {
   font-family: 'PP Neue Bit';
   src: url('/fonts/ppneuebit-bold.otf') format('opentype'),
-       url('/fonts/PP-NeueBit.woff2') format('woff2');
+    url('/fonts/PP-NeueBit.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -842,7 +899,15 @@
   font-smooth: never !important;
 }
 
-h1, h2, h3, h4, h5, h6, .display-heading, .section-heading, .font-display {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.display-heading,
+.section-heading,
+.font-display {
   font-style: normal !important;
 }
 
@@ -850,6 +915,7 @@ h1, h2, h3, h4, h5, h6, .display-heading, .section-heading, .font-display {
   0% {
     transform: translateX(0%);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -890,8 +956,77 @@ h1, h2, h3, h4, h5, h6, .display-heading, .section-heading, .font-display {
   scrollbar-color: #d1d5db #f3f4f6;
 }
 
+/* ------------------------------------------------------------------ */
+/* Animated Footer Brand Mask                         */
+/* ------------------------------------------------------------------ */
 
+.doorway-footer-brand-container {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+}
 
+.doorway-footer-brand-mask {
+  font-family: var(--font-mondwest), system-ui, -apple-system, sans-serif;
+  font-size: clamp(100px, 20vw, 320px);
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  text-align: center;
+  width: 100%;
+  margin: 0 auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-size: 300% 300%;
+  background-position: 0% 50%;
+  background-image:
+    radial-gradient(ellipse at 30% 40%, rgba(16, 185, 129, 0.95) 0%, transparent 45%),
+    radial-gradient(ellipse at 70% 60%, rgba(5, 150, 105, 0.9) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.8) 0%, transparent 35%),
+    repeating-linear-gradient(45deg,
+      #0c0c0a 0px,
+      #0c0c0a 28px,
+      #064e3b 28px,
+      #064e3b 34px,
+      #047857 34px,
+      #047857 60px,
+      #10b981 60px,
+      #10b981 66px,
+      #022c22 66px,
+      #022c22 95px);
+  animation: doorway-brand-drift 22s ease-in-out infinite alternate;
+  filter: contrast(1.15) brightness(1.05);
+  transition: filter 400ms ease, transform 400ms ease;
+}
 
+.doorway-footer-brand-container:hover .doorway-footer-brand-mask {
+  animation-duration: 9s;
+  filter: contrast(1.3) brightness(1.2);
+  transform: scale(1.01);
+}
 
+@keyframes doorway-brand-drift {
+  0% {
+    background-position: 0% 30%;
+  }
 
+  50% {
+    background-position: 100% 70%;
+  }
+
+  100% {
+    background-position: 0% 30%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doorway-footer-brand-mask {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}

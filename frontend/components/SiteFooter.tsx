@@ -181,8 +181,15 @@ export async function SiteFooter() {
           </div>
         </div>
 
+        {/* Giant Animated Brand Wordmark (Sarvam-Inspired Mask Animation) */}
+        <div className="mt-16 pt-8 border-t border-gray-100 doorway-footer-brand-container">
+          <div className="doorway-footer-brand-mask select-none" aria-label="doorway">
+            doorway
+          </div>
+        </div>
+
         {/* Bottom Copyright Bar */}
-        <div className="mt-12 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-gray-400 text-[11px]">
+        <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-gray-400 text-[11px]">
           <span>© 2026 DOORWAY. Find the opportunities the web hides.</span>
           <span>Into the Scrape-Verse Hackathon</span>
         </div>

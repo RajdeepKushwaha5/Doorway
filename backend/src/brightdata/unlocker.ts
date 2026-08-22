@@ -364,3 +364,54 @@ export function createWitnessFetcher(
       url,
     );
 }
+
+/**
+ * The same page, as its source rather than as prose.
+ *
+ * Markdown is what makes label extraction work on a page nobody has written a
+ * selector for, and it discards every piece of structured data on the way,
+ * because a `<script type="application/ld+json">` block is not prose and
+ * markdown has nowhere to put it. That is where most of the missing deadlines
+ * turned out to be: publishers embed schema.org markup because search engines
+ * reward it, so the date a page shows a human as "15th July 2026" is also in
+ * the source as "2026-07-15", already normalised.
+ *
+ * Deliberately a separate call rather than a replacement. The markdown reading
+ * and the structured reading are different representations of the same page,
+ * authored separately and extracted by different code, which is what makes
+ * agreement between them worth something. Deriving both from one fetch would
+ * be cheaper and would collapse two sensors into one.
+ */
+export async function fetchPageSource(
+  config: UnlockerConfig,
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ html: string; fetchedAt: string }> {
+  assertPublicHttpUrl(url);
+
+  const response = await brightDataRequest(
+    config.apiKey,
+    config.baseUrl ?? 'https://api.brightdata.com',
+    {
+      method: 'POST',
+      path: '/request',
+      body: {
+        zone: config.zone,
+        url,
+        // No data_format: raw means the document as served, structured data
+        // and all.
+        format: 'raw',
+        ...(config.country === undefined || config.country.trim() === ''
+          ? {}
+          : { country: config.country.trim().toLowerCase() }),
+      },
+      timeoutMs: 90_000,
+      ...(signal === undefined ? {} : { signal }),
+    },
+  );
+
+  return {
+    html: typeof response === 'string' ? response : JSON.stringify(response),
+    fetchedAt: new Date().toISOString(),
+  };
+}
