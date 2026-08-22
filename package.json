@@ -28,7 +28,8 @@
     "blindspot": "npm run blindspot --workspace backend --",
     "benchmark": "npm run benchmark --workspace backend",
     "demo:reset": "npm run live -- mode baseline && npm run live -- observe-all",
-    "doorway:seed": "npm run build --workspace backend && npm run doorway:seed --workspace backend --"
+    "doorway:seed": "npm run build --workspace backend && npm run doorway:seed --workspace backend --",
+    "blindspot:proof": "npm run build --workspace backend && npm run blindspot:proof --workspace backend"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

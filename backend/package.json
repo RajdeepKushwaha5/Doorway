@@ -24,7 +24,8 @@
     "doorway:seed": "node --env-file-if-exists=../.env dist/scripts/doorway-seed.js",
     "discover:test": "node --env-file-if-exists=../.env dist/scripts/discover-test.js",
     "crawl:test": "node --env-file-if-exists=../.env dist/scripts/crawl-test.js",
-    "index:fill": "node --env-file-if-exists=../.env dist/scripts/fill-index.js"
+    "index:fill": "node --env-file-if-exists=../.env dist/scripts/fill-index.js",
+    "blindspot:proof": "node dist/scripts/unwatched-field.js"
   },
   "dependencies": {
     "zod": "^3.24.1"
