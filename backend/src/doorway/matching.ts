@@ -5,7 +5,23 @@ export function buildWorld(
   opportunities: Opportunity[],
   now = new Date(),
 ): DoorwayWorld {
+  /*
+   * The type toggles are a filter, and were being scored rather than obeyed.
+   *
+   * A student who unticks Fellowships and asks for Internships is not saying
+   * "prefer internships"; they are saying they do not want the other thing. The
+   * type only contributed to a match score, so a fellowship still appeared,
+   * marked twenty percent, in a search for internships. A filter that can be
+   * overruled by a score is not a filter, and the toggle looked broken because
+   * it was.
+   *
+   * An empty selection still means everything, since that is what an untouched
+   * form should do rather than showing nothing at all.
+   */
+  const wanted = new Set(profile.opportunityTypes);
+
   const matches = opportunities
+    .filter((opportunity) => wanted.size === 0 || wanted.has(opportunity.type))
     .map((opportunity) => matchOpportunity(profile, opportunity))
     .filter((match) => match.eligible !== false)
     .sort((a, b) => b.score - a.score);

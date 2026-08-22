@@ -957,77 +957,65 @@ h6,
 }
 
 /* ------------------------------------------------------------------ */
-/* Animated Footer Brand Mask (Smooth Modernist Sans)                 */
+/* Sarvam-Style Tapestry Artwork Brand Mask                           */
 /* ------------------------------------------------------------------ */
 
 .doorway-footer-brand-container {
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   user-select: none;
-  padding: 1.5rem 0 0.5rem;
+  padding: 2.5rem 0 1rem;
 }
 
 .doorway-footer-brand-mask {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: clamp(110px, 22vw, 340px);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: clamp(80px, 19vw, 300px);
   font-weight: 900;
-  line-height: 0.78;
-  letter-spacing: -0.065em;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   text-align: center;
   width: 100%;
   margin: 0 auto;
+  padding-bottom: 0.15em;
+  padding-top: 0.05em;
+  display: inline-block;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
-  background-size: 300% 300%;
+  background-size: 220% auto;
   background-position: 0% 50%;
-  background-image:
-    radial-gradient(ellipse at 25% 35%, rgba(16, 185, 129, 0.95) 0%, transparent 40%),
-    radial-gradient(ellipse at 75% 65%, rgba(5, 150, 105, 0.9) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.85) 0%, transparent 35%),
-    linear-gradient(135deg, rgba(16, 185, 129, 0.5) 0%, rgba(12, 12, 10, 0.95) 50%, rgba(5, 150, 105, 0.6) 100%),
-    repeating-linear-gradient(
-      -45deg,
-      #0c0c0a 0px,
-      #0c0c0a 16px,
-      #064e3b 16px,
-      #064e3b 22px,
-      #047857 22px,
-      #047857 42px,
-      #10b981 42px,
-      #10b981 48px,
-      #022c22 48px,
-      #022c22 68px
-    );
-  animation: doorway-brand-drift 20s ease-in-out infinite alternate;
+  background-repeat: repeat-x;
+  background-image: url('/images/tapestry-mask.jpg');
+  animation: doorway-tapestry-drift 35s linear infinite alternate;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
   font-smooth: auto !important;
-  filter: contrast(1.15) brightness(1.05);
-  transition: filter 400ms ease, transform 400ms ease;
+  filter: contrast(1.12) saturate(1.15) brightness(1.02);
+  transition: filter 500ms ease, transform 500ms ease;
 }
 
 .doorway-footer-brand-container:hover .doorway-footer-brand-mask {
-  animation-duration: 8s;
-  filter: contrast(1.3) brightness(1.2);
+  animation-duration: 15s;
+  filter: contrast(1.25) saturate(1.3) brightness(1.1);
   transform: scale(1.01);
 }
 
-@keyframes doorway-brand-drift {
+@keyframes doorway-tapestry-drift {
   0% {
-    background-position: 0% 30%;
+    background-position: 0% 50%;
   }
 
   50% {
-    background-position: 100% 70%;
+    background-position: 100% 50%;
   }
 
   100% {
-    background-position: 0% 30%;
+    background-position: 0% 50%;
   }
 }
 
