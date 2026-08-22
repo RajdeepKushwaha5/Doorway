@@ -57,10 +57,20 @@ export function DecisionStream({
   url,
   label = 'Run the collector',
   disabledReason,
+  onVerdict,
 }: {
   collectorId: string;
   url?: string;
   label?: string;
+  /**
+   * Told the verdict when one arrives.
+   *
+   * The page around this stream wants to say what happened, and without this it
+   * can only say what usually happens. On the proof page that meant a static
+   * paragraph claiming the two sensors disagreed, printed directly beneath a
+   * stream reporting that they had agreed.
+   */
+  onVerdict?: (verdict: string) => void;
   /**
    * Why this cannot run, when it cannot.
    *
@@ -139,6 +149,14 @@ export function DecisionStream({
   const busy = phase.kind === 'starting' || phase.kind === 'watching';
   const blocked = disabledReason !== undefined;
   const verdict = events.find((event) => event.step === 'verdict');
+  const verdictName = String(verdict?.detail?.['verdict'] ?? '');
+
+  // Tell the page what was decided, so it can describe this run rather than a
+  // typical one. Reset to empty on a fresh start, so a stale verdict from the
+  // previous run cannot describe the one now in flight.
+  useEffect(() => {
+    onVerdict?.(verdictName);
+  }, [verdictName, onVerdict]);
 
   return (
     <div className="font-mono">

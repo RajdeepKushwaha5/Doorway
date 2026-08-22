@@ -1,5 +1,6 @@
 'use server';
 
+import { fundingLabel } from '@/lib/funding';
 import { revalidatePath } from 'next/cache';
 import { serverApiBase } from '@/lib/env';
 import { api } from '@/lib/api';
@@ -433,7 +434,7 @@ export async function getProofOpportunityAction(): Promise<{
       collectorId: first.collectorId,
       title: first.title,
       deadlineRaw: first.deadlineRaw,
-      fundingLevel: first.funding.level,
+      fundingLevel: fundingLabel(first.funding),
       applicationUrl: first.applicationUrl,
       trustStatus: first.trust.status,
       confirmedBy: first.trust.confirmedBy,

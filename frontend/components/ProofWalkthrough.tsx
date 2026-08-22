@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { DecisionStream } from '@/components/DecisionStream';
 import {
@@ -64,6 +64,63 @@ const TRUST_COPY: Record<string, { label: string; tone: string; meaning: string 
   },
 };
 
+/**
+ * What step 4 can truthfully say, given what the run actually decided.
+ *
+ * Four cases rather than one, because the walkthrough offers four faults and
+ * two of them are supposed to come back clean. Saying "the sensors disagreed"
+ * after a healthy run does not merely overstate the result, it demonstrates the
+ * failure the page is here to argue against.
+ */
+function outcome(verdict: string): {
+  heading: string;
+  aggregator: string;
+  doorway: string;
+  next: string;
+} {
+  if (verdict === '') {
+    return {
+      heading: 'What each system would do',
+      aggregator:
+        'Publishes whatever it last scraped. If the request succeeded and the JSON was valid, nothing raises an error, and a wrong closing date is served with full confidence and no way for a reader to tell.',
+      doorway:
+        'Publishes a reading only when both sensors support it. When they disagree the last confirmed value stays up, the disputed field is named, and the record is marked as held.',
+      next: 'Break the page above and run it again to see which of these actually happens. This panel reports the run, not the usual case.',
+    };
+  }
+
+  if (verdict === 'healthy') {
+    return {
+      heading: 'What this run decided',
+      aggregator:
+        'Would have published, and would have been right. Nothing was wrong with this page, so the two systems agree here. That is the point of running it clean first.',
+      doorway:
+        'Both sensors read the page and agreed on every field, so the reading was published and no repair was proposed. A system that cried drift here would be useless: the next real drift would be ignored too.',
+      next: 'Now break the page above and run it again. The interesting claim is not that a clean page passes, it is what happens to a broken one.',
+    };
+  }
+
+  if (verdict === 'genuine_source_change') {
+    return {
+      heading: 'What this run decided',
+      aggregator:
+        'Publishes the new value, which is correct here, and would publish it just as confidently if the collector had been the thing that broke. It cannot tell those two apart, which is why being right this time is luck.',
+      doorway:
+        'Both sensors saw the same new value, so the page changed and the collector is fine. Blame was assigned to the source rather than the extractor, and no repair was proposed against a collector that is working. A required field going missing still blocks publication.',
+      next: 'Put the page back to normal and run it once more to return the fixture to its baseline.',
+    };
+  }
+
+  return {
+    heading: 'What this run decided',
+    aggregator:
+      'Publishes whatever it last scraped. The request succeeded and the JSON was valid, so nothing raised an error. It now shows the wrong closing date, with full confidence and no way for a reader to tell.',
+    doorway:
+      'The two sensors did not support the same reading, so it was not published. The last value both confirmed is still shown, the disputed field is named, and the record is marked as held rather than quietly served alongside the rest.',
+    next: 'Put the page back to normal and run it once more. The quarantine lifts on its own, because an incident opened by two sensors disagreeing is closed by the two of them agreeing again.',
+  };
+}
+
 export function ProofWalkthrough({
   collectorId,
   watchUrl,
@@ -84,6 +141,21 @@ export function ProofWalkthrough({
   const [mode, setMode] = useState(initialMode);
   const [chosen, setChosen] = useState<ProofScenario | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * What the last run actually decided, empty until one has finished.
+   *
+   * Step 4 used to be a fixed paragraph asserting that the two sensors had
+   * disagreed and the reading had been withheld. That is one of six outcomes,
+   * and on a baseline page it is the wrong one: the sentence sat directly
+   * beneath a stream reporting three agreements and a healthy verdict. A page
+   * whose entire argument is that this system does not publish claims it has
+   * not checked cannot itself narrate a result it did not read.
+   */
+  const [ranVerdict, setRanVerdict] = useState('');
+  // Stable, so the stream's effect does not re-fire on every parent render.
+  const handleVerdict = useCallback((verdict: string) => setRanVerdict(verdict), []);
+  const told = outcome(ranVerdict);
   const [pending, startTransition] = useTransition();
 
   const switchTo = (scenario: ProofScenario | null): void => {
@@ -260,10 +332,26 @@ export function ProofWalkthrough({
         blurb="Both sensors read the page. The line-by-line reasoning is printed as it happens, including the exact line the second sensor read the value from."
       >
         {chosen === null ? (
-          <p className="font-mono text-[13px] leading-relaxed text-gray-600">
-            Nothing is broken right now, so a run should come back healthy. That is worth doing
-            once before you break anything, so the green result means something when you see it.
-          </p>
+          /*
+           * Keyed on what the fixture is serving, not on what was pressed here.
+           *
+           * `chosen` is only the fault clicked in this session, so after a
+           * reload it is null while the page can still be serving a break from
+           * before. This claimed nothing was broken directly beneath a banner
+           * naming the mode that was.
+           */
+          mode === null || mode === 'baseline' ? (
+            <p className="font-mono text-[13px] leading-relaxed text-gray-600">
+              Nothing is broken right now, so a run should come back healthy. That is worth doing
+              once before you break anything, so the green result means something when you see it.
+            </p>
+          ) : (
+            <p className="font-mono text-[13px] leading-relaxed text-gray-600">
+              The source page is currently serving{' '}
+              <code className="text-black">{mode}</code>, set before this page was loaded. Run the
+              sensors to see what that does, or put the page back to normal first.
+            </p>
+          )
         ) : (
           <div className="mb-6 border-l-2 border-emerald-500 bg-emerald-50/60 px-5 py-4">
             <div className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-emerald-700 font-bold">
@@ -284,6 +372,7 @@ export function ProofWalkthrough({
             collectorId={collectorId}
             {...(watchUrl === null ? {} : { url: watchUrl })}
             label="Run both sensors now"
+            onVerdict={handleVerdict}
             {...(canRun
               ? {}
               : {
@@ -307,15 +396,22 @@ export function ProofWalkthrough({
         blurb="The point is not that an alert fired. It is what a student is served while the source is wrong."
         last
       >
+        <div className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-gray-400 mb-3">
+          {told.heading}
+          {ranVerdict === '' ? null : (
+            <span className="ml-2 normal-case tracking-normal font-mono text-gray-500">
+              verdict: {ranVerdict}
+            </span>
+          )}
+        </div>
+
         <div className="grid gap-px bg-gray-200 sm:grid-cols-2">
           <div className="bg-white p-5">
             <div className="font-neuebit text-[11px] uppercase tracking-[0.14em] text-gray-500">
               An ordinary aggregator
             </div>
             <p className="mt-3 font-mono text-[13px] leading-relaxed text-gray-700">
-              Publishes whatever it last scraped. The request succeeded and the JSON was valid, so
-              nothing raised an error. It now shows the wrong closing date, with full confidence
-              and no way for a reader to tell.
+              {told.aggregator}
             </p>
           </div>
           <div className="bg-white p-5">
@@ -323,17 +419,12 @@ export function ProofWalkthrough({
               Doorway
             </div>
             <p className="mt-3 font-mono text-[13px] leading-relaxed text-gray-700">
-              Two sensors disagreed, so the new reading was not published. The last date both
-              confirmed is still shown, the disputed field is named, and the record is marked as
-              held rather than quietly served alongside the rest.
+              {told.doorway}
             </p>
           </div>
         </div>
 
-        <p className="mt-6 font-mono text-[12.5px] leading-relaxed text-gray-600">
-          Put the page back to normal and run it once more. The quarantine lifts on its own, because
-          an incident opened by two sensors disagreeing is closed by the two of them agreeing again.
-        </p>
+        <p className="mt-6 font-mono text-[12.5px] leading-relaxed text-gray-600">{told.next}</p>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <Link

@@ -1,5 +1,6 @@
 'use client';
 
+import { fundingLabel } from '@/lib/funding';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
 import { LiveDiscovery } from '@/components/LiveDiscovery';
@@ -858,15 +859,3 @@ function formatDeadline(value: string | null, raw: string | null): string {
   );
 }
 
-function fundingLabel(funding: DoorwayMatch['opportunity']['funding']): string {
-  if (funding.amount !== null && funding.currency !== null) {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: funding.currency,
-      maximumFractionDigits: 0,
-    }).format(funding.amount);
-  }
-  if (funding.level === 'full') return 'Fully funded';
-  if (funding.level === 'partial') return 'Partial funding';
-  return 'Not stated';
-}
