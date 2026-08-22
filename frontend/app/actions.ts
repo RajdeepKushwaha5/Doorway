@@ -583,13 +583,31 @@ export async function startFindAction(
       error?: unknown;
     } | null;
 
-    if (!response.ok || body === null || typeof body.findId !== 'string') {
+    if (body !== null && typeof body.error === 'string') {
+      return { ok: false, error: body.error };
+    }
+
+    /*
+     * A success that is not the success we asked for.
+     *
+     * Reporting "the search could not be started (200)" is a contradiction: 200
+     * is the server saying it worked. What actually happened is that it
+     * answered in a shape this page does not recognise, which in practice means
+     * the API is running an older build than the dashboard. Saying so points at
+     * the thing that needs fixing instead of at an HTTP code that is fine.
+     */
+    if (response.ok && (body === null || typeof body.findId !== 'string')) {
       return {
         ok: false,
         error:
-          body !== null && typeof body.error === 'string'
-            ? body.error
-            : `the search could not be started (${String(response.status)})`,
+          'The search service answered, but not in a shape this page understands. That usually means the API is running an older build than this dashboard. Redeploy the API and try again.',
+      };
+    }
+
+    if (!response.ok || body === null || typeof body.findId !== 'string') {
+      return {
+        ok: false,
+        error: `The search service refused the request (${String(response.status)}).`,
       };
     }
     return { ok: true, data: { findId: body.findId, live: body.live === true } };

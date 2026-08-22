@@ -29,12 +29,33 @@ const TYPE_WORDS: Record<OpportunityType, string> = {
   hackathon: 'hackathon',
 };
 
-/** How a page says it pays for everything, in the words pages actually use. */
-const FUNDING_WORDS: Record<string, string> = {
-  full: 'fully funded',
-  partial: 'funded',
-  any: '',
-};
+/**
+ * How each kind of opportunity talks about its money.
+ *
+ * This began as one phrase for everything, which produced "fully funded
+ * internship" and "fully funded grant". Neither is a thing anybody publishes:
+ * an internship pays a stipend, and a grant is money by definition, so saying
+ * "funded grant" narrows the search to pages that happen to contain a redundant
+ * phrase. A word nobody writes is worse than no word at all, because it filters
+ * out the real pages rather than the wrong ones.
+ */
+function moneyWord(type: OpportunityType, requirement: string): string {
+  switch (type) {
+    case 'hackathon':
+      // Free to enter, pays in prizes. No money word belongs in the query.
+      return '';
+    case 'grant':
+      // A grant is the money. "Funded grant" asks for a tautology.
+      return '';
+    case 'internship':
+      // Paid is the word every listing uses. Stipend is the other one.
+      return requirement === 'any' ? '' : 'paid';
+    default:
+      if (requirement === 'full') return 'fully funded';
+      if (requirement === 'partial') return 'funded';
+      return '';
+  }
+}
 
 /**
  * Where each kind of opportunity is actually published.
@@ -48,7 +69,9 @@ const FUNDING_WORDS: Record<string, string> = {
 const HOMES: Record<OpportunityType, string[]> = {
   scholarship: ['.gov.in', '.nic.in', '.edu', '.ac.in', '.ac.uk', '.gov', '.edu.au'],
   fellowship: ['.gov.in', '.nic.in', '.edu', '.ac.in', '.ac.uk', '.gov', '.org'],
-  internship: ['.edu', '.ac.in', '.gov.in', '.org'],
+  // Internships are advertised where work is advertised. Restricting them to
+  // universities and ministries asked the wrong buildings.
+  internship: ['internshala.com', 'unstop.com', '.edu', '.ac.in', '.gov.in', '.org'],
   'research-program': ['.edu', '.ac.in', '.ac.uk', '.gov.in', '.org'],
   grant: ['.gov.in', '.gov', '.org', '.edu'],
   hackathon: [
@@ -60,19 +83,6 @@ const HOMES: Record<OpportunityType, string[]> = {
     'dorahacks.io',
     'lu.ma',
   ],
-};
-
-/** Types where money is the point, and types where it is not. */
-const FUNDING_MATTERS: Record<OpportunityType, boolean> = {
-  scholarship: true,
-  fellowship: true,
-  internship: true,
-  'research-program': true,
-  grant: true,
-  // Hackathons are free to enter and pay in prizes. "Fully funded hackathon" is
-  // not a phrase anybody publishes, and putting it in the query is why the
-  // search for them came back nearly empty.
-  hackathon: false,
 };
 
 export interface DiscoveryQuery {
@@ -127,7 +137,7 @@ export function buildQueries(
 
   for (const type of types) {
     const word = TYPE_WORDS[type];
-    const funding = FUNDING_MATTERS[type] ? (FUNDING_WORDS[profile.fundingRequirement] ?? '') : '';
+    const funding = moneyWord(type, profile.fundingRequirement);
 
     // The open query. Aggregators win most of these, and that is useful: an
     // aggregator often names something the primary search misses, and the name

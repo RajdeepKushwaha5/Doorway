@@ -553,3 +553,73 @@ describe('money a hackathon actually offers', () => {
     expect(scanForFunding('Over $10,000 in prizes await the winners')).toContain('10,000');
   });
 });
+
+/**
+ * Every filter has to work, not just the two that were built first.
+ *
+ * One money phrase for all six types produced "fully funded internship" and
+ * "fully funded grant". Neither is published anywhere: an internship pays a
+ * stipend and a grant is money by definition, so the phrase narrows the search
+ * to pages containing a redundancy. A word nobody writes filters out the real
+ * pages rather than the wrong ones.
+ */
+describe('all six opportunity types', () => {
+  const base: DoorwayProfile = {
+    country: 'India',
+    educationLevel: 'Undergraduate',
+    interests: ['artificial intelligence'],
+    skills: [],
+    opportunityTypes: [],
+    fundingRequirement: 'full',
+    locations: [],
+  };
+
+  const forType = (type: DoorwayProfile['opportunityTypes'][number]) =>
+    buildQueries({ ...base, opportunityTypes: [type] });
+
+  it('produces at least two searches for every type', () => {
+    for (const type of [
+      'scholarship',
+      'fellowship',
+      'internship',
+      'research-program',
+      'grant',
+      'hackathon',
+    ] as const) {
+      expect(forType(type).length, type).toBeGreaterThanOrEqual(2);
+      // A query that is only site restrictions has nothing to match on.
+      for (const query of forType(type)) {
+        expect(query.text.replace(/\(site:[^)]*\)/, '').trim().length, type).toBeGreaterThan(8);
+      }
+    }
+  });
+
+  it('never asks for a funded grant or a funded hackathon', () => {
+    expect(forType('grant').every((q) => !/funded/i.test(q.text))).toBe(true);
+    expect(forType('hackathon').every((q) => !/funded/i.test(q.text))).toBe(true);
+  });
+
+  it('asks for a paid internship rather than a funded one', () => {
+    const internships = forType('internship');
+    expect(internships.some((q) => /\bpaid\b/i.test(q.text))).toBe(true);
+    expect(internships.every((q) => !/fully funded/i.test(q.text))).toBe(true);
+  });
+
+  it('looks for internships where work is advertised', () => {
+    expect(forType('internship').find((q) => q.officialOnly)?.text).toContain('internshala.com');
+  });
+
+  it('keeps funding language where money is genuinely the question', () => {
+    for (const type of ['scholarship', 'fellowship', 'research-program'] as const) {
+      expect(forType(type).some((q) => /fully funded/i.test(q.text)), type).toBe(true);
+    }
+  });
+
+  it('spreads across types rather than repeating the first', () => {
+    const mixed = buildQueries({
+      ...base,
+      opportunityTypes: ['scholarship', 'fellowship', 'internship', 'hackathon'],
+    });
+    expect(new Set(mixed.map((q) => q.type)).size).toBe(4);
+  });
+});
