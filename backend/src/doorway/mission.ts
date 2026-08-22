@@ -252,6 +252,30 @@ function decideState(input: {
     };
   }
 
+  /*
+   * A record on hold is not a record that has been confirmed.
+   *
+   * Falling through to "the facts have been confirmed" was exactly wrong for a
+   * quarantined opportunity, because the facts are the thing under dispute.
+   * What is true is narrower and worth saying precisely: the values shown are
+   * the last ones both sensors supported, and the newer reading was not good
+   * enough to publish.
+   */
+  if (opportunity.trust.fieldsDegraded.length > 0 || opportunity.trust.status === 'quarantined') {
+    return {
+      state: 'verified',
+      reason:
+        'Some facts are disputed. What is shown is the last reading both sensors confirmed, so readiness is not claimed.',
+    };
+  }
+
+  if (opportunity.trust.status === 'stale') {
+    return {
+      state: 'verified',
+      reason: 'Confirmed once, and not rechecked since. Open the official page before you rely on it.',
+    };
+  }
+
   if (total > 0 && heldCount >= total) {
     return {
       state: 'application_ready',

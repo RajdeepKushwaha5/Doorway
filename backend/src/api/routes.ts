@@ -824,7 +824,15 @@ export function buildRouter(deps: ApiDeps): Router {
       index.all(),
     ]);
     const opportunity = [
-      ...opportunitiesFromSnapshots(snapshots, collectors, incidents),
+      /*
+       * Looking one up by id is not browsing.
+       *
+       * The fixture is kept out of listings because a student scrolling a page
+       * of opportunities must never be shown a fabricated one. Being handed its
+       * id is different: the proof walkthrough links straight to it, and the
+       * evidence page for the record that page is built around answered 404.
+       */
+      ...opportunitiesFromSnapshots(snapshots, collectors, incidents, Date.now(), true),
       ...indexed.filter(isPublishableDraft).map(draftToOpportunity),
     ].find((candidate) => candidate.id === params['id']);
     if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
@@ -851,7 +859,15 @@ export function buildRouter(deps: ApiDeps): Router {
       index.all(),
     ]);
     const opportunity = [
-      ...opportunitiesFromSnapshots(snapshots, collectors, incidents),
+      /*
+       * Looking one up by id is not browsing.
+       *
+       * The fixture is kept out of listings because a student scrolling a page
+       * of opportunities must never be shown a fabricated one. Being handed its
+       * id is different: the proof walkthrough links straight to it, and the
+       * evidence page for the record that page is built around answered 404.
+       */
+      ...opportunitiesFromSnapshots(snapshots, collectors, incidents, Date.now(), true),
       ...indexed.filter(isPublishableDraft).map(draftToOpportunity),
     ].find((candidate) => candidate.id === params['id']);
     if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');

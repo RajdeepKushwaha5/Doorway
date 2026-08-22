@@ -170,6 +170,12 @@ describe('a disputed requirement is held, never dropped', () => {
     expect(after.state).not.toBe('application_ready');
   });
 
+  it('does not call a disputed record confirmed', () => {
+    const mission = buildMission({ opportunity: disputed, held: ['Resume'], now: NOW });
+    expect(mission.stateReason).toContain('disputed');
+    expect(mission.stateReason).not.toContain('The facts have been confirmed');
+  });
+
   it('blocks when the two sensors disagree about where to apply', () => {
     const mission = buildMission({
       opportunity: opportunity({

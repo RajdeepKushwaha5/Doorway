@@ -1,5 +1,6 @@
 'use client';
 
+import { ApplicationMission } from '@/components/ApplicationMission';
 import { fundingLabel } from '@/lib/funding';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
@@ -658,6 +659,7 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
   );
   const quarantined = opportunity.trust.status === 'quarantined';
   const closed = opportunity.applicationStatus === 'closed';
+  const [planning, setPlanning] = useState(false);
   return (
     <article
       className={`doorway-building blueprint-card border border-black bg-white ${quarantined ? 'doorway-building-broken' : ''} ${closed ? 'opacity-75' : ''}`}
@@ -719,7 +721,31 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
             </a>
           </div>
         )}
+
+        {/*
+          * Where a verified fact turns into something to do.
+          *
+          * Closed on load, because a list of ten opportunities is meant to be
+          * scannable and ten open plans is not a list. Withheld entirely when
+          * the record is quarantined or the door is shut, since a plan for an
+          * application that cannot be made is not a kindness.
+          */}
+        {quarantined || closed ? null : (
+          <button
+            type="button"
+            onClick={() => setPlanning((open) => !open)}
+            aria-expanded={planning}
+            className="mt-4 flex w-full items-center justify-between border border-black px-3 py-2 font-neuebit text-[10.5px] uppercase tracking-[0.12em] hover:bg-black hover:text-white transition-colors"
+          >
+            <span>{planning ? 'Hide my application plan' : 'Build my application plan'}</span>
+            <span>{planning ? '−' : '+'}</span>
+          </button>
+        )}
       </div>
+
+      {planning && !quarantined && !closed ? (
+        <ApplicationMission opportunityId={opportunity.id} />
+      ) : null}
     </article>
   );
 }

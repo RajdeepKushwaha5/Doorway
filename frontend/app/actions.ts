@@ -4,7 +4,9 @@ import { fundingLabel } from '@/lib/funding';
 import { revalidatePath } from 'next/cache';
 import { serverApiBase } from '@/lib/env';
 import { api } from '@/lib/api';
-import type { DoorwayProfile, DoorwayWorld } from '@/lib/types';
+import type { DoorwayProfile, DoorwayWorld,
+  Mission,
+} from '@/lib/types';
 
 /**
  * Server actions: the only place the admin token exists.
@@ -708,5 +710,28 @@ export async function getIndexStatsAction(): Promise<{
     // Unreachable is a real answer. The hero shows nothing rather than a
     // plausible-looking number, which is the whole point of this change.
     return null;
+  }
+}
+
+/**
+ * The plan for one opportunity, for one student.
+ *
+ * The held list is sent rather than stored, and the answer is computed on the
+ * server rather than in the browser. Readiness looks trivial enough to work
+ * out here, and the moment it is, the rules about disputed requirements and
+ * what blocks an application exist in two places and start to disagree.
+ */
+export async function getMissionAction(
+  id: string,
+  held: readonly string[],
+): Promise<{ ok: true; mission: Mission } | { ok: false; error: string }> {
+  try {
+    return { ok: true, mission: await api.mission(id, held) };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : 'The plan could not be built for this opportunity.',
+    };
   }
 }

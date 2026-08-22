@@ -404,3 +404,38 @@ export interface DoorwayWorld {
     closingSoon: number;
   };
 }
+
+/**
+ * What a verified opportunity asks a student to actually do.
+ *
+ * Mirrors the backend shape exactly and is never re-derived here. The rules
+ * about what counts as ready, what blocks an application and what a disputed
+ * requirement means live in one place, on the server, for the same reason the
+ * funding label does: two renderings of one rule is the arrangement that
+ * silently drifts apart.
+ */
+export interface MissionDocument {
+  name: string;
+  status: 'held' | 'missing' | 'disputed';
+}
+
+export interface Mission {
+  opportunityId: string;
+  title: string;
+  provider: string;
+  applicationUrl: string;
+  state: 'discovered' | 'verified' | 'eligible' | 'application_ready' | 'blocked' | 'submitted';
+  stateReason: string;
+  documents: MissionDocument[];
+  readiness: { held: number; total: number; percent: number };
+  deadline: {
+    raw: string | null;
+    at: number | null;
+    safety: number | null;
+    daysRemaining: number | null;
+  };
+  blockers: string[];
+  disputed: string[];
+  confirmedBy: string;
+  lastVerifiedAt: string;
+}

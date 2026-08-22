@@ -13,6 +13,7 @@ import type {
   DoorwayProfile,
   DoorwayWorld,
   DoorwayOpportunity,
+  Mission,
 } from './types';
 
 /**
@@ -189,6 +190,12 @@ export const api = {
     request('/api/doorway/world', { method: 'POST', body: JSON.stringify(profile) }),
 
   /** One opportunity, with everything known about where its values came from. */
+  mission: (id: string, held: readonly string[]): Promise<Mission> =>
+    request(
+      `/api/doorway/opportunities/${encodeURIComponent(id)}/mission` +
+        (held.length === 0 ? '' : `?held=${encodeURIComponent(held.join(','))}`),
+    ),
+
   doorwayOpportunity: (id: string): Promise<DoorwayOpportunity> =>
     request(`/api/doorway/opportunities/${encodeURIComponent(id)}`),
 };
