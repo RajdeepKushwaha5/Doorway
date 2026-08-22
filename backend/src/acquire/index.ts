@@ -1,7 +1,7 @@
 import type { DoorwayProfile } from '../doorway/types.js';
 import { buildQueries } from './queries.js';
 import { mergeResults, search, type SerpResult } from './serp.js';
-import { readCandidate, type OpportunityDraft } from './read.js';
+import { corroborate, readCandidate, type OpportunityDraft } from './read.js';
 
 export type { OpportunityDraft } from './read.js';
 export type { SerpResult } from './serp.js';
@@ -163,12 +163,20 @@ export async function discover(
       return null;
     }
 
+    const corroborated = await corroborate(config, draft, options.signal);
+
     emit({
       step: 'read',
-      line: `read             ${draft.title.slice(0, 58)}`,
-      detail: { url: draft.sourceUrl, deadline: draft.deadlineRaw, missing: draft.missing },
+      line: `read             ${corroborated.title.slice(0, 58)}`,
+      detail: {
+        url: corroborated.sourceUrl,
+        deadline: corroborated.deadlineRaw,
+        status: corroborated.applicationStatus,
+        sensors: corroborated.sensorCount,
+        missing: corroborated.missing,
+      },
     });
-    return draft;
+    return corroborated;
   });
 
   const kept = drafts.filter((draft): draft is OpportunityDraft => draft !== null);

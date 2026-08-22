@@ -27,7 +27,7 @@ const DEFAULT_PROFILE: DoorwayProfile = {
   educationLevel: 'Undergraduate',
   interests: ['Artificial intelligence'],
   skills: [],
-  opportunityTypes: ['scholarship', 'fellowship', 'internship', 'research-program'],
+  opportunityTypes: [],
   fundingRequirement: 'full',
   locations: [],
 };
@@ -621,8 +621,8 @@ function SearchingState({ lines }: { lines: { step: string; line: string }[] }) 
       )}
 
       <p className="border-t border-gray-200 px-6 py-3 font-mono text-[11.5px] leading-relaxed text-gray-500">
-        Pages that turn out to be listings, articles about opportunities, or rounds that have
-        already closed are dropped rather than padded into your results.
+        Listing pages and articles are rejected. Closed rounds remain visible with a clear label
+        and rank after opportunities that can still accept an application.
       </p>
     </div>
   );
@@ -630,16 +630,20 @@ function SearchingState({ lines }: { lines: { step: string; line: string }[] }) 
 
 function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: number }) {
   const { opportunity } = match;
-  const deadline = useMemo(() => formatDeadline(opportunity.deadline), [opportunity.deadline]);
+  const deadline = useMemo(
+    () => formatDeadline(opportunity.deadline, opportunity.deadlineRaw),
+    [opportunity.deadline, opportunity.deadlineRaw],
+  );
   const quarantined = opportunity.trust.status === 'quarantined';
+  const closed = opportunity.applicationStatus === 'closed';
   return (
     <article
-      className={`doorway-building blueprint-card border border-black bg-white ${quarantined ? 'doorway-building-broken' : ''}`}
+      className={`doorway-building blueprint-card border border-black bg-white ${quarantined ? 'doorway-building-broken' : ''} ${closed ? 'opacity-75' : ''}`}
       style={{ animationDelay: `${String(index * 90)}ms` }}
     >
       <div className="doorway-building-roof flex items-center justify-between border-b border-black px-4 py-3 font-neuebit text-[10px] uppercase tracking-[0.12em]">
         <span>{opportunity.type.replace('-', ' ')}</span>
-        <span>{match.score}% match</span>
+        <span>{closed ? 'Applications closed' : `${String(match.score)}% match`}</span>
       </div>
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
@@ -658,17 +662,24 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
           <Fact label="Funding" value={fundingLabel(opportunity.funding)} />
           <Fact label="Deadline" value={deadline} />
         </div>
+        <div className="mt-3 border border-gray-200 px-3 py-2 font-mono text-[9.5px] uppercase tracking-[0.08em] text-gray-500">
+          {opportunity.trust.confirmedBy === 'two_sensors'
+            ? 'NOTICE: two independent readings agreed'
+            : opportunity.trust.status === 'discovered'
+              ? 'Bright Data live discovery: one reading, verify before acting'
+              : 'NOTICE: contract checked, second reading pending'}
+        </div>
         <div className="mt-5 min-h-[44px] font-mono text-[10px] leading-5 text-gray-500">
           {match.explanation.slice(0, 2).map((line) => (
             <div key={line}>+ {line}</div>
           ))}
         </div>
-        {quarantined ? (
+        {quarantined || closed ? (
           <Link
             href={`/opportunities/${opportunity.id}`}
             className="mt-5 flex items-center justify-between border-t border-black pt-4 font-neuebit text-[11px] uppercase tracking-[0.12em] text-blocked hover:text-black"
           >
-            <span>Held back, see why</span>
+            <span>{closed ? 'Closed, see dates and evidence' : 'Held back, see why'}</span>
             <span>→</span>
           </Link>
         ) : (
@@ -819,8 +830,8 @@ function HowItLives() {
   );
 }
 
-function formatDeadline(value: string | null): string {
-  if (value === null) return 'Not stated';
+function formatDeadline(value: string | null, raw: string | null): string {
+  if (value === null) return raw ?? 'Date not published';
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(
     new Date(value),
   );

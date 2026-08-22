@@ -11,6 +11,8 @@ export const opportunityTypeSchema = z.enum([
 
 export type OpportunityType = z.infer<typeof opportunityTypeSchema>;
 
+export type ApplicationStatus = 'open' | 'rolling' | 'closed' | 'unknown';
+
 export const profileSchema = z.object({
   country: z.string().trim().min(1).max(80),
   educationLevel: z.string().trim().min(1).max(80),
@@ -63,6 +65,8 @@ export interface Opportunity {
   };
   deadline: string | null;
   deadlineRaw: string | null;
+  applicationStatus: ApplicationStatus;
+  statusReason: string | null;
   locations: string[];
   remote: boolean | null;
   requiredDocuments: string[];

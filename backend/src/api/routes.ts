@@ -750,14 +750,16 @@ export function buildRouter(deps: ApiDeps): Router {
   });
 
   router.get('/api/doorway/opportunities/:id', async ({ params }) => {
-    const [collectors, snapshots, incidents] = await Promise.all([
+    const [collectors, snapshots, incidents, indexed] = await Promise.all([
       store.listCollectors(),
       store.listVerifiedSnapshots(),
       store.listIncidents(),
+      index.all(),
     ]);
-    const opportunity = opportunitiesFromSnapshots(snapshots, collectors, incidents).find(
-      (candidate) => candidate.id === params['id'],
-    );
+    const opportunity = [
+      ...opportunitiesFromSnapshots(snapshots, collectors, incidents),
+      ...indexed.map(draftToOpportunity),
+    ].find((candidate) => candidate.id === params['id']);
     if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
     return opportunity;
   });
@@ -1065,7 +1067,9 @@ export function buildRouter(deps: ApiDeps): Router {
 
     void discover(deps.discovery, profile, {
       maxPages: 18,
-      maxTypes: 4,
+      // A selected type is a filter, not a suggestion. The old cap silently
+      // dropped Hackathons when it was the fifth selected button.
+      maxTypes: Math.min(6, profile.opportunityTypes.length),
       onEvent: (event) => {
         emit({
           step: event.step,
@@ -1074,10 +1078,10 @@ export function buildRouter(deps: ApiDeps): Router {
         });
       },
     })
-      .then((found) => {
+      .then(async (found) => {
         // Everything the live search turned up joins the index, so the next
         // student gets it for free.
-        void index.merge(found.drafts);
+        await index.merge(found.drafts);
         const live = found.drafts.map(draftToOpportunity);
         // Watched first: a record two sensors agreed on outranks one read once,
         // and ordering says so before any badge is read.
@@ -1123,9 +1127,9 @@ export function buildRouter(deps: ApiDeps): Router {
    */
   router.get('/api/doorway/find/:id', async ({ params }) => {
     const id = params['id'] ?? '';
+    if (broker.has(id)) return { status: 'running' as const };
     const world = finds.get(id);
     if (world !== undefined) return { status: 'done' as const, world };
-    if (broker.has(id)) return { status: 'running' as const };
     throw new HttpError(404, 'no such search');
   });
 

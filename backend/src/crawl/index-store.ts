@@ -167,10 +167,13 @@ export class OpportunityIndex {
       const haystack =
         `${record.title} ${record.summary} ${record.eligibility ?? ''} ${record.provider}`.toLowerCase();
 
-      // No interests given means every record of the right type qualifies.
-      let score = words.length === 0 ? 1 : 0;
+      // Type is a filter; interest is a ranking signal. Requiring the page to
+      // repeat every word typed by the student made "Artificial intelligence"
+      // exclude pages that simply say "AI", and could turn a healthy index
+      // into one unrelated result.
+      let score = 1;
       for (const word of words) if (haystack.includes(word)) score += 1;
-      if (score === 0) continue;
+      if (terms.some((term) => mentionsAlias(haystack, term))) score += 1;
 
       // A stated deadline and a stated amount are what a student can act on,
       // so a record carrying them outranks one that does not.
@@ -199,4 +202,17 @@ export class OpportunityIndex {
           : records.reduce((latest, record) => (record.lastSeenAt > latest ? record.lastSeenAt : latest), ''),
     };
   }
+}
+
+function mentionsAlias(haystack: string, term: string): boolean {
+  const normalized = term.toLowerCase().trim();
+  const aliases: Record<string, string[]> = {
+    'artificial intelligence': ['ai', 'machine learning', 'ml', 'deep learning'],
+    'machine learning': ['ml', 'ai', 'artificial intelligence'],
+    'computer science': ['cs', 'computing', 'software'],
+    'data science': ['analytics', 'machine learning'],
+  };
+  return (aliases[normalized] ?? []).some((alias) =>
+    new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(haystack),
+  );
 }

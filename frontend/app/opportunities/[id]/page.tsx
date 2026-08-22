@@ -77,6 +77,7 @@ export default async function OpportunityPage({
   const status = STATUS[opportunity.trust.status];
   const deadline = formatDeadline(opportunity.deadline);
   const quarantined = opportunity.trust.status === 'quarantined';
+  const closed = opportunity.applicationStatus === 'closed';
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -108,6 +109,10 @@ export default async function OpportunityPage({
           </div>
           <p className="mt-2 max-w-[760px] font-mono text-[12px] leading-relaxed text-gray-600">
             {status.note}
+          </p>
+          <p className="mt-2 max-w-[760px] font-mono text-[12px] leading-relaxed text-gray-700">
+            Application status: <strong>{opportunity.applicationStatus}</strong>.{' '}
+            {opportunity.statusReason}
           </p>
         </header>
 
@@ -148,7 +153,9 @@ export default async function OpportunityPage({
           <Fact label="Confirmed by">
             {opportunity.trust.confirmedBy === 'two_sensors'
               ? 'two independent sensors'
-              : 'learned contract only'}
+              : opportunity.trust.confirmedBy === 'single_sensor'
+                ? 'one live Bright Data reading'
+                : 'learned contract only'}
           </Fact>
         </section>
 
@@ -192,9 +199,11 @@ export default async function OpportunityPage({
               {opportunity.sourceUrl}
             </p>
             <p className="mt-3 max-w-[760px] font-mono text-[12px] leading-relaxed text-gray-600">
-              Every field above was extracted from that page by a Bright Data Scraper Studio
-              collector, then checked against an independent reading of the same page. Nothing here
-              was written by hand or inferred from a summary.
+              {opportunity.trust.status === 'discovered'
+                ? opportunity.trust.confirmedBy === 'two_sensors'
+                  ? 'Bright Data found and opened this live page. NOTICE then compared its visible text with the page structured data, and the two readings agreed on the deadline.'
+                  : 'Bright Data found and opened this live page. It has not yet joined the continuously watched Scraper Studio fleet, so NOTICE labels it as one reading rather than pretending it is verified.'
+                : 'A Bright Data Scraper Studio collector extracted this page and NOTICE checked its fields against the source contract. Two-sensor records were also confirmed by the independent Web Unlocker witness.'}
             </p>
 
             {opportunity.trust.fieldsDegraded.length > 0 ? (
@@ -215,9 +224,9 @@ export default async function OpportunityPage({
                 Read the source ↗
               </a>
 
-              {quarantined ? (
+              {quarantined || closed ? (
                 <span className="border border-blocked bg-red-50 px-5 py-2.5 font-neuebit text-[11px] uppercase tracking-[0.12em] text-blocked">
-                  Application held until re-verified
+                  {closed ? 'Applications closed' : 'Application held until re-verified'}
                 </span>
               ) : (
                 <a

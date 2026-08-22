@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { deadlineHasPassed } from '../acquire/dates.js';
 import type { CollectorRecord, IncidentRecord, VerifiedSnapshot } from '../store/index.js';
 import type { Opportunity, OpportunityType } from './types.js';
 
@@ -48,7 +49,7 @@ export function opportunitiesFromSnapshots(
   for (const snapshot of snapshots) {
     const collector = byCollector.get(snapshot.collectorId);
     if (collector === undefined) continue;
-    if (!includeLab && labHost !== '' && collector.targetDomain.trim().toLowerCase() === labHost) {
+    if (!includeLab && isControlledFixture(collector, labHost)) {
       continue;
     }
     const rows = Array.isArray(snapshot.data) ? snapshot.data : [snapshot.data];
@@ -63,6 +64,19 @@ export function opportunitiesFromSnapshots(
     const bTime = b.deadline === null ? Number.POSITIVE_INFINITY : Date.parse(b.deadline);
     return aTime - bTime;
   });
+}
+
+function isControlledFixture(collector: CollectorRecord, configuredHost: string): boolean {
+  const name = collector.name.trim().toLowerCase();
+  const domain = collector.targetDomain.trim().toLowerCase();
+  return (
+    collector.id.startsWith('demo-doorway-') ||
+    name.includes('controlled fixture') ||
+    name.startsWith('doorway lab') ||
+    domain === 'localhost' ||
+    domain.startsWith('localhost:') ||
+    (configuredHost !== '' && domain === configuredHost)
+  );
 }
 
 function parseOpportunity(
@@ -118,6 +132,18 @@ function parseOpportunity(
 
   const deadlineRaw = text(value, ['deadline_raw', 'application_deadline', 'deadline']);
   const deadline = isoDate(text(value, ['deadline', 'application_deadline']));
+  const rawApplicationStatus = (
+    text(value, ['application_status', 'registration_status', 'status']) ?? ''
+  ).toLowerCase();
+  const applicationStatus = /closed|ended|expired|complete/.test(rawApplicationStatus)
+    ? 'closed'
+    : /rolling|year[- ]round/.test(rawApplicationStatus)
+      ? 'rolling'
+      : deadlineHasPassed(deadlineRaw ?? deadline)
+        ? 'closed'
+        : /open|register|accepting/.test(rawApplicationStatus) || deadline !== null
+          ? 'open'
+          : 'unknown';
   const sourceKey = `${collector.id}:${snapshot.url}:${title}:${provider}`;
 
   return {
@@ -138,6 +164,17 @@ function parseOpportunity(
     },
     deadline,
     deadlineRaw,
+    applicationStatus,
+    statusReason:
+      applicationStatus === 'closed'
+        ? deadlineHasPassed(deadlineRaw ?? deadline)
+          ? 'The published application deadline has passed.'
+          : 'The source reports that applications are closed.'
+        : applicationStatus === 'rolling'
+          ? 'The source reports rolling applications.'
+          : applicationStatus === 'open'
+            ? 'The source reports an open application window.'
+            : 'The source did not publish a reliable application status.',
     locations: strings(value, ['locations', 'location', 'countries']),
     remote: boolean(value, ['remote', 'is_remote']),
     requiredDocuments: strings(value, ['required_documents', 'documents']),

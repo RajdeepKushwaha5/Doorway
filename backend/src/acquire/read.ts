@@ -1,7 +1,7 @@
 import { fetchPageSource, fetchWitnessMarkdown } from '../brightdata/unlocker.js';
 import { extractFields } from '../witness/extract.js';
 import type { WitnessFieldSpec } from '../witness/spec.js';
-import type { OpportunityType } from '../doorway/types.js';
+import type { ApplicationStatus, OpportunityType } from '../doorway/types.js';
 import type { SerpResult } from './serp.js';
 import {
   plausibleDeadline,
@@ -136,7 +136,33 @@ export interface OpportunityDraft {
   corroboration: DraftCorroboration;
   /** The date the page declared in machine-readable form, when it declared one. */
   structuredDeadline: string | null;
+  /** Whether somebody can still submit, kept separate from date confidence. */
+  applicationStatus?: ApplicationStatus;
+  /** Plain-language evidence for the lifecycle classification. */
+  statusReason?: string | null;
   readAt: string;
+}
+
+function applicationLifecycle(
+  markdown: string,
+  deadlineRaw: string | null,
+): { applicationStatus: ApplicationStatus; statusReason: string | null } {
+  if (saysClosed(markdown)) {
+    return { applicationStatus: 'closed', statusReason: 'The official page says applications are closed.' };
+  }
+  if (deadlineHasPassed(deadlineRaw)) {
+    return { applicationStatus: 'closed', statusReason: 'The published application deadline has passed.' };
+  }
+  if (/\b(rolling admissions?|applications? accepted year[- ]round|no deadline)\b/i.test(markdown)) {
+    return { applicationStatus: 'rolling', statusReason: 'The official page describes applications as rolling.' };
+  }
+  if (deadlineRaw !== null) {
+    return { applicationStatus: 'open', statusReason: 'The published deadline has not passed.' };
+  }
+  if (/\b(applications? (?:are )?open|registration (?:is )?open|apply now|register now)\b/i.test(markdown)) {
+    return { applicationStatus: 'open', statusReason: 'The official page says applications are open.' };
+  }
+  return { applicationStatus: 'unknown', statusReason: 'The official page did not publish a reliable closing date.' };
 }
 
 /** Words that mean this page is a listing index, not a single opportunity. */
@@ -234,6 +260,16 @@ function firstString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
+}
+
+function publisherName(host: string, markdown: string): string {
+  const lower = host.toLowerCase();
+  if (lower.includes('wemakedevs.org')) {
+    return /\bwith Bright Data\b/i.test(markdown) ? 'WeMakeDevs and Bright Data' : 'WeMakeDevs';
+  }
+  if (lower.includes('hackindia.org')) return 'HackIndia';
+  if (lower.includes('devpost.com')) return 'Devpost';
+  return host;
 }
 
 /**
@@ -417,20 +453,6 @@ export function readMarkdown(
 ): OpportunityDraft | null {
   if (markdown.trim().length < 400) return null;
 
-  /*
-   * A closed opportunity is not an opportunity.
-   *
-   * Adobe's page has a "Key dates" section whose entire content is
-   * "Applications are closed for the Adobe India AI Research Fellowship". That
-   * line matched the deadline label and was then rejected for containing no
-   * date, so the record went out with its deadline reading "Not stated". A
-   * student reads that as still open with the date unclear, and spends an
-   * evening on an application that cannot be submitted. Dropping the record is
-   * the only honest answer: this product exists to find things somebody can
-   * still apply to.
-   */
-  if (saysClosed(markdown)) return null;
-
   const title = titleFrom(markdown, candidate.title);
   if (looksLikeIndex(title, markdown, candidate.url)) return null;
   // A title that is a question means an article about the subject, not the
@@ -480,7 +502,7 @@ export function readMarkdown(
    * and leave the reader to do the subtraction. That subtraction is exactly
    * what software should be doing on their behalf.
    */
-  if (deadlineHasPassed(deadlineRaw)) return null;
+  const lifecycle = applicationLifecycle(markdown, deadlineRaw);
 
   const resolved: Record<string, string | null> = {
     deadline_raw: deadlineRaw,
@@ -535,7 +557,7 @@ export function readMarkdown(
     sourceUrl: candidate.url,
     host: candidate.host,
     title,
-    provider: provider ?? candidate.host,
+    provider: provider ?? publisherName(candidate.host, markdown),
     type: inferType(title, type, candidate.url),
     summary: candidate.description,
     deadlineRaw,
@@ -547,6 +569,7 @@ export function readMarkdown(
     sensorCount: 1,
     corroboration: 'text_only',
     structuredDeadline: null,
+    ...lifecycle,
     readAt: new Date().toISOString(),
   };
 }
@@ -617,13 +640,17 @@ export function reconcileStructured(
   // A date the page declared but never showed in words. Still one reading:
   // nothing corroborated it, it simply came from somewhere the words were not.
   if (draft.deadlineRaw === null && facts.deadline !== null) {
-    if (deadlineHasPassed(facts.deadline)) return { ...draft, structuredDeadline: facts.deadline };
+    const closed = deadlineHasPassed(facts.deadline);
     return {
       ...draft,
       deadlineRaw: facts.deadline,
       structuredDeadline: facts.deadline,
       corroboration: 'text_only',
       missing: draft.missing.filter((field) => field !== 'deadline_raw'),
+      applicationStatus: closed ? 'closed' : 'open',
+      statusReason: closed
+        ? 'The machine-readable deadline on the official page has passed.'
+        : 'The machine-readable deadline on the official page has not passed.',
     };
   }
 

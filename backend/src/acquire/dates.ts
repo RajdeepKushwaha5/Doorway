@@ -31,7 +31,12 @@ function monthFrom(name: string): number | null {
 function utc(year: number, month: number, day: number): number | null {
   if (day < 1 || day > 31 || month < 0 || month > 11) return null;
   if (year < 1990 || year > 2100) return null;
-  return Date.UTC(year, month, day);
+  const at = Date.UTC(year, month, day);
+  const date = new Date(at);
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
+    return null;
+  }
+  return at;
 }
 
 /**
@@ -53,6 +58,24 @@ export function parseDeadline(raw: string): number | null {
   const iso = /\b((?:19|20)\d{2})-(\d{1,2})-(\d{1,2})\b/g;
   // 31/12/2026 and 31-12-2026, day first: these pages are not American by default
   const slash = /\b(\d{1,2})[/.-](\d{1,2})[/.-]((?:19|20)\d{2})\b/g;
+  // Aug 22-30, 2026. The application closes on the end of the range.
+  const mdyRange = /\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?\s*[-–—]\s*(\d{1,2})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})\b/g;
+  // 17-23 August 2026.
+  const dmyRange = /\b(\d{1,2})(?:st|nd|rd|th)?\s*[-–—]\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+((?:19|20)\d{2})\b/g;
+
+  for (const match of raw.matchAll(mdyRange)) {
+    const month = monthFrom(match[1] ?? '');
+    if (month === null) continue;
+    const at = utc(Number(match[4]), month, Number(match[3]));
+    if (at !== null) found.push(at);
+  }
+
+  for (const match of raw.matchAll(dmyRange)) {
+    const month = monthFrom(match[3] ?? '');
+    if (month === null) continue;
+    const at = utc(Number(match[4]), month, Number(match[2]));
+    if (at !== null) found.push(at);
+  }
 
   for (const match of raw.matchAll(dmy)) {
     const month = monthFrom(match[2] ?? '');

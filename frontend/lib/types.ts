@@ -368,13 +368,15 @@ export interface DoorwayOpportunity {
   };
   deadline: string | null;
   deadlineRaw: string | null;
+  applicationStatus: 'open' | 'rolling' | 'closed' | 'unknown';
+  statusReason: string | null;
   locations: string[];
   remote: boolean | null;
   requiredDocuments: string[];
   applicationUrl: string;
   trust: {
     status: 'verified' | 'partially_verified' | 'stale' | 'quarantined' | 'discovered';
-    confirmedBy: 'two_sensors' | 'contract_only';
+    confirmedBy: 'two_sensors' | 'contract_only' | 'single_sensor';
     lastVerifiedAt: string;
     incidentId: string | null;
     fieldsDegraded: string[];

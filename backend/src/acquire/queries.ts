@@ -75,7 +75,9 @@ const HOMES: Record<OpportunityType, string[]> = {
   'research-program': ['.edu', '.ac.in', '.ac.uk', '.gov.in', '.org'],
   grant: ['.gov.in', '.gov', '.org', '.edu'],
   hackathon: [
+    'wemakedevs.org',
     'devpost.com',
+    'hackindia.org',
     'devfolio.co',
     'unstop.com',
     'mlh.io',
@@ -136,7 +138,7 @@ export function buildQueries(
   profile: DoorwayProfile,
   options: { maxTypes?: number } = {},
 ): DiscoveryQuery[] {
-  const maxTypes = options.maxTypes ?? 4;
+  const maxTypes = options.maxTypes ?? 6;
 
   /*
    * A multi-word interest is a phrase, and has to be searched as one.
@@ -211,6 +213,23 @@ export function buildQueries(
         type,
         officialOnly: false,
       });
+    }
+
+    /*
+     * Hackathons are unusually concentrated on a few publisher platforms.
+     * These broad primary-source queries deliberately do not include the
+     * student's interest or country. A page may say "AI" where the form says
+     * "Artificial intelligence", and excluding it at search time prevents the
+     * ranking layer from ever seeing the right event.
+     */
+    if (type === 'hackathon') {
+      for (const host of ['wemakedevs.org/hackathons', 'devpost.com', 'hackindia.org']) {
+        queries.push({
+          text: `site:${host} hackathon register ${year}`,
+          type,
+          officialOnly: true,
+        });
+      }
     }
   }
 

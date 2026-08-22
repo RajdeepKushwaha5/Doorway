@@ -214,11 +214,29 @@ export function scanForDeadline(markdown: string): string | null {
 
   for (const [index, line] of lines.entries()) {
     if (line.length < 4 || line.length > 220) continue;
-    if (!DEADLINE_WORDS.test(line)) continue;
+    if (!DEADLINE_WORDS.test(line) && !/^when$/i.test(line)) continue;
     if (NOT_A_DEADLINE.test(line)) continue;
 
     const accepted = plausibleDeadline(line);
     if (accepted !== null) return accepted;
+
+    /*
+     * Timeline cards often put the date immediately above its label:
+     *
+     *   Aug 23, 2026
+     *   Submissions close
+     *
+     * This is the mirror image of the heading shape handled below. Only the
+     * two preceding lines are considered and the combined text still has to
+     * pass the same deadline parser.
+     */
+    for (const above of lines.slice(Math.max(0, index - 2), index).reverse()) {
+      if (above === '') continue;
+      if (above.length > 220 || NOT_A_DEADLINE.test(above)) break;
+      const over = plausibleDeadline(`${above} ${line}`);
+      if (over !== null) return over;
+      break;
+    }
 
     /*
      * The date under the heading.

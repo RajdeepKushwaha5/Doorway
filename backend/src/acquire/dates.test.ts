@@ -55,6 +55,12 @@ describe('deadlines that have already gone', () => {
       expect(parseDeadline('Opens 1 March 2026 and closes 30 April 2026')).toBe(
         Date.UTC(2026, 3, 30),
       );
+      expect(parseDeadline('Aug 22-30, 2026')).toBe(Date.UTC(2026, 7, 30));
+      expect(parseDeadline('17-23 August 2026')).toBe(Date.UTC(2026, 7, 23));
+    });
+
+    it('rejects calendar dates that roll into another month', () => {
+      expect(parseDeadline('31 February 2026')).toBeNull();
     });
 
     it('returns nothing when there is no date', () => {

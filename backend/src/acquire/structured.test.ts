@@ -160,11 +160,12 @@ describe('setting one reading against the other', () => {
     expect(result.missing).not.toContain('deadline_raw');
   });
 
-  it('will not resurrect a date that has already gone', () => {
+  it('keeps a past structured date and labels the opportunity closed', () => {
     const silent = { ...draft, deadlineRaw: null, missing: ['deadline_raw'] };
     const result = reconcileStructured(silent, facts({ deadline: '2020-01-01' }));
-    expect(result.deadlineRaw).toBeNull();
-    expect(result.missing).toContain('deadline_raw');
+    expect(result.deadlineRaw).toBe('2020-01-01');
+    expect(result.missing).not.toContain('deadline_raw');
+    expect(result.applicationStatus).toBe('closed');
   });
 
   it('leaves the reading alone when the page declares nothing', () => {

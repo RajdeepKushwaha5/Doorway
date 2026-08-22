@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { OpportunityDraft } from '../acquire/index.js';
+import { deadlineHasPassed, parseDeadline } from '../acquire/dates.js';
 import type { Opportunity, OpportunityType } from './types.js';
 
 /**
@@ -77,22 +78,8 @@ function money(text: string | null): { amount: number | null; currency: string |
  */
 function isoDeadline(raw: string | null): string | null {
   if (raw === null) return null;
-
-  const named = /\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})\b/.exec(raw);
-  const usa = /\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})\b/.exec(raw);
-  const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(raw);
-
-  if (iso !== null) return `${iso[1] ?? ''}-${iso[2] ?? ''}-${iso[3] ?? ''}`;
-
-  const parse = (day: string, month: string, year: string): string | null => {
-    const at = Date.parse(`${day} ${month} ${year} UTC`);
-    if (Number.isNaN(at)) return null;
-    return new Date(at).toISOString().slice(0, 10);
-  };
-
-  if (named !== null) return parse(named[1] ?? '', named[2] ?? '', named[3] ?? '');
-  if (usa !== null) return parse(usa[2] ?? '', usa[1] ?? '', usa[3] ?? '');
-  return null;
+  const at = parseDeadline(raw);
+  return at === null ? null : new Date(at).toISOString().slice(0, 10);
 }
 
 /**
@@ -124,6 +111,13 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
     },
     deadline: isoDeadline(draft.deadlineRaw),
     deadlineRaw: draft.deadlineRaw,
+    applicationStatus:
+      draft.applicationStatus ?? (deadlineHasPassed(draft.deadlineRaw) ? 'closed' : 'unknown'),
+    statusReason:
+      draft.statusReason ??
+      (deadlineHasPassed(draft.deadlineRaw)
+        ? 'The published application deadline has passed.'
+        : 'The official page did not publish a reliable closing date.'),
     locations: [],
     remote: null,
     requiredDocuments: [],

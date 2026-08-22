@@ -20,14 +20,17 @@ export function buildWorld(
    */
   const wanted = new Set(profile.opportunityTypes);
 
-  const matches = opportunities
+  const matches = deduplicate(opportunities)
     .filter((opportunity) => wanted.size === 0 || wanted.has(opportunity.type))
     .map((opportunity) => matchOpportunity(profile, opportunity))
     .filter((match) => match.eligible !== false)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      const lifecycle = lifecycleOrder(a.opportunity.applicationStatus) - lifecycleOrder(b.opportunity.applicationStatus);
+      return lifecycle !== 0 ? lifecycle : b.score - a.score;
+    });
 
   const closingSoon = matches.filter((match) => {
-    if (match.opportunity.deadline === null) return false;
+    if (match.opportunity.applicationStatus === 'closed' || match.opportunity.deadline === null) return false;
     const days = (Date.parse(match.opportunity.deadline) - now.getTime()) / 86_400_000;
     return days >= 0 && days <= 30;
   }).length;
@@ -43,6 +46,40 @@ export function buildWorld(
       closingSoon,
     },
   };
+}
+
+function lifecycleOrder(status: Opportunity['applicationStatus']): number {
+  if (status === 'open') return 0;
+  if (status === 'rolling') return 1;
+  if (status === 'unknown') return 2;
+  return 3;
+}
+
+function deduplicate(opportunities: Opportunity[]): Opportunity[] {
+  const byKey = new Map<string, Opportunity>();
+  for (const opportunity of opportunities) {
+    const normalizedTitle = opportunity.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const normalizedProvider = opportunity.provider.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const key = `${normalizedTitle}::${normalizedProvider}`;
+    const existing = byKey.get(key);
+    if (existing === undefined || trustWeight(opportunity) > trustWeight(existing)) {
+      byKey.set(key, opportunity);
+    }
+  }
+  return [...byKey.values()];
+}
+
+function trustWeight(opportunity: Opportunity): number {
+  const trust = opportunity.trust.status === 'verified'
+    ? 5
+    : opportunity.trust.status === 'partially_verified'
+      ? 4
+      : opportunity.trust.status === 'discovered'
+        ? 3
+        : opportunity.trust.status === 'stale'
+          ? 2
+          : 1;
+  return trust * 10 + (opportunity.trust.confirmedBy === 'two_sensors' ? 2 : 0);
 }
 
 /**
@@ -166,6 +203,19 @@ export function matchOpportunity(
     explanation.push('Some fields are quarantined while the source is rechecked');
   } else {
     explanation.push('This record has a weaker verification state; inspect the source before acting');
+  }
+
+  if (opportunity.applicationStatus === 'open') {
+    score += 8;
+    matched.push('Applications are currently open');
+  } else if (opportunity.applicationStatus === 'rolling') {
+    score += 6;
+    matched.push('Applications are accepted on a rolling basis');
+  } else if (opportunity.applicationStatus === 'closed') {
+    score -= 45;
+    explanation.push('Applications are closed; this result is kept for transparency');
+  } else {
+    unknown.push('The source did not publish a reliable closing date or application status');
   }
 
   explanation.unshift(...matched);
