@@ -4,6 +4,7 @@ import { deadlineHasPassed, parseDeadline } from '../acquire/dates.js';
 import { plausibleDeadline, scanForDeadline } from '../acquire/plausible.js';
 import { looksLikeIndex } from '../acquire/read.js';
 import type { Opportunity, OpportunityType } from './types.js';
+import { decideLifecycle } from './lifecycle.js';
 
 /**
  * Let a live find into the world, without letting it pretend to be verified.
@@ -106,13 +107,19 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
     explicitDeadlineFromSummary(draft.summary) ??
     (sourceReportsComplete ? dateRangeFromSummary(draft.summary) : null) ??
     scanForDeadline(draft.summary);
-  const applicationStatus = deadlineHasPassed(deadlineRaw) || sourceReportsComplete
-    ? 'closed'
-    : draft.applicationStatus !== undefined && draft.applicationStatus !== 'unknown'
-      ? draft.applicationStatus
-      : deadlineRaw === null
-        ? 'unknown'
-        : 'open';
+  /*
+   * Whether somebody can still apply, decided where every path decides it.
+   *
+   * The summary is passed as the prose to scan, and the reading that produced
+   * this draft is passed as an upstream opinion, which is only trusted when it
+   * is not "I cannot tell". One precedence, applied to whatever signals this
+   * path happens to hold.
+   */
+  const { status: applicationStatus, reason: statusReason } = decideLifecycle({
+    pageText: draft.summary,
+    deadlineRaw,
+    declared: draft.applicationStatus,
+  });
 
   return {
     id: createHash('sha256').update(`discovered:${draft.sourceUrl}`).digest('hex').slice(0, 18),
@@ -133,16 +140,10 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
     deadline: isoDeadline(deadlineRaw),
     deadlineRaw,
     applicationStatus,
-    statusReason:
-      deadlineHasPassed(deadlineRaw)
-        ? 'The published application deadline has passed.'
-        : sourceReportsComplete
-          ? 'The source reports that this event is complete.'
-        : applicationStatus !== 'unknown' && draft.applicationStatus === applicationStatus
-          ? draft.statusReason ?? 'The official page reports the application window is open.'
-          : deadlineRaw === null
-            ? 'The official page did not publish a reliable closing date.'
-            : 'The published deadline has not passed.',
+    // The decision above already said why. Restating it here was a fourth copy
+    // of the same reasoning, and the one most likely to drift, because nothing
+    // would fail if it disagreed with the status beside it.
+    statusReason,
     locations: [],
     remote: null,
     requiredDocuments: [],

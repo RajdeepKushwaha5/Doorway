@@ -13,6 +13,7 @@ import {
   saysClosed,
 } from './plausible.js';
 import { deadlineHasPassed, parseDeadline } from './dates.js';
+import { decideLifecycle } from '../doorway/lifecycle.js';
 import { hasStructuredFacts, readStructured, type StructuredFacts } from './structured.js';
 
 /**
@@ -143,26 +144,21 @@ export interface OpportunityDraft {
   readAt: string;
 }
 
+/**
+ * Whether somebody can still apply, decided in the one place that decides it.
+ *
+ * This carried its own copy of the rules until three copies existed across the
+ * discovery, watched-source and index paths. They did not have to disagree to
+ * be a problem: the two date parsers that cost most of the deadlines in the
+ * index were both correct when written, and one was improved while the other
+ * was not.
+ */
 function applicationLifecycle(
   markdown: string,
   deadlineRaw: string | null,
 ): { applicationStatus: ApplicationStatus; statusReason: string | null } {
-  if (saysClosed(markdown)) {
-    return { applicationStatus: 'closed', statusReason: 'The official page says applications are closed.' };
-  }
-  if (deadlineHasPassed(deadlineRaw)) {
-    return { applicationStatus: 'closed', statusReason: 'The published application deadline has passed.' };
-  }
-  if (/\b(rolling admissions?|applications? accepted year[- ]round|no deadline)\b/i.test(markdown)) {
-    return { applicationStatus: 'rolling', statusReason: 'The official page describes applications as rolling.' };
-  }
-  if (deadlineRaw !== null) {
-    return { applicationStatus: 'open', statusReason: 'The published deadline has not passed.' };
-  }
-  if (/\b(applications? (?:are )?open|registration (?:is )?open|apply now|register now)\b/i.test(markdown)) {
-    return { applicationStatus: 'open', statusReason: 'The official page says applications are open.' };
-  }
-  return { applicationStatus: 'unknown', statusReason: 'The official page did not publish a reliable closing date.' };
+  const verdict = decideLifecycle({ pageText: markdown, deadlineRaw });
+  return { applicationStatus: verdict.status, statusReason: verdict.reason };
 }
 
 /** Words that mean this page is a listing index, not a single opportunity. */

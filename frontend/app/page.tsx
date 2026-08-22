@@ -50,7 +50,7 @@ const FAQS = [
   {
     q: 'Why is valid JSON not enough?',
     tag: 'detection',
-    a: 'A layout change can move a price selector onto a refundable deposit. The output stays schema-valid, the request still succeeds, and nothing raises an error. The wrong fact is the only symptom.',
+    a: 'A redesign can move a deadline selector onto an early-interest date. The output stays schema-valid, the request still succeeds, and nothing raises an error. The wrong fact is the only symptom, and a student plans an evening around it.',
   },
   {
     q: 'How do you know the site changed rather than the scraper breaking?',
@@ -214,7 +214,7 @@ export async function NoticeEnginePage() {
             </h2>
             <p className="text-[14px] text-gray-600 leading-relaxed font-mono">
               Status codes, schemas and null checks all answer the same question: did the request
-              work. Every one of them <span className="text-gray-900 font-semibold">passes a price that is wrong by a factor of ten</span>, because none of
+              work. Every one of them <span className="text-gray-900 font-semibold">passes a closing date that is seventeen days early</span>, because none of
               them ever learns what the value was supposed to be. NOTICE holds a selector-bound
               collector against an independent selector-free markdown witness, and{' '}
               <span className="text-gray-900 font-semibold font-mono">withholds the field rather than guessing</span>.
@@ -316,7 +316,7 @@ export async function NoticeEnginePage() {
               A console that cannot run anything says so instead. */}
           {fixtureCollector === undefined ? (
             <p className="rounded-lg border border-gray-200 bg-gray-50 p-5 font-mono text-[13px] leading-relaxed text-gray-600">
-              The DriftMart fixture collector is not registered on this deployment, so there is
+              The controlled fixture collector is not registered on this deployment, so there is
               nothing for the console to run. Register it above and this panel becomes live.
             </p>
           ) : (

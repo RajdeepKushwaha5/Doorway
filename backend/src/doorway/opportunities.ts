@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { deadlineHasPassed } from '../acquire/dates.js';
 import type { CollectorRecord, IncidentRecord, VerifiedSnapshot } from '../store/index.js';
 import type { Opportunity, OpportunityType } from './types.js';
+import { decideLifecycle } from './lifecycle.js';
 
 const TYPES = new Set<OpportunityType>([
   'scholarship',
@@ -132,18 +133,18 @@ function parseOpportunity(
 
   const deadlineRaw = text(value, ['deadline_raw', 'application_deadline', 'deadline']);
   const deadline = isoDate(text(value, ['deadline', 'application_deadline']));
-  const rawApplicationStatus = (
-    text(value, ['application_status', 'registration_status', 'status']) ?? ''
-  ).toLowerCase();
-  const applicationStatus = /closed|ended|expired|complete/.test(rawApplicationStatus)
-    ? 'closed'
-    : /rolling|year[- ]round/.test(rawApplicationStatus)
-      ? 'rolling'
-      : deadlineHasPassed(deadlineRaw ?? deadline)
-        ? 'closed'
-        : /open|register|accepting/.test(rawApplicationStatus) || deadline !== null
-          ? 'open'
-          : 'unknown';
+  /*
+   * Whether somebody can still apply, decided where every path decides it.
+   *
+   * This carried its own closure vocabulary and its own precedence, as did the
+   * discovery path and the index path. Three copies of one rule is the
+   * arrangement that produced the two date parsers, where both were right when
+   * written and only one was ever improved.
+   */
+  const { status: applicationStatus, reason: statusReason } = decideLifecycle({
+    statusText: text(value, ['application_status', 'registration_status', 'status']),
+    deadlineRaw: deadlineRaw ?? deadline,
+  });
   const sourceKey = `${collector.id}:${snapshot.url}:${title}:${provider}`;
 
   return {
@@ -165,16 +166,7 @@ function parseOpportunity(
     deadline,
     deadlineRaw,
     applicationStatus,
-    statusReason:
-      applicationStatus === 'closed'
-        ? deadlineHasPassed(deadlineRaw ?? deadline)
-          ? 'The published application deadline has passed.'
-          : 'The source reports that applications are closed.'
-        : applicationStatus === 'rolling'
-          ? 'The source reports rolling applications.'
-          : applicationStatus === 'open'
-            ? 'The source reports an open application window.'
-            : 'The source did not publish a reliable application status.',
+    statusReason,
     locations: strings(value, ['locations', 'location', 'countries']),
     remote: boolean(value, ['remote', 'is_remote']),
     requiredDocuments: strings(value, ['required_documents', 'documents']),
