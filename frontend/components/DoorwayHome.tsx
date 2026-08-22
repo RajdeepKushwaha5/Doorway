@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
+import { LiveDiscovery } from '@/components/LiveDiscovery';
 import Link from 'next/link';
 import { buildDoorwayWorldAction } from '@/app/actions';
 import type {
@@ -208,7 +209,11 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
         </div>
       </section>
 
-      <WorldSection world={world} pending={pending} />
+      <WorldSection
+        world={world}
+        pending={pending}
+        profile={{ ...profile, interests: splitList(interest) }}
+      />
       <HowItLives />
     </div>
   );
@@ -225,7 +230,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function WorldSection({ world, pending }: { world: DoorwayWorld | null; pending: boolean }) {
+function WorldSection({
+  world,
+  pending,
+  profile,
+}: {
+  world: DoorwayWorld | null;
+  pending: boolean;
+  // Passed down so the live search asks for what this student asked for,
+  // rather than for whatever the page was first rendered with.
+  profile: DoorwayProfile;
+}) {
   return (
     <section id="world" className="border-b border-gray-200 bg-white">
       <div className="mx-auto max-w-[1400px] px-6 py-20 lg:px-12">
@@ -271,6 +286,20 @@ function WorldSection({ world, pending }: { world: DoorwayWorld | null; pending:
             </div>
           </>
         ) : null}
+
+        {/*
+          The other half of the answer.
+
+          The world above is what Doorway watches continuously, which is the
+          strong claim and, necessarily, a short list. A student whose interest
+          is not on it would otherwise reach an empty map and a dead end. This
+          goes and looks now, and is kept visually and verbally apart from the
+          verified world because what it returns has been read once by one
+          sensor and deserves a smaller claim.
+        */}
+        <div className="mt-16">
+          <LiveDiscovery profile={profile} />
+        </div>
       </div>
     </section>
   );

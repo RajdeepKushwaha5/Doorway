@@ -414,3 +414,102 @@ export async function getProofOpportunityAction(): Promise<{
     return null;
   }
 }
+
+/**
+ * Search the live web for one student, now.
+ *
+ * Returns an id rather than results. Four searches and a dozen page reads take
+ * a minute or more, and a server action held open that long is one a platform
+ * will cut out from under the user. The work is watched on the same event
+ * stream the observation console uses.
+ */
+export interface DiscoveryDraft {
+  sourceUrl: string;
+  host: string;
+  title: string;
+  provider: string;
+  type: string;
+  summary: string;
+  deadlineRaw: string | null;
+  fundingLevel: string | null;
+  eligibility: string | null;
+  official: boolean;
+  foundVia: string;
+  missing: string[];
+  readAt: string;
+}
+
+export async function startDiscoveryAction(
+  profile: DoorwayProfile,
+): Promise<ActionResult<{ discoveryId: string; remaining: number }>> {
+  // Unauthenticated on purpose: this is the route a student uses, and neither
+  // they nor a judge can be handed an admin token. The server rate limits it.
+  try {
+    const response = await fetch(`${serverApiBase()}/api/doorway/discover`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(profile),
+      cache: 'no-store',
+    });
+
+    const body = (await response.json()) as {
+      discoveryId?: unknown;
+      remaining?: unknown;
+      error?: unknown;
+    };
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error:
+          typeof body.error === 'string'
+            ? body.error
+            : `the search could not be started (${String(response.status)})`,
+      };
+    }
+
+    if (typeof body.discoveryId !== 'string') {
+      return { ok: false, error: 'the server did not return a search to watch' };
+    }
+
+    return {
+      ok: true,
+      data: {
+        discoveryId: body.discoveryId,
+        remaining: typeof body.remaining === 'number' ? body.remaining : 0,
+      },
+    };
+  } catch (caught) {
+    return {
+      ok: false,
+      error: caught instanceof Error ? caught.message : 'the search service could not be reached',
+    };
+  }
+}
+
+/** Collect what a finished search found. */
+export async function getDiscoveryAction(
+  id: string,
+): Promise<ActionResult<{ status: string; drafts: DiscoveryDraft[] }>> {
+  try {
+    const response = await fetch(
+      `${serverApiBase()}/api/doorway/discoveries/${encodeURIComponent(id)}`,
+      { cache: 'no-store' },
+    );
+    if (!response.ok) return { ok: false, error: 'that search is no longer available' };
+
+    const body = (await response.json()) as { status?: unknown; drafts?: unknown };
+    return {
+      ok: true,
+      data: {
+        status: typeof body.status === 'string' ? body.status : 'unknown',
+        drafts: Array.isArray(body.drafts) ? (body.drafts as DiscoveryDraft[]) : [],
+      },
+    };
+  } catch (caught) {
+    return {
+      ok: false,
+      error: caught instanceof Error ? caught.message : 'the search service could not be reached',
+    };
+  }
+}

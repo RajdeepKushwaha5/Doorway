@@ -21,7 +21,8 @@
     "mcp": "node --env-file-if-exists=../.env dist/scripts/mcp.js",
     "blindspot": "node --env-file-if-exists=../.env dist/scripts/blindspot.js",
     "benchmark": "node --env-file-if-exists=../.env dist/scripts/benchmark.js",
-    "doorway:seed": "node --env-file-if-exists=../.env dist/scripts/doorway-seed.js"
+    "doorway:seed": "node --env-file-if-exists=../.env dist/scripts/doorway-seed.js",
+    "discover:test": "node --env-file-if-exists=../.env dist/scripts/discover-test.js"
   },
   "dependencies": {
     "zod": "^3.24.1"

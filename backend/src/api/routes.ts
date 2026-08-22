@@ -25,6 +25,8 @@ import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, binary, HttpError, Router, stream } from './http.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
 import { buildWorld, opportunitiesFromSnapshots, profileSchema } from '../doorway/index.js';
+import { discover, type OpportunityDraft } from '../acquire/index.js';
+import { DiscoveryBudget } from '../acquire/budget.js';
 
 /**
  * Ceiling on a candidate replay.
@@ -77,6 +79,13 @@ export interface ApiDeps {
   notifyIncident?: (incident: IncidentRecord, collectorName: string) => Promise<unknown>;
   /** Independent witness acquisition. Injected so deploys need no CLI. */
   fetchMarkdown?: (url: string) => Promise<{ markdown: string; fetchedAt: string }>;
+  /**
+   * Credentials for searching the live web.
+   *
+   * Absent means discovery is off and the route says so, rather than failing
+   * at the moment a student presses the button.
+   */
+  discovery?: { apiKey: string; zone: string; country?: string };
 }
 
 /** Build the HTTP surface. */
@@ -85,6 +94,12 @@ export function buildRouter(deps: ApiDeps): Router {
   // One per server. Holds only recent observations, and only in memory: the
   // durable record of any of this is the run and the incident in the store.
   const broker = deps.broker ?? new ObservationBroker();
+  // Public and paid, so capped. See DiscoveryBudget for why the global ceiling
+  // is the limit that actually matters.
+  const budget = new DiscoveryBudget();
+  // Finished discoveries, so a client that missed the stream can still read
+  // what was found. Bounded, and never the durable record of anything.
+  const discoveries = new Map<string, OpportunityDraft[]>();
   const { store, client } = deps;
   const witnessDeps = {
     ...(deps.fetchMarkdown === undefined ? {} : { fetchMarkdown: deps.fetchMarkdown }),
@@ -121,6 +136,8 @@ export function buildRouter(deps: ApiDeps): Router {
       verifiedFeed: '/api/feed/{collectorId}',
       opportunities: '/api/doorway/opportunities',
       opportunityWorld: 'POST /api/doorway/world',
+      discover: 'POST /api/doorway/discover',
+      discovery: '/api/doorway/discoveries/{id}',
       certificate: '/api/incidents/{id}/certificate',
     },
     note: 'Writes require a bearer token and are not listed. Verdicts are exportable as certificates you can re-derive offline.',
@@ -681,6 +698,98 @@ export function buildRouter(deps: ApiDeps): Router {
     );
     if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
     return opportunity;
+  });
+
+  /*
+   * Find opportunities for one student, from the live web, now.
+   *
+   * Public on purpose, and rate limited for the same reason. Every other route
+   * that spends money is behind the admin token, but this is the one a student
+   * uses and neither they nor a judge can be handed a token. Public and paid is
+   * a combination that ends one way if left alone, so `DiscoveryBudget` caps it
+   * per caller and, more importantly, globally.
+   *
+   * Returns an id immediately rather than the results. Four searches and a
+   * dozen page reads take a minute or more, and a request held open that long
+   * is one a proxy will cut. The work is watched on the same event stream the
+   * observation console uses.
+   */
+  router.post('/api/doorway/discover', async ({ body, request }) => {
+    if (deps.discovery === undefined) {
+      throw new HttpError(
+        503,
+        'live discovery is not configured on this server, so nothing can be searched for',
+      );
+    }
+
+    const parsed = profileSchema.safeParse(body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new HttpError(400, issue?.message ?? 'invalid student profile');
+    }
+
+    // Behind a proxy the socket address is the proxy. The first hop in
+    // x-forwarded-for is the closest thing to the caller available here.
+    const forwarded = request.headers['x-forwarded-for'];
+    const caller =
+      (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() ??
+      request.socket.remoteAddress ??
+      'unknown';
+
+    const decision = budget.take(caller);
+    if (!decision.allowed) {
+      throw new HttpError(429, decision.reason ?? 'too many live searches');
+    }
+
+    const profile = parsed.data;
+    const observationId = broker.start('discovery', profile.interests.join(', '));
+    const emit = broker.emitterFor(observationId);
+
+    void discover(deps.discovery, profile, {
+      maxPages: 12,
+      maxTypes: 3,
+      onEvent: (event) => {
+        emit({ step: event.step, line: event.line, ...(event.detail === undefined ? {} : { detail: event.detail }) });
+      },
+    })
+      .then((result) => {
+        discoveries.set(observationId, result.drafts);
+        // Bounded: this is a demonstration surface, not a store.
+        if (discoveries.size > 50) {
+          const oldest = discoveries.keys().next().value;
+          if (oldest !== undefined) discoveries.delete(oldest);
+        }
+      })
+      .catch((error: unknown) => {
+        emit({
+          step: 'error',
+          line: `failed           ${error instanceof Error ? error.message : String(error)}`,
+          detail: { message: error instanceof Error ? error.message : String(error) },
+        });
+      })
+      .finally(() => {
+        broker.finish(observationId);
+      });
+
+    return { discoveryId: observationId, remaining: decision.remaining };
+  });
+
+  /**
+   * Collect the results of a finished discovery.
+   *
+   * Separate from the stream because the stream is a log and these are records.
+   * A client that missed the stream entirely can still read what was found.
+   */
+  router.get('/api/doorway/discoveries/:id', async ({ params }) => {
+    const id = params['id'] ?? '';
+    const drafts = discoveries.get(id);
+    if (drafts === undefined) {
+      // Still running is not the same as never existed, and a client polling
+      // needs to tell them apart.
+      if (broker.has(id)) return { id, status: 'running' as const, drafts: [] };
+      throw new HttpError(404, 'no such discovery');
+    }
+    return { id, status: 'done' as const, drafts };
   });
 
   router.post('/api/doorway/world', async ({ body }) => {

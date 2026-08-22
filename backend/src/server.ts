@@ -109,6 +109,28 @@ function main(): void {
     ]);
   };
 
+  /*
+   * Live discovery, when the credentials for it exist.
+   *
+   * The same key and the same unlocker zone the witness already uses. Passing
+   * it explicitly rather than reading the environment inside the route keeps
+   * the "is this feature on" decision in one place, where the server can also
+   * say so at startup instead of failing under a student's hand.
+   */
+  const discoveryKey = process.env['BRIGHTDATA_API_KEY'];
+  const discoveryZone = process.env['BRIGHTDATA_UNLOCKER_ZONE'];
+  const discoveryCountry = process.env['DISCOVERY_COUNTRY'];
+  const discovery =
+    discoveryKey === undefined || discoveryZone === undefined
+      ? undefined
+      : {
+          apiKey: discoveryKey,
+          zone: discoveryZone,
+          ...(discoveryCountry === undefined || discoveryCountry.trim() === ''
+            ? {}
+            : { country: discoveryCountry.trim().toLowerCase() }),
+        };
+
   const router = buildRouter({
     store,
     client,
@@ -116,6 +138,7 @@ function main(): void {
     screenshots,
     ...(captureScreenshot === undefined ? {} : { captureScreenshot }),
     notifyIncident: announce,
+    ...(discovery === undefined ? {} : { discovery }),
   });
   const server = createServer((request, response) => {
     void router.handle(request, response);

@@ -31,6 +31,15 @@ export type ObserveStep =
   | 'verdict'
   /** A prior quarantine lifted because both sensors agree again. */
   | 'recovery'
+  // Discovery shares this stream rather than growing a second one. The steps
+  // differ but the shape does not: a sequence of lines a person watches while
+  // something slow happens, with structured detail beside each.
+  | 'searching'
+  | 'searched'
+  | 'reading'
+  | 'read'
+  | 'skipped'
+  | 'done'
   | 'error';
 
 export interface ObserveEvent {

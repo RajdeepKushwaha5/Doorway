@@ -128,6 +128,7 @@ export async function SiteFooter() {
             <ul className="space-y-2.5 text-gray-600 text-[12px]">
               <li><Link href="/" className="hover:text-black">Discover</Link></li>
               <li><Link href="/#world" className="hover:text-black">Opportunity World</Link></li>
+              <li><Link href="/proof" className="hover:text-black">Check It Yourself</Link></li>
               <li><Link href="/engine" className="hover:text-black">Trust Engine</Link></li>
               <li><Link href="/verify" className="hover:text-black">Verify Evidence</Link></li>
             </ul>
