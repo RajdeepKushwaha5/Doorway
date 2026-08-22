@@ -183,15 +183,60 @@ function parseOpportunity(
   };
 }
 
-function deduplicate(opportunities: Opportunity[]): Opportunity[] {
+/**
+ * How much a record has actually been checked, highest first.
+ *
+ * Two sensors agreeing outranks a learned contract, which outranks one sensor
+ * reading a page once. Nothing about when it happened enters into it.
+ */
+const CORROBORATION: Record<string, number> = {
+  two_sensors: 3,
+  contract_only: 2,
+  single_sensor: 1,
+};
+
+/** How far this system will vouch for it, highest first. */
+const STANDING: Record<string, number> = {
+  verified: 4,
+  partially_verified: 3,
+  quarantined: 2,
+  stale: 1,
+  discovered: 0,
+};
+
+/**
+ * Keep the better-checked record when two describe the same opportunity.
+ *
+ * This kept whichever was seen most recently, and recency is not
+ * trustworthiness. A page discovered seconds ago by one sensor always beat a
+ * snapshot two sensors had agreed on an hour earlier, so a live search
+ * downgraded the product's strongest records to `discovered` and served a
+ * student the weakest available evidence for opportunities that were fully
+ * corroborated.
+ *
+ * Corroboration decides it, then standing, and recency only breaks a tie
+ * between records that have been checked equally well.
+ */
+export function deduplicate(opportunities: Opportunity[]): Opportunity[] {
   const byKey = new Map<string, Opportunity>();
+
+  const stronger = (candidate: Opportunity, existing: Opportunity): boolean => {
+    const byCorroboration =
+      (CORROBORATION[candidate.trust.confirmedBy] ?? 0) -
+      (CORROBORATION[existing.trust.confirmedBy] ?? 0);
+    if (byCorroboration !== 0) return byCorroboration > 0;
+
+    const byStanding =
+      (STANDING[candidate.trust.status] ?? 0) - (STANDING[existing.trust.status] ?? 0);
+    if (byStanding !== 0) return byStanding > 0;
+
+    return Date.parse(candidate.trust.lastVerifiedAt) > Date.parse(existing.trust.lastVerifiedAt);
+  };
+
   for (const opportunity of opportunities) {
     const key = `${opportunity.title.toLowerCase()}::${opportunity.provider.toLowerCase()}`;
     const existing = byKey.get(key);
-    if (
-      existing === undefined ||
-      Date.parse(opportunity.trust.lastVerifiedAt) > Date.parse(existing.trust.lastVerifiedAt)
-    ) {
+    if (existing === undefined || stronger(opportunity, existing)) {
       byKey.set(key, opportunity);
     }
   }
