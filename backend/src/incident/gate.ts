@@ -1,4 +1,6 @@
 import { compareValues } from '../shared/index.js';
+import { compareDates } from '../witness/compare.js';
+import type { WitnessFieldSpec } from '../witness/spec.js';
 import { getPath } from '../contracts/paths.js';
 import { validateRun, type CollectorContract } from '../contracts/index.js';
 
@@ -48,6 +50,21 @@ export interface GateInput {
   /** Fields that must not change. A repair may not quietly drop them. */
   protectedFields: readonly string[];
   contract: CollectorContract;
+  /**
+   * How each field should be compared.
+   *
+   * Without these the gate compares every value the same way, and a date is
+   * the one field where that is catastrophic. A collector writing
+   * "2026-09-01T00:00:00.000Z" against a pinned "18 September 2026" was
+   * normalised to the numbers 20260901000000000 and 182026 and reported as a
+   * numeric mismatch. It rejected the right repair for the wrong reason, and
+   * it would have rejected a correct one identically, which means a date fix
+   * could never have been promoted at all.
+   *
+   * Optional so existing callers keep working; absent, comparison is exactly
+   * as before.
+   */
+  specs?: readonly WitnessFieldSpec[];
 }
 
 export type GateDecision =
@@ -60,6 +77,7 @@ function evaluateCase(
   label: string,
   expected: Readonly<Record<string, unknown>>,
   rows: readonly unknown[] | undefined,
+  specs: readonly WitnessFieldSpec[] = [],
 ): GateCaseResult {
   if (rows === undefined) {
     return {
@@ -92,7 +110,14 @@ function evaluateCase(
   const fields = Object.entries(expected).map(([path, expectedValue]) => {
     const lookup = getPath(row, path);
     const observed = lookup.found ? lookup.value : null;
-    const agreement = compareValues(observed, expectedValue);
+    // A date is a day, not a number. Two spellings of one day are one day,
+    // and the gate has to know that before it can tell a working repair from
+    // a broken one.
+    const spec = specs.find((candidate) => candidate.path === path);
+    const agreement =
+      spec?.shape === 'date'
+        ? compareDates(observed, expectedValue)
+        : compareValues(observed, expectedValue);
     return {
       path,
       expected: expectedValue,
@@ -135,6 +160,7 @@ export function evaluateGate(input: GateInput): GateDecision {
     'incident',
     input.incident.expected,
     input.candidateRowsByUrl.get(input.incident.url),
+    input.specs ?? [],
   );
   results.push(incidentResult);
 
@@ -145,6 +171,7 @@ export function evaluateGate(input: GateInput): GateDecision {
         golden.label,
         golden.expected,
         input.candidateRowsByUrl.get(golden.url),
+        input.specs ?? [],
       ),
     );
   }

@@ -83,7 +83,7 @@ export function observeMarkdown(
  * Falls back to ordinary comparison when either side cannot be parsed, so a
  * value that is not a date is still judged rather than waved through.
  */
-function compareDates(collectorValue: unknown, witnessValue: unknown): ValueAgreement {
+export function compareDates(collectorValue: unknown, witnessValue: unknown): ValueAgreement {
   if (typeof collectorValue === 'string' && typeof witnessValue === 'string') {
     const left = parseDeadline(collectorValue);
     const right = parseDeadline(witnessValue);

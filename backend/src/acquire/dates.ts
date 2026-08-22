@@ -54,8 +54,21 @@ export function parseDeadline(raw: string): number | null {
   const dmy = /\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+((?:19|20)\d{2})\b/g;
   // September 18, 2026
   const mdy = /\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})\b/g;
-  // 2026-09-18
-  const iso = /\b((?:19|20)\d{2})-(\d{1,2})-(\d{1,2})\b/g;
+  /*
+   * 2026-09-18, and 2026-09-18T00:00:00.000Z.
+   *
+   * The trailing boundary was \b, which fails on a full ISO timestamp: the
+   * character after the day is "T", and a word boundary needs a word and a
+   * non-word character either side of it. Scraper Studio collectors return
+   * timestamps in exactly that form, so this parser could not read the format
+   * its own flagship field arrives in.
+   *
+   * Everything downstream inherited that. The date comparison fell back to
+   * treating two dates as very large numbers, the lifecycle could not tell
+   * whether a deadline had passed, and a witness spec declared as a date
+   * refused a perfectly good value.
+   */
+  const iso = /\b((?:19|20)\d{2})-(\d{1,2})-(\d{1,2})(?![\d-])/g;
   // 31/12/2026 and 31-12-2026, day first: these pages are not American by default
   const slash = /\b(\d{1,2})[/.-](\d{1,2})[/.-]((?:19|20)\d{2})\b/g;
   // Aug 22-30, 2026. The application closes on the end of the range.

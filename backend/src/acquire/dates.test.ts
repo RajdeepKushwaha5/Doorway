@@ -69,3 +69,26 @@ describe('deadlines that have already gone', () => {
     });
   });
 });
+
+describe('the format collectors actually return', () => {
+  /*
+   * Scraper Studio hands back ISO timestamps. The pattern ended in , and the
+   * character after the day in "2026-09-18T00:00:00.000Z" is "T", so there was
+   * no word boundary and nothing matched. The parser could not read the format
+   * its own flagship field arrives in, and every date-aware behaviour
+   * downstream quietly fell back to something worse.
+   */
+  it('reads a full ISO timestamp', () => {
+    expect(parseDeadline('2026-09-18T00:00:00.000Z')).toBe(Date.UTC(2026, 8, 18));
+    expect(parseDeadline('2026-09-18T00:00:00Z')).toBe(Date.UTC(2026, 8, 18));
+    expect(parseDeadline('2026-09-18T17:45:00+05:30')).toBe(Date.UTC(2026, 8, 18));
+  });
+
+  it('still reads a plain ISO date', () => {
+    expect(parseDeadline('2026-09-18')).toBe(Date.UTC(2026, 8, 18));
+  });
+
+  it('does not read a date out of a longer number', () => {
+    expect(parseDeadline('order 2026-09-1899')).toBeNull();
+  });
+});

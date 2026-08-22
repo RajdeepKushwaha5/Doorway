@@ -221,6 +221,8 @@ export async function attemptRepair(
     candidateRowsByUrl,
     protectedFields: collector.protectedFields,
     contract,
+    // So a date is compared as a day rather than as a very large number.
+    specs: collector.witnessSpecs,
   });
 
   /*
@@ -421,6 +423,7 @@ export async function promoteRepair(
       candidateRowsByUrl: new Map([[verificationUrl, verification.rows]]),
       protectedFields: collector.protectedFields,
       contract,
+      specs: collector.witnessSpecs,
     });
 
     recovered = hardFailures.length === 0 && postGate.results[0]?.passed === true;
