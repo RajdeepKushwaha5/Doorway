@@ -373,7 +373,7 @@ export interface DoorwayOpportunity {
   requiredDocuments: string[];
   applicationUrl: string;
   trust: {
-    status: 'verified' | 'partially_verified' | 'stale' | 'quarantined';
+    status: 'verified' | 'partially_verified' | 'stale' | 'quarantined' | 'discovered';
     confirmedBy: 'two_sensors' | 'contract_only';
     lastVerifiedAt: string;
     incidentId: string | null;

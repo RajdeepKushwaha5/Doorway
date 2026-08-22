@@ -32,6 +32,11 @@ const STATUS: Record<
     tone: 'border-neutral-300 bg-neutral-50 text-neutral-800',
     note: 'These values passed the checks learned for this source, but the independent witness was not consulted on this reading.',
   },
+  discovered: {
+    label: 'Found live, not verified',
+    tone: 'border-amber-500/40 bg-amber-50 text-amber-800 font-semibold',
+    note: 'This page was found by searching the live web and read once, moments ago. There is no history to check it against and no second reading to agree with, so treat every value below as the page said it rather than as something we stand behind. Open the source before you plan around a date.',
+  },
   stale: {
     label: 'Stale',
     tone: 'border-neutral-300 bg-neutral-50 text-neutral-800',

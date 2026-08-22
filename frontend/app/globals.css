@@ -485,6 +485,9 @@
 .doorway-trust-partially_verified { color: #2563eb; }
 .doorway-trust-stale { color: #b45309; }
 .doorway-trust-quarantined { color: #b4231f; }
+/* Found live and unverified. Amber rather than green: it is a real find and an
+   unchecked one, and the colour should say the second part too. */
+.doorway-trust-discovered { color: #b45309; }
 
 @keyframes doorway-rise {
   to { opacity: 1; transform: translate3d(0, 0, 0); }

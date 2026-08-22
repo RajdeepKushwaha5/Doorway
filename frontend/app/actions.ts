@@ -513,3 +513,63 @@ export async function getDiscoveryAction(
     };
   }
 }
+
+/**
+ * Everything we can find for this student, watched and live, in one answer.
+ *
+ * Replaces the two-step the page used to ask of people: build a world from
+ * sources under observation, then notice a separate button further down and
+ * press that to search the web. Only a handful of sources are watched, so the
+ * first step alone showed a nearly empty map, and most visitors never reached
+ * the second.
+ *
+ * Slower than the old world call, because it really does go and search. The
+ * caller shows the reasoning while it runs rather than a spinner.
+ */
+export interface FoundWorld extends DoorwayWorld {
+  /** Whether the live search actually ran. */
+  live: boolean;
+  /** How many pages were opened and considered. */
+  searched: number;
+  /** Why the live half did not run, when it did not. */
+  liveMessage?: string;
+  /** The stream to watch, when a search was started. */
+  discoveryId?: string;
+}
+
+export async function findOpportunitiesAction(
+  profile: DoorwayProfile,
+): Promise<ActionResult<FoundWorld>> {
+  try {
+    const response = await fetch(`${serverApiBase()}/api/doorway/find`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(profile),
+      cache: 'no-store',
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | FoundWorld
+      | { error?: string }
+      | null;
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error:
+          payload !== null && 'error' in payload && typeof payload.error === 'string'
+            ? payload.error
+            : `the search failed with ${String(response.status)}`,
+      };
+    }
+    if (payload === null || !('matches' in payload)) {
+      return { ok: false, error: 'the server returned something that is not a world' };
+    }
+    return { ok: true, data: payload };
+  } catch (caught) {
+    return {
+      ok: false,
+      error: caught instanceof Error ? caught.message : 'the service could not be reached',
+    };
+  }
+}

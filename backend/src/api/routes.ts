@@ -24,7 +24,12 @@ import { currentState, transition } from '../incident/index.js';
 import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, binary, HttpError, Router, stream } from './http.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
-import { buildWorld, opportunitiesFromSnapshots, profileSchema } from '../doorway/index.js';
+import {
+  buildWorld,
+  draftToOpportunity,
+  opportunitiesFromSnapshots,
+  profileSchema,
+} from '../doorway/index.js';
 import { discover, type OpportunityDraft } from '../acquire/index.js';
 import { DiscoveryBudget } from '../acquire/budget.js';
 
@@ -136,6 +141,7 @@ export function buildRouter(deps: ApiDeps): Router {
       verifiedFeed: '/api/feed/{collectorId}',
       opportunities: '/api/doorway/opportunities',
       opportunityWorld: 'POST /api/doorway/world',
+      find: 'POST /api/doorway/find',
       discover: 'POST /api/doorway/discover',
       discovery: '/api/doorway/discoveries/{id}',
       certificate: '/api/incidents/{id}/certificate',
@@ -790,6 +796,97 @@ export function buildRouter(deps: ApiDeps): Router {
       throw new HttpError(404, 'no such discovery');
     }
     return { id, status: 'done' as const, drafts };
+  });
+
+  /*
+   * One question, one answer: everything we can find for this student.
+   *
+   * The world used to be built only from sources under continuous observation,
+   * and live finds went into a separate list further down the page behind a
+   * button. Since only a handful of sources are watched, a student whose
+   * interest was not among them arrived to a nearly empty map and reasonably
+   * concluded the product had no data, while a live search would have found
+   * them a dozen fellowships in under a minute.
+   *
+   * So this does both and returns one world. Verified records and live finds
+   * sit together, each carrying its own standing, because the honest thing is
+   * not to hide the weaker ones but to say which is which.
+   *
+   * Discovery is best-effort. If the search fails, the watched sources still
+   * come back, because half an answer beats an error page.
+   */
+  router.post('/api/doorway/find', async ({ body, request }) => {
+    const parsed = profileSchema.safeParse(body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new HttpError(400, issue?.message ?? 'invalid student profile');
+    }
+    const profile = parsed.data;
+
+    const [collectors, snapshots, incidents] = await Promise.all([
+      store.listCollectors(),
+      store.listVerifiedSnapshots(),
+      store.listIncidents(),
+    ]);
+    const watched = opportunitiesFromSnapshots(snapshots, collectors, incidents);
+
+    if (deps.discovery === undefined) {
+      return { ...buildWorld(profile, watched), live: false, searched: 0 };
+    }
+
+    const forwarded = request.headers['x-forwarded-for'];
+    const caller =
+      (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() ??
+      request.socket.remoteAddress ??
+      'unknown';
+
+    const decision = budget.take(caller);
+    if (!decision.allowed) {
+      // Over the cap is not an error here. The watched sources are still worth
+      // returning, and the world says the live half did not run.
+      return {
+        ...buildWorld(profile, watched),
+        live: false,
+        searched: 0,
+        liveMessage: decision.reason,
+      };
+    }
+
+    const observationId = broker.start('discovery', profile.interests.join(', '));
+    const emit = broker.emitterFor(observationId);
+
+    let found: Awaited<ReturnType<typeof discover>> | null = null;
+    try {
+      found = await discover(deps.discovery, profile, {
+        maxPages: 12,
+        maxTypes: 3,
+        onEvent: (event) => {
+          emit({
+            step: event.step,
+            line: event.line,
+            ...(event.detail === undefined ? {} : { detail: event.detail }),
+          });
+        },
+      });
+    } catch (error: unknown) {
+      emit({
+        step: 'error',
+        line: `failed           ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      broker.finish(observationId);
+    }
+
+    const live = (found?.drafts ?? []).map(draftToOpportunity);
+
+    // Watched first. A record two sensors agreed on outranks one read once, and
+    // ordering is the quietest way to say so before anybody reads a badge.
+    return {
+      ...buildWorld(profile, [...watched, ...live]),
+      live: found !== null,
+      searched: found?.considered ?? 0,
+      discoveryId: observationId,
+    };
   });
 
   router.post('/api/doorway/world', async ({ body }) => {

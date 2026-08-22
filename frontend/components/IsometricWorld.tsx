@@ -90,6 +90,11 @@ function paletteFor(match: DoorwayMatch): Palette {
       return { roof: '#e5e7eb', left: '#d1d5db', right: '#9ca3af', edge: '#4b5563', label: 'text-gray-600' };
     case 'partially_verified':
       return { roof: '#e7efe6', left: '#a9c4a8', right: '#8fae8e', edge: '#16794a', label: 'text-emerald-700' };
+    // Found live, moments ago, read once. Drawn in outline rather than filled
+    // colour: it is a building whose foundations nobody has checked yet, and it
+    // should read that way at a glance, before any badge is read.
+    case 'discovered':
+      return { roof: '#fffbeb', left: '#fde68a', right: '#fcd34d', edge: '#b45309', label: 'text-amber-700' };
     default:
       return { roof: '#d1fae5', left: '#6ee7b7', right: '#34d399', edge: '#10b981', label: 'text-emerald-600' };
   }

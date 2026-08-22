@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
 import { LiveDiscovery } from '@/components/LiveDiscovery';
 import Link from 'next/link';
-import { buildDoorwayWorldAction } from '@/app/actions';
+import { findOpportunitiesAction } from '@/app/actions';
 import type {
   DoorwayMatch,
   DoorwayProfile,
@@ -77,14 +77,34 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  /* How many pages the live search opened, so the result can explain itself. */
+  const [searched, setSearched] = useState<number | null>(null);
+  const [liveNote, setLiveNote] = useState<string | null>(null);
+
+  /*
+   * One press, both halves.
+   *
+   * This used to build a world from the sources under continuous observation
+   * and stop there, leaving a separate button further down the page to search
+   * the live web. Only a handful of sources are watched, so pressing this
+   * showed a nearly empty map, and almost nobody scrolled far enough to find
+   * the button that would have filled it. Two actions to get one answer, and
+   * the first one looked like the product had no data.
+   */
   const submit = (): void => {
     const next = { ...profile, interests: splitList(interest) };
     setProfile(next);
     setError(null);
+    setLiveNote(null);
     startTransition(async () => {
-      const result = await buildDoorwayWorldAction(next);
-      if (result.ok) setWorld(result.data);
-      else setError(result.error);
+      const result = await findOpportunitiesAction(next);
+      if (result.ok) {
+        setWorld(result.data);
+        setSearched(result.data.searched);
+        setLiveNote(result.data.liveMessage ?? null);
+      } else {
+        setError(result.error);
+      }
     });
   };
 
@@ -283,7 +303,7 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                   disabled={pending || profile.opportunityTypes.length === 0}
                   className="flex min-h-14 w-full items-center justify-between bg-emerald-500 hover:bg-emerald-400 px-5 font-neuebit text-[13px] uppercase tracking-[0.14em] text-black font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <span>{pending ? 'Constructing your world' : 'Open the map'}</span>
+                  <span>{pending ? 'Searching the live web' : 'Find my opportunities'}</span>
                   <span>{pending ? '···' : '↗'}</span>
                 </button>
                 {error !== null ? (
@@ -442,14 +462,30 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
 }
 
 function TrustMark({ status }: { status: DoorwayMatch['opportunity']['trust']['status'] }) {
+  /*
+   * Words a student already knows.
+   *
+   * "Proved", "Checked", "Held" are this system's vocabulary, not theirs. Each
+   * one is paired with a plain sentence on hover so nobody has to be told what
+   * the badge means before the page is useful to them.
+   */
   const labels = {
-    verified: 'Proved',
+    verified: 'Confirmed',
     partially_verified: 'Checked',
-    stale: 'Aging',
-    quarantined: 'Held',
+    stale: 'Not rechecked',
+    quarantined: 'On hold',
+    discovered: 'Just found',
+  } as const;
+
+  const meanings = {
+    verified: 'Two independent readings of this page agreed. Safe to plan around.',
+    partially_verified: 'Passed the checks learned for this source, but only one reading.',
+    stale: 'Confirmed once, but not recently. Check the source before you rely on it.',
+    quarantined: 'The readings stopped agreeing, so the last confirmed values are shown instead.',
+    discovered: 'Found on the live web moments ago and read once. Not verified yet, so open the source before you plan around it.',
   } as const;
   return (
-    <span className={`doorway-trust doorway-trust-${status}`} title={`Trust status: ${status}`}>
+    <span className={`doorway-trust doorway-trust-${status}`} title={meanings[status]}>
       {labels[status]}
     </span>
   );
