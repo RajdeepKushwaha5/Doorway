@@ -224,6 +224,21 @@ export async function startObservationAction(
 }
 
 /**
+ * Build a sensor for a page nobody has watched.
+ *
+ * The slowest thing this product does that a person waits through, so it
+ * returns an observation id rather than a result. Generation took 97 seconds
+ * against a simple page and Bright Data's own documentation allows up to
+ * twenty five minutes for a complex one, which is the difference between a
+ * button and a job.
+ */
+export async function manufactureCollectorAction(
+  url: string,
+): Promise<ActionResult<{ observationId: string; url: string }>> {
+  return mutate<{ observationId: string; url: string }>('/api/collectors/manufacture', { url });
+}
+
+/**
  * Correct a registered collector in place.
  *
  * The route behind this was written after a witness spec used "result" as a

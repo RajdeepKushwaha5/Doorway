@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Globe } from '@/components/Globe';
 import { RegisterCollector } from '@/components/RegisterCollector';
+import { SensorFoundry } from '@/components/SensorFoundry';
 import { OperationsPanel } from '@/components/OperationsPanel';
 import { LiveConsole } from '@/components/LiveConsole';
 import { ComparisonAnimation } from '@/components/ComparisonAnimation';
@@ -112,6 +113,9 @@ export async function NoticeEnginePage() {
   // Which controls this deployment can actually operate. Read here so a button
   // that cannot work says so instead of failing when somebody presses it.
   const capabilities = await getConsoleCapabilitiesAction();
+  // Creating a scraper writes to a real Bright Data account, so the same
+  // token that guards runs guards this.
+  const canManufacture = capabilities.canRunCollector;
 
   const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
 
@@ -349,6 +353,36 @@ export async function NoticeEnginePage() {
           </div>
 
           <BlindspotsMatrix />
+        </section>
+
+        {/* The Foundry ---------------------------------------------------
+            Everything above shows what six collectors found. This shows one
+            being made, which is the part a reader otherwise has to take on
+            trust. It sits before the control room because manufacturing a
+            sensor comes before breaking the page it watches. */}
+        <section id="foundry" className="mt-14 pt-12 border-t border-gray-200 scroll-mt-16">
+          <div className="mb-8">
+            <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-2">
+              ✦ THE FOUNDRY
+            </div>
+            <h2 className="font-mondwest text-[36px] sm:text-[48px] leading-[1.0] tracking-tight">
+              Give it a page. Watch it build the sensor.
+            </h2>
+            <p className="mt-4 max-w-[70ch] font-mono text-[13px] leading-relaxed text-gray-600">
+              Scraper Studio is usually something you used last week to make a handful of
+              collectors. Here it is something the product calls when it meets a page it has no
+              sensor for. The agent reads the page first, names the dates it found and says which
+              one it refuses to use, and only then writes the brief.
+            </p>
+          </div>
+          <SensorFoundry
+            {...(canManufacture
+              ? {}
+              : {
+                  disabledReason:
+                    'This deployment has no admin token, so it cannot create scrapers on a Bright Data account. Everything else on this page still shows real recorded state.',
+                })}
+          />
         </section>
 
         {/* Fault Console (Live Interactive Component) ------------------- */}
