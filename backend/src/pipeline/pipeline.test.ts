@@ -207,6 +207,55 @@ describe('NOTICE end-to-end', () => {
     expect(latest?.confirmedBy).toBe('two_sensors');
   });
 
+  /*
+   * The other half of manufacturing: a collector registered before its schema
+   * could be read starts watching on the first run that returns rows.
+   */
+  it('promotes pending specs once a row exists to key them against', async () => {
+    const unwatched: CollectorRecord = {
+      ...collector,
+      witnessSpecs: [],
+      protectedFields: [],
+      pendingWitnessSpecs: SPECS,
+    };
+    await store.saveCollector(unwatched);
+    fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+
+    await observeOnce(unwatched, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+
+    const saved = await store.getCollector(unwatched.id);
+    expect(saved?.witnessSpecs.map((s) => s.path)).toEqual(['price', 'deposit']);
+    // Protected is set from the promoted specs, never separately, so a
+    // protected field nobody reads cannot come into being here.
+    expect(saved?.protectedFields).toEqual(['price', 'deposit']);
+    expect(saved?.pendingWitnessSpecs).toBeUndefined();
+  });
+
+  it('leaves the intent alone when the run still returns nothing', async () => {
+    const unwatched: CollectorRecord = {
+      ...collector,
+      witnessSpecs: [],
+      protectedFields: [],
+      pendingWitnessSpecs: SPECS,
+    };
+    await store.saveCollector(unwatched);
+    fake.rowsByUrl.set(INCIDENT_URL, []);
+
+    await observeOnce(unwatched, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: witness,
+    });
+
+    const saved = await store.getCollector(unwatched.id);
+    expect(saved?.pendingWitnessSpecs).toHaveLength(2);
+    expect(saved?.witnessSpecs).toHaveLength(0);
+  });
+
   it('publishes healthy output without opening an incident', async () => {
     fake.rowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
     const result = await observeOnce(collector, INCIDENT_URL, {

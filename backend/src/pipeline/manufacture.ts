@@ -326,7 +326,16 @@ export async function manufactureCollector(
     });
   }
 
-  const specs = alignSpecs(specsFor(brief), firstRow);
+  const wanted = specsFor(brief);
+  const specs = alignSpecs(wanted, firstRow);
+  /*
+   * Keep the intent when the schema could not be read.
+   *
+   * A scraper is not runnable for a minute or two after it is generated, and
+   * waiting on that inside manufacture means waiting on something that may
+   * never answer. The first run that returns rows promotes these.
+   */
+  const pending = specs.length === 0 && wanted.length > 0 ? wanted : undefined;
   const collector: CollectorRecord = {
     id: randomUUID(),
     brightDataCollectorId,
@@ -346,6 +355,7 @@ export async function manufactureCollector(
      * construction rather than by discipline.
      */
     protectedFields: specs.map((spec) => spec.path),
+    ...(pending === undefined ? {} : { pendingWitnessSpecs: pending }),
     goldenCases: [],
     acquisitionContext: {},
     autoPromote: 'never',
@@ -372,7 +382,7 @@ export async function manufactureCollector(
     step: 'registered',
     line:
       specs.length === 0
-        ? `registered as ${collector.id} with no witness specs, because its schema could not be read`
+        ? `registered as ${collector.id}, schema not readable yet, so the second sensor starts on its first successful run`
         : `registered as ${collector.id}, second sensor watching ${specs.map((s) => s.path).join(', ')}`,
     detail: { collectorId: collector.id, brightDataCollectorId, witnessing: specs.map((s) => s.path) },
   });

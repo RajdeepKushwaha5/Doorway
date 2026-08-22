@@ -3,6 +3,7 @@ import type { BrightDataClient } from '../brightdata/index.js';
 import { scrapeMarkdown } from '../brightdata/index.js';
 import { learnContract, validateRun } from '../contracts/index.js';
 import { brief, type ObserveEmitter } from './events.js';
+import { alignSpecs } from './manufacture.js';
 import { classify, synthesizeRepairPrompt, transition } from '../incident/index.js';
 import {
   compareAcquisitionContexts,
@@ -215,6 +216,37 @@ export async function observeOnce(
     // empty until a human accepts a baseline via POST /collectors/:id/baseline.
     contract = learnContract(collector.id, [], collector.invariants);
     await deps.store.saveContract(contract);
+  }
+
+  /*
+   * A manufactured collector learns what to watch on its first real run.
+   *
+   * A freshly generated scraper is not runnable for a minute or two, so the
+   * schema it produces cannot be read at the moment it is created. The specs
+   * it wants are kept as intent, and this is the first place a row exists to
+   * key them against.
+   *
+   * Promoted before the witness is asked anything, so the second sensor starts
+   * working on this run rather than the next one. Protected fields are set from
+   * the promoted specs, never separately, because a protected field no sensor
+   * reads is the arrangement that published a listing with no way to apply.
+   */
+  if ((collector.pendingWitnessSpecs?.length ?? 0) > 0 && result.rows.length > 0) {
+    const promoted = alignSpecs(collector.pendingWitnessSpecs ?? [], result.rows[0]);
+    if (promoted.length > 0) {
+      collector = {
+        ...collector,
+        witnessSpecs: promoted,
+        protectedFields: promoted.map((spec) => spec.path),
+        pendingWitnessSpecs: undefined,
+      };
+      await deps.store.saveCollector(collector);
+      emit({
+        step: 'contracts',
+        line: `second sensor   started watching ${promoted.map((spec) => spec.path).join(', ')}`,
+        detail: { witnessing: promoted.map((spec) => spec.path) },
+      });
+    }
   }
 
   const checks = validateRun({ rows: result.rows, contract });

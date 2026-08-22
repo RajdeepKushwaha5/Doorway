@@ -215,3 +215,37 @@ describe('a scraper that is not runnable the instant it exists', () => {
     expect(result.collector.witnessSpecs).toHaveLength(0);
   });
 });
+
+describe('a collector that could not read its own schema yet', () => {
+  /*
+   * A freshly generated scraper is not runnable for a minute or two. Waiting
+   * inside manufacture means waiting on something that may never answer, and
+   * guessing the field names produced a collector whose second sensor looked
+   * for fields that did not exist while its record published as confirmed by
+   * two sensors.
+   */
+  it('keeps what it wanted to watch instead of discarding it', async () => {
+    const { result } = await run(['done'], undefined, 99);
+    expect(result.collector.witnessSpecs).toHaveLength(0);
+    expect(result.collector.pendingWitnessSpecs?.map((s) => s.path)).toEqual([
+      'deadline_raw',
+      'application_url',
+    ]);
+  });
+
+  it('protects nothing until a sensor can actually read it', async () => {
+    const { result } = await run(['done'], undefined, 99);
+    expect(result.collector.protectedFields).toHaveLength(0);
+  });
+
+  it('says the second sensor starts later, rather than that it failed', async () => {
+    const { events } = await run(['done'], undefined, 99);
+    const line = events.find((e) => e.step === 'registered')?.line ?? '';
+    expect(line).toContain('first successful run');
+  });
+
+  it('carries nothing pending once the schema was readable', async () => {
+    const { result } = await run();
+    expect(result.collector.pendingWitnessSpecs).toBeUndefined();
+  });
+});

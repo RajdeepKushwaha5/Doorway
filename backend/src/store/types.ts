@@ -45,6 +45,22 @@ export interface CollectorRecord {
    */
   provenance?: CollectorProvenance | undefined;
   /**
+   * Specs we know we want, before we know what the scraper calls those fields.
+   *
+   * A freshly generated scraper is not runnable for a minute or two, so the
+   * schema it produces cannot be read at the moment it is created. Blocking
+   * manufacture until it can be would mean waiting on something that may never
+   * answer; guessing the field names produced a collector whose second sensor
+   * looked for fields that did not exist and whose record was published as
+   * confirmed by two sensors anyway.
+   *
+   * So the intent is kept here, and the first run that returns rows promotes
+   * these into real specs keyed to the schema that exists. The system
+   * converges instead of blocking, and until it does the collector is honestly
+   * unwatched rather than falsely watched.
+   */
+  pendingWitnessSpecs?: WitnessFieldSpec[] | undefined;
+  /**
    * Whether a repair that passed the gate may be promoted without a human.
    *
    * `never` is the default, and is the right setting while you are learning
