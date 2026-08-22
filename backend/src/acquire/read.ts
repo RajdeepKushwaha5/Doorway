@@ -139,6 +139,12 @@ const INDEX_SHAPES = [
   /^\s*top\s+\d*\s*\w/i,
   /^\s*\d{1,3}\s+(?:best|fully|top|amazing|great)\b/i,
   /\bfellowships\b.*\b(?:20\d\d)\s*[/-]\s*20\d\d/i,
+  // "144 Machine learning intern jobs in India" is a job board's result count.
+  // A crawl reaches these constantly, and a result count is never one
+  // opportunity however many opportunities it happens to be counting.
+  // The count is often written with separators: "2,431 AI internships".
+  /^\s*\d[\d,.]{1,8}\s+\S+.*\b(?:jobs?|internships?|vacancies|openings|opportunities|results?)\b/i,
+  /\b(?:current|latest|all)\s+(?:vacancies|openings|jobs|opportunities)\b/i,
 ];
 
 /**
@@ -367,6 +373,22 @@ export async function readCandidate(
     return null;
   }
 
+  return readMarkdown(markdown, candidate, type);
+}
+
+/**
+ * Judge a page that has already been fetched.
+ *
+ * Split out from the fetch so the crawler can reuse every rule in here. It
+ * fetches in bulk and mines each page for links before deciding what the page
+ * is, so it arrives holding markdown rather than a URL. Two copies of this
+ * judgement would be two things to keep correct and one of them would rot.
+ */
+export function readMarkdown(
+  markdown: string,
+  candidate: SerpResult,
+  type: OpportunityType = 'scholarship',
+): OpportunityDraft | null {
   if (markdown.trim().length < 400) return null;
 
   /*

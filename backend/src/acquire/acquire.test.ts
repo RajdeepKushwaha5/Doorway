@@ -623,3 +623,22 @@ describe('all six opportunity types', () => {
     expect(new Set(mixed.map((q) => q.type)).size).toBe(4);
   });
 });
+
+describe('what a crawl reaches that a search never did', () => {
+  /*
+   * At a hundred and twenty pages the crawl walks into every job board on the
+   * internet. A result count is never one opportunity, however many
+   * opportunities it happens to be counting.
+   */
+  it('recognises a job board result count', () => {
+    expect(looksLikeIndex('144 Machine learning intern jobs in India', '')).toBe(true);
+    expect(looksLikeIndex('2,431 AI internships', '')).toBe(true);
+    expect(looksLikeIndex('Current vacancies', '')).toBe(true);
+    expect(looksLikeIndex('All openings', '')).toBe(true);
+  });
+
+  it('leaves a single opportunity alone', () => {
+    expect(looksLikeIndex('Anthropic Fellows Program for AI Safety Research', '')).toBe(false);
+    expect(looksLikeIndex('2026 Oxford Schmidt AI Fellowship', '')).toBe(false);
+  });
+});
