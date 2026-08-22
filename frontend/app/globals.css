@@ -957,6 +957,81 @@ h6,
 }
 
 /* ------------------------------------------------------------------ */
+/* GitHub Universe-Style Modular Grid Navbar                          */
+/* ------------------------------------------------------------------ */
+
+.nav-grid-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 1.25rem;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4b5563;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.nav-grid-cell:hover {
+  background-color: rgba(255, 255, 255, 0.98);
+  color: #0c0c0a;
+}
+
+.nav-grid-cell::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: #10b981;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-grid-cell:hover::after,
+.nav-grid-cell.is-active::after {
+  transform: scaleX(1);
+}
+
+.nav-grid-cell.is-active {
+  background-color: #ffffff;
+  color: #0c0c0a;
+}
+
+.nav-cta-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 1.6rem;
+  background-color: #10b981;
+  color: #000000;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 180ms ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.nav-cta-cell:hover {
+  background-color: #059669;
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------------ */
 /* Education & Career Opportunity Brand Mask (Sarvam-Style)           */
 /* ------------------------------------------------------------------ */
 
