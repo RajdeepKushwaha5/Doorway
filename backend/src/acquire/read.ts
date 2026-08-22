@@ -251,7 +251,10 @@ export function inferType(title: string, fallback: OpportunityType, url = ''): O
   const lower = `${title} ${url.replace(/[/_-]/g, ' ')}`.toLowerCase();
   if (lower.includes('fellowship')) return 'fellowship';
   if (lower.includes('scholarship')) return 'scholarship';
-  if (lower.includes('internship')) return 'internship';
+  // "Intern" as well as "internship": a listing calling itself an intern role
+  // never uses the longer word, and was falling through to whatever the query
+  // happened to guess.
+  if (/\bintern(?:s|ship|ships)?\b/.test(lower) || /\btrainee\b/.test(lower)) return 'internship';
   if (lower.includes('hackathon')) return 'hackathon';
   if (lower.includes('grant')) return 'grant';
   if (lower.includes('research')) return 'research-program';
@@ -507,10 +510,19 @@ export function readMarkdown(
    * badly laid out.
    */
   const namesAnOpportunity =
-    // Hackathons were missing from this list entirely, so every one of them
-    // failed the test for being an opportunity at all. A page called
-    // "Innovation Challenge 2026" matched none of these words and was dropped.
-    /\b(fellowship|scholarship|internship|grant|programme|program|bursary|award|hackathon|challenge|competition|datathon|ideathon)\b/i.test(
+    /*
+     * The vocabulary has to be the one listings use, not the one the form uses.
+     *
+     * Hackathons were missing entirely, so "Innovation Challenge 2026" was
+     * dropped. Then internships: real postings say "Intern", never
+     * "internship", so "Founder's Office - Intern at Cityfurnish" matched
+     * nothing and a search for internships returned an empty page.
+     *
+     * Both times the search found the right listings and this line threw them
+     * away, which is the worst place for the mistake to be: invisible from
+     * outside, and indistinguishable from the web not having anything.
+     */
+    /\b(fellow|fellowship|scholar|scholarship|intern|interns|internship|trainee|traineeship|apprentice|apprenticeship|residency|co-?op|grant|programme|program|bursary|award|hackathon|challenge|competition|datathon|ideathon)\b/i.test(
       title,
     );
   const offersAWayIn = /\[[^\]]*\b(apply|application|register|submit)\b[^\]]*\]\(/i.test(markdown);

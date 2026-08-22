@@ -717,3 +717,75 @@ describe('the date under the heading', () => {
     );
   });
 });
+
+/**
+ * Searching for internships returned an empty page.
+ *
+ * Every part of the pipeline worked: the searches found real postings, and this
+ * threw them away. Real listings say "Intern", never "internship", so
+ * "Founder's Office - Intern at Cityfurnish" matched none of the words used to
+ * decide whether a page is an opportunity at all.
+ *
+ * That is the worst place for the mistake to be. It is invisible from outside
+ * and indistinguishable from the web not having anything.
+ */
+describe('the vocabulary listings actually use', () => {
+  it('types an intern posting as an internship', () => {
+    expect(inferType("Founder's Office - Intern at Cityfurnish", 'scholarship')).toBe('internship');
+    expect(inferType('Summer Trainee, Data Science', 'scholarship')).toBe('internship');
+    expect(inferType('Research Interns 2026', 'grant')).toBe('internship');
+  });
+
+  it('does not mistake a word containing intern for one', () => {
+    // "International" and "internal" both contain the letters.
+    expect(inferType('International Climate Grant', 'grant')).toBe('grant');
+  });
+
+  /*
+   * A multi-word interest is a phrase. Unquoted, "Founder Office" matches any
+   * page containing both words anywhere, which on a job board is nearly all of
+   * them and on the open web is none of the right ones.
+   */
+  it('searches a multi-word interest as a phrase', () => {
+    const queries = buildQueries({
+      country: 'India',
+      educationLevel: 'Undergraduate',
+      interests: ['Founder Office'],
+      skills: [],
+      opportunityTypes: ['internship'],
+      fundingRequirement: 'any',
+      locations: [],
+    });
+    expect(queries.every((q) => q.text.includes('"Founder Office"'))).toBe(true);
+  });
+
+  it('leaves a single word unquoted', () => {
+    const queries = buildQueries({
+      country: 'India',
+      educationLevel: 'Undergraduate',
+      interests: ['robotics'],
+      skills: [],
+      opportunityTypes: ['internship'],
+      fundingRequirement: 'any',
+      locations: [],
+    });
+    // Quoting "robotics" would exclude "robotic", which nobody meant.
+    expect(queries.every((q) => !q.text.includes('"robotics"'))).toBe(true);
+  });
+
+  it('asks in the listing vocabulary as well as the form vocabulary', () => {
+    const internships = buildQueries({
+      country: 'India',
+      educationLevel: 'Undergraduate',
+      interests: ['robotics'],
+      skills: [],
+      opportunityTypes: ['internship'],
+      fundingRequirement: 'any',
+      locations: [],
+    });
+    // Nobody advertises an "internship" for a founder's office; they advertise
+    // an "intern".
+    expect(internships.some((q) => /\bintern\b/.test(q.text))).toBe(true);
+    expect(internships).toHaveLength(3);
+  });
+});

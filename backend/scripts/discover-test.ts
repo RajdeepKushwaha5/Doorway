@@ -14,9 +14,9 @@ import type { DoorwayProfile } from '../src/doorway/types.js';
 const PROFILE: DoorwayProfile = {
   country: 'India',
   educationLevel: 'Undergraduate',
-  interests: ['Founder Office'],
+  interests: ['artificial intelligence'],
   skills: [],
-  opportunityTypes: ['internship'],
+  opportunityTypes: ['scholarship', 'fellowship', 'internship', 'hackathon'],
   fundingRequirement: 'full',
   locations: [],
 };

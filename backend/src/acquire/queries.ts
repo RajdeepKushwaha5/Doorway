@@ -85,6 +85,23 @@ const HOMES: Record<OpportunityType, string[]> = {
   ],
 };
 
+/**
+ * The second word for each type, and how a listing frames it.
+ *
+ * Deliberately not a synonym list. Each entry is the phrasing a page offering
+ * the thing would use, which is a different question from what the thing is
+ * called: "upcoming ... register" finds hackathons still open, and "intern
+ * role" finds the postings that never once say "internship".
+ */
+const ALTERNATE_WORDS: Record<OpportunityType, { prefix: string; word: string; suffix: string } | null> = {
+  scholarship: { prefix: 'apply for', word: 'scholarship', suffix: 'applications open' },
+  fellowship: { prefix: 'apply for', word: 'fellowship', suffix: 'applications open' },
+  internship: { prefix: '', word: 'intern', suffix: 'apply' },
+  'research-program': { prefix: '', word: 'research assistantship', suffix: 'apply' },
+  grant: { prefix: 'apply for', word: 'funding call', suffix: 'proposals' },
+  hackathon: { prefix: 'upcoming', word: 'hackathon', suffix: 'register' },
+};
+
 export interface DiscoveryQuery {
   /** The search string itself. */
   text: string;
@@ -121,7 +138,22 @@ export function buildQueries(
 ): DiscoveryQuery[] {
   const maxTypes = options.maxTypes ?? 4;
 
-  const interests = profile.interests.filter((entry) => clean(entry) !== '').slice(0, 2);
+  /*
+   * A multi-word interest is a phrase, and has to be searched as one.
+   *
+   * "Founder Office" unquoted matches any page containing both words anywhere,
+   * which on a job board is nearly all of them and on the open web is none of
+   * the right ones. Quoted, it finds the roles that are actually called that.
+   *
+   * Single words are left bare: quoting "internship" would exclude
+   * "internships", which is not what anybody meant.
+   */
+  const interests = profile.interests
+    .map((entry) => clean(entry))
+    .filter((entry) => entry !== '')
+    .slice(0, 2)
+    .map((entry) => (entry.includes(' ') ? `"${entry}"` : entry));
+
   const subject = interests.length === 0 ? '' : interests.join(' ');
   const where = clean(profile.country);
   const level = clean(profile.educationLevel).toLowerCase();
@@ -163,15 +195,19 @@ export function buildQueries(
     });
 
     /*
-     * One more for hackathons, because they are the type most likely to be
-     * happening right now and least likely to be indexed under a student's
-     * words. "Upcoming" is how every platform labels the ones still open, and
-     * it is the single most useful word available for excluding the thousands
-     * that have already run.
+     * A third query in the vocabulary listings actually use.
+     *
+     * The word a form offers and the word a page publishes are rarely the same.
+     * Nobody advertises an "internship" for a founder's office; they advertise
+     * an "intern". Nobody labels a hackathon "hackathon India 2026"; they label
+     * it "upcoming" and ask you to register. Searching only the form's word
+     * finds the pages written about opportunities rather than the ones offering
+     * them.
      */
-    if (type === 'hackathon') {
+    const alternate = ALTERNATE_WORDS[type];
+    if (alternate !== null) {
       queries.push({
-        text: clean(`upcoming ${subject} ${word} ${where} register ${year}`),
+        text: clean(`${alternate.prefix} ${subject} ${alternate.word} ${where} ${alternate.suffix}`),
         type,
         officialOnly: false,
       });

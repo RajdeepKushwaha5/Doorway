@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CollectorRecord, IncidentRecord, VerifiedSnapshot } from '../store/index.js';
 import { buildWorld } from './matching.js';
+import type { DoorwayProfile, Opportunity } from './types.js';
 import { opportunitiesFromSnapshots } from './opportunities.js';
 
 const collector: CollectorRecord = {
@@ -295,5 +296,69 @@ describe('keeping the fixture out of a student\'s results', () => {
       [],
     );
     expect(found).toHaveLength(1);
+  });
+});
+
+/**
+ * The type toggles were being scored rather than obeyed.
+ *
+ * A student who unticks Fellowships and asks for Internships is not saying
+ * "prefer internships"; they are saying they do not want the other thing. The
+ * type only contributed to a match score, so a fellowship still appeared,
+ * marked twenty percent, in a search for internships. A filter that can be
+ * overruled by a score is not a filter.
+ */
+describe('the type toggles', () => {
+  const profile: DoorwayProfile = {
+    country: 'India',
+    educationLevel: 'Undergraduate',
+    interests: ['artificial intelligence'],
+    skills: [],
+    opportunityTypes: ['internship'],
+    fundingRequirement: 'any',
+    locations: [],
+  };
+
+  const opportunity = (type: Opportunity['type'], id: string): Opportunity => ({
+    id,
+    collectorId: 'c',
+    sourceUrl: `https://a.test/${id}`,
+    title: `An ${type}`,
+    provider: 'A',
+    type,
+    summary: 'artificial intelligence',
+    eligibility: [],
+    interests: [],
+    funding: { amount: null, currency: null, coverage: [], level: 'unspecified' },
+    deadline: null,
+    deadlineRaw: null,
+    locations: [],
+    remote: null,
+    requiredDocuments: [],
+    applicationUrl: `https://a.test/${id}/apply`,
+    trust: {
+      status: 'discovered',
+      confirmedBy: 'single_sensor',
+      lastVerifiedAt: new Date().toISOString(),
+      incidentId: null,
+      fieldsDegraded: [],
+    },
+  });
+
+  it('shows only what was asked for', () => {
+    const world = buildWorld(profile, [
+      opportunity('internship', 'a'),
+      opportunity('fellowship', 'b'),
+    ]);
+    expect(world.matches).toHaveLength(1);
+    expect(world.matches[0]?.opportunity.type).toBe('internship');
+  });
+
+  it('treats an untouched form as no filter rather than as nothing', () => {
+    const world = buildWorld({ ...profile, opportunityTypes: [] }, [
+      opportunity('internship', 'a'),
+      opportunity('fellowship', 'b'),
+    ]);
+    expect(world.matches).toHaveLength(2);
   });
 });
