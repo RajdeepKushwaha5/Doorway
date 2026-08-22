@@ -37,6 +37,7 @@ function opportunity(overrides: Partial<Opportunity> = {}): Opportunity {
       lastVerifiedAt: '2026-08-22T00:00:00Z',
       incidentId: null,
       fieldsDegraded: [],
+      verdict: null,
     },
     ...overrides,
   } as Opportunity;
@@ -147,6 +148,7 @@ describe('what stops an application', () => {
           lastVerifiedAt: '2026-08-22T00:00:00Z',
           incidentId: null,
           fieldsDegraded: [],
+          verdict: null,
         },
       }),
       now: NOW,
@@ -173,6 +175,7 @@ describe('a disputed requirement is held, never dropped', () => {
       lastVerifiedAt: '2026-08-22T00:00:00Z',
       incidentId: 'inc-1',
       fieldsDegraded: ['required_documents'],
+      verdict: 'extractor_drift',
     },
   });
 
@@ -202,6 +205,31 @@ describe('a disputed requirement is held, never dropped', () => {
     expect(mission.stateReason).not.toContain('The facts have been confirmed');
   });
 
+  it('does not claim a disagreement when the sensors agreed', () => {
+    /*
+     * From the live run of application_link_removed. Both sensors read the
+     * page and both found no apply link, so the verdict was
+     * genuine_source_change. Telling a student they disagreed would describe
+     * an argument that never happened.
+     */
+    const mission = buildMission({
+      opportunity: opportunity({
+        trust: {
+          status: 'quarantined',
+          confirmedBy: 'two_sensors',
+          lastVerifiedAt: '2026-08-22T00:00:00Z',
+          incidentId: 'inc-3',
+          fieldsDegraded: ['application_url'],
+          verdict: 'genuine_source_change',
+        },
+      }),
+      now: NOW,
+    });
+    expect(mission.state).toBe('blocked');
+    expect(mission.blockers[0]).toContain('source has removed the way to apply');
+    expect(mission.blockers[0]).not.toContain('disagree');
+  });
+
   it('blocks when the two sensors disagree about where to apply', () => {
     const mission = buildMission({
       opportunity: opportunity({
@@ -211,6 +239,7 @@ describe('a disputed requirement is held, never dropped', () => {
           lastVerifiedAt: '2026-08-22T00:00:00Z',
           incidentId: 'inc-2',
           fieldsDegraded: ['application_url'],
+          verdict: 'extractor_drift',
         },
       }),
       now: NOW,

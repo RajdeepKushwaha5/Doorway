@@ -178,6 +178,7 @@ function parseOpportunity(
       lastVerifiedAt: snapshot.verifiedAt,
       incidentId: openIncident?.id ?? null,
       fieldsDegraded: openIncident?.affectedFields ?? [],
+      verdict: openIncident?.classification ?? null,
     },
   };
 }

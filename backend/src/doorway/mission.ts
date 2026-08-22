@@ -208,8 +208,20 @@ function findBlockers(
   if (opportunity.applicationUrl.trim() === '') {
     blockers.push('The source no longer publishes a way to apply.');
   } else if (disputed.some((field) => BLOCKING_FIELDS.includes(field))) {
+    /*
+     * Say which of the two things happened, rather than assuming one.
+     *
+     * A degraded field does not say why it is degraded, and the two reasons
+     * need different words. This asserted that the sensors disagreed, and on
+     * the run that exposed it they had agreed: both read the page and both
+     * found no apply link, so the source had removed it. Telling a student
+     * there was a conflict would have described an argument that never
+     * happened, which is the same failure this system exists to catch.
+     */
     blockers.push(
-      'The two sensors disagree about where to apply, so the link is held at its last confirmed value.',
+      opportunity.trust.verdict === 'genuine_source_change'
+        ? 'The source has removed the way to apply. The link shown is the last one both sensors confirmed and may no longer work.'
+        : 'The two sensors disagree about where to apply, so the link is held at its last confirmed value.',
     );
   }
 

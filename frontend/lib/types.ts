@@ -382,6 +382,8 @@ export interface DoorwayOpportunity {
     lastVerifiedAt: string;
     incidentId: string | null;
     fieldsDegraded: string[];
+    /** What the open incident concluded, when one is open. Null when none is. */
+    verdict: string | null;
   };
 }
 

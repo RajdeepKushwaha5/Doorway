@@ -45,6 +45,16 @@ export interface OpportunityTrust {
   lastVerifiedAt: string;
   incidentId: string | null;
   fieldsDegraded: string[];
+  /**
+   * What the open incident concluded, when one is open.
+   *
+   * Carried because "this field is degraded" does not say why, and the two
+   * reasons call for different words to a student. A collector and the witness
+   * disagreeing means the value on screen is disputed. Both of them finding
+   * the field gone means the source removed it, and saying they disagreed
+   * would assert a conflict that did not happen.
+   */
+  verdict: string | null;
 }
 
 export interface Opportunity {

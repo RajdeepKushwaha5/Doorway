@@ -167,6 +167,8 @@ export function draftToOpportunity(draft: OpportunityDraft): Opportunity {
       confirmedBy: draft.corroboration === 'confirmed' ? 'two_sensors' : 'single_sensor',
       lastVerifiedAt: draft.readAt,
       incidentId: null,
+      // Nothing has been watching this long enough for an incident to exist.
+      verdict: null,
       // Everything the page did not state, named rather than left to look like
       // an absence of interest.
       /*
