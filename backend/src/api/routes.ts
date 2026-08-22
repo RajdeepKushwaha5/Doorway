@@ -36,6 +36,7 @@ import {
   type DoorwayWorld,
 } from '../doorway/index.js';
 import { discover, type OpportunityDraft } from '../acquire/index.js';
+import { manufactureCollector } from '../pipeline/manufacture.js';
 import { DiscoveryBudget } from '../acquire/budget.js';
 import { crawl } from '../crawl/crawler.js';
 import { OpportunityIndex } from '../crawl/index-store.js';
@@ -256,6 +257,7 @@ export function buildRouter(deps: ApiDeps): Router {
       mission: '/api/doorway/opportunities/{id}/mission?held=Resume,Transcript',
       opportunityWorld: 'POST /api/doorway/world',
       find: 'POST /api/doorway/find',
+      manufacture: 'POST /api/collectors/manufacture',
       crawl: 'POST /api/crawl',
       index: '/api/crawl',
       discover: 'POST /api/doorway/discover',
@@ -1113,6 +1115,78 @@ export function buildRouter(deps: ApiDeps): Router {
 
   /** What the index holds, which is what a search can answer from. */
   router.get('/api/crawl', async () => index.stats());
+
+  /*
+   * Build a sensor for a page nobody has watched.
+   *
+   * Returns as soon as the job has somewhere to be watched, because generation
+   * runs to minutes and a request that waits for it would time out long before
+   * it finished. The observation id is the handle: the same stream the observe
+   * and discovery paths use, so a viewer learns one vocabulary rather than
+   * three.
+   *
+   * Admin-gated. Every call creates a real Scraper Studio collector against a
+   * real account, and a public route that manufactures scrapers on demand ends
+   * exactly one way.
+   */
+  router.post('/api/collectors/manufacture', async ({ body, request }) => {
+    assertAdmin(request);
+
+    const url = (body as { url?: unknown } | null)?.url;
+    if (typeof url !== 'string' || url.trim() === '') {
+      throw new HttpError(400, 'a url is required');
+    }
+    let target: URL;
+    try {
+      target = new URL(url.trim());
+    } catch {
+      throw new HttpError(400, `not a URL: ${url}`);
+    }
+    if (target.protocol !== 'https:' && target.protocol !== 'http:') {
+      throw new HttpError(400, 'only http and https pages can be read');
+    }
+
+    if (deps.fetchMarkdown === undefined) {
+      throw new HttpError(
+        503,
+        'no Web Unlocker is configured, so the page cannot be read and no brief could be written from it',
+      );
+    }
+    const readPage = deps.fetchMarkdown;
+
+    const observationId = broker.start('manufacture', target.toString());
+    const emit = broker.emitterFor(observationId);
+
+    void manufactureCollector({
+      url: target.toString(),
+      client,
+      store,
+      readPage: async (pageUrl) => readPage(pageUrl),
+      emit,
+    })
+      .then((result) => {
+        emit({
+          step: 'done',
+          line: `done  ${result.brightDataCollectorId} is registered and ready to run`,
+          detail: {
+            collectorId: result.collector.id,
+            brightDataCollectorId: result.brightDataCollectorId,
+          },
+        });
+      })
+      .catch((error: unknown) => {
+        emit({
+          step: 'error',
+          line: `failed  ${error instanceof Error ? error.message : String(error)}`,
+          detail: {},
+        });
+      })
+      .finally(() => {
+        broker.finish(observationId);
+      });
+
+    return { observationId, url: target.toString() };
+  });
 
   router.post('/api/doorway/find', async ({ body, request }) => {
     const parsed = profileSchema.safeParse(body);

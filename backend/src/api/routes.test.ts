@@ -863,3 +863,46 @@ describe('a collector birth certificate', () => {
     expect(created.status).toBe(400);
   });
 });
+
+describe('manufacturing a collector over HTTP', () => {
+  /*
+   * Every call to this creates a real Scraper Studio collector against a real
+   * account. What is worth pinning without spending anything is that it
+   * refuses before it reaches Bright Data at all.
+   */
+  const post = (body: unknown, auth = true) =>
+    fetch(`${base}/api/collectors/manufacture`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(auth ? { authorization: `Bearer ${TOKEN}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+  it('refuses an anonymous caller', async () => {
+    // A public route that manufactures scrapers on demand ends one way.
+    expect((await post({ url: 'https://example.test/x' }, false)).status).toBe(401);
+  });
+
+  it('refuses a missing url', async () => {
+    expect((await post({})).status).toBe(400);
+  });
+
+  it('refuses something that is not a url', async () => {
+    expect((await post({ url: 'not a url' })).status).toBe(400);
+  });
+
+  it('refuses a scheme that is not a web page', async () => {
+    expect((await post({ url: 'file:///etc/passwd' })).status).toBe(400);
+    expect((await post({ url: 'ftp://example.test/x' })).status).toBe(400);
+  });
+
+  it('says so when there is no Web Unlocker to read the page with', async () => {
+    // This harness injects no fetchMarkdown, so the honest answer is that the
+    // brief cannot be written rather than one invented from the URL.
+    const response = await post({ url: 'https://example.test/fellowship' });
+    expect(response.status).toBe(503);
+    expect(((await response.json()) as { error: string }).error).toContain('Web Unlocker');
+  });
+});
