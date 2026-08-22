@@ -277,6 +277,56 @@ describe('NOTICE end-to-end', () => {
     expect(feed.health.status).toBe('verified');
   });
 
+  /**
+   * Blameless and still unfit to serve.
+   *
+   * `genuine_source_change` is a verdict about who is at fault, and it was
+   * being read as permission to publish. Those are two questions. A required
+   * field going missing is a statement about the row, not about the extractor,
+   * and both can be true at once: the field really did vanish from the page,
+   * both sensors agree that it vanished, the collector is working perfectly,
+   * and the row is still not fit to serve.
+   *
+   * Found by removing the apply button from a live fixture. The row published
+   * and the opportunity was served as fully verified, with the listing URL
+   * quietly substituted for the missing application URL, so a student clicking
+   * apply would have reached a page with no form on it.
+   *
+   * `deposit` is this collector's protected field, standing in for the apply
+   * link: the one the owner declared load-bearing.
+   */
+  it('withholds a row whose protected field vanished, even with no one to blame', async () => {
+    const guarded: CollectorRecord = {
+      ...collector,
+      id: 'col-protected',
+      invariants: [{ kind: 'required', field: 'deposit' }],
+      protectedFields: ['deposit'],
+      goldenCases: [],
+    };
+    await store.saveCollector(guarded);
+
+    // The field is gone from the page, so the witness cannot find it either.
+    // Nobody is at fault and the row is still unusable.
+    fake.rowsByUrl.set(INCIDENT_URL, [{ price: { value: 249, currency: 'USD' } }]);
+    const result = await observeOnce(guarded, INCIDENT_URL, {
+      client: asClient(fake),
+      store,
+      fetchMarkdown: async () => ({
+        // The deposit line is absent from the page, so the witness cannot
+        // find it either. Nobody is at fault; the row is still unusable.
+        markdown: MARKDOWN.replace(/^.*deposit.*$/gim, ''),
+        fetchedAt: new Date().toISOString(),
+      }),
+    });
+
+    expect(result.publishable).toBe(false);
+    expect(result.incident?.quarantined).toBe(true);
+
+    // The decisive part: nothing reaches the feed as current.
+    const feed = await buildFeed(store, guarded.id, INCIDENT_URL);
+    expect(feed.health.status).not.toBe('verified');
+  });
+
   it('detects drift, quarantines it, and never publishes the corrupt value', async () => {
     fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
     const result = await observeOnce(collector, INCIDENT_URL, {

@@ -600,9 +600,18 @@ export async function observeOnce(
     // right page is the reason the disagreement below is worth acting on, and
     // an operator should be able to see it rather than assume it.
     pageIdentity: identity,
-    // Quarantine anything not positively verified. Publishing a row that only
-    // "probably" survived is the failure this system exists to prevent.
-    quarantined: classification.verdict !== 'healthy' && classification.verdict !== 'genuine_source_change',
+    // Quarantine anything not positively verified, and anything whose
+    // protected fields did not survive. A row can be blameless and still be
+    // unfit to serve; see the note on `publishable` below.
+    quarantined:
+      (classification.verdict !== 'healthy' &&
+        classification.verdict !== 'genuine_source_change') ||
+      checks.some(
+        (check) =>
+          check.status === 'fail' &&
+          check.field !== undefined &&
+          collector.protectedFields.includes(check.field),
+      ),
     createdAt: startedAt,
     resolvedAt: null,
   };
@@ -628,8 +637,40 @@ export async function observeOnce(
     at: startedAt,
   });
 
+  /*
+   * Blame and publishability are two questions, and they were being answered
+   * once.
+   *
+   * `genuine_source_change` means the collector is fine and the world moved.
+   * That is a verdict about who is at fault, and it was being read as
+   * permission to publish. It is not. A required field going missing is a
+   * statement about the row, not about the extractor, and both can be true at
+   * the same time: the apply link really did vanish from the page, both
+   * sensors agree that it vanished, the collector is working perfectly, and
+   * the resulting row is still not fit to serve.
+   *
+   * Found by removing the apply button from a live fixture. The verdict came
+   * back `genuine_source_change`, the row published, and Doorway served the
+   * fellowship as fully verified with the listing URL quietly substituted for
+   * the missing application URL. A student clicking apply would have reached a
+   * page with no form on it, with nothing anywhere saying the link was a
+   * stand-in.
+   *
+   * Only protected fields block. Those are the ones the collector's owner
+   * declared load-bearing, and for an opportunity they are the deadline and
+   * the way to apply. An opportunity missing either is not an opportunity.
+   */
+  const brokenProtected = checks.filter(
+    (check) =>
+      check.status === 'fail' &&
+      check.field !== undefined &&
+      collector.protectedFields.includes(check.field),
+  );
+
   const publishable =
-    classification.verdict === 'healthy' || classification.verdict === 'genuine_source_change';
+    (classification.verdict === 'healthy' ||
+      classification.verdict === 'genuine_source_change') &&
+    brokenProtected.length === 0;
 
   if (publishable) {
     await deps.store.saveVerifiedSnapshot({
