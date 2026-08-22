@@ -99,6 +99,66 @@ function compareDates(collectorValue: unknown, witnessValue: unknown): ValueAgre
   return compareValues(collectorValue, witnessValue);
 }
 
+/**
+ * What two readings of one field amount to.
+ *
+ * Split out because the interesting cases are the ones where a value is
+ * absent, and absence means different things depending on who is silent and
+ * whether the page was required to show anything at all.
+ */
+function agreementFor(
+  spec: WitnessFieldSpec,
+  collectorValue: unknown,
+  witnessValue: { value: unknown } | undefined,
+  state: { witnessMissing: boolean; collectorMissing: boolean },
+): ValueAgreement {
+  if (spec.requiredOnPage === true) {
+    /*
+     * A link the page no longer offers is a disagreement, not a shrug.
+     *
+     * Everywhere else a value the witness could not find is incomparable: one
+     * sensor read it, the other could not, and convicting the collector on
+     * that basis would quarantine the web. For a field the page must show,
+     * silence means something. The collector claimed an application URL the
+     * listing had stopped publishing, the value was well formed and even
+     * resolved, and because nothing compared it the run came back healthy
+     * while the listing had no way to apply.
+     */
+    if (state.witnessMissing && !state.collectorMissing) {
+      return {
+        kind: 'disagree',
+        note: 'the collector reported a value but the page does not show one, and this field must appear on the page',
+      };
+    }
+
+    /*
+     * Two sensors finding nothing is agreement, not ignorance.
+     *
+     * When the collector reports no link and an independent read of the same
+     * page also finds none, they have corroborated each other: the page really
+     * stopped publishing it. Treating that as incomparable dropped the field
+     * out of coverage, and a run where both sensors agreed the apply link was
+     * gone came back `inconclusive` with the note that the witness "could not
+     * determine whether the page or extractor changed". It could. Both had
+     * looked, and both had seen the same absence.
+     *
+     * The record is still withheld, because a protected field is missing. What
+     * changes is the blame: the source changed, and no repair is owed by a
+     * collector that read the page correctly.
+     */
+    if (state.witnessMissing && state.collectorMissing) {
+      return {
+        kind: 'agree',
+        note: 'neither sensor found this on the page, so the source no longer publishes it',
+      };
+    }
+  }
+
+  return spec.shape === 'date'
+    ? compareDates(collectorValue, witnessValue?.value ?? null)
+    : compareValues(collectorValue, witnessValue?.value ?? null);
+}
+
 export function reconcile(
   collectorRow: unknown,
   observation: WitnessObservation,
@@ -138,15 +198,11 @@ export function reconcile(
      * back healthy while the listing had no way to apply.
      */
     const witnessMissing = witnessValue === undefined;
-    const agreement =
-      spec.requiredOnPage === true && witnessMissing && collectorValue !== null
-        ? ({
-            kind: 'disagree',
-            note: 'the collector reported a value but the page does not show one, and this field must appear on the page',
-          } as ValueAgreement)
-        : spec.shape === 'date'
-          ? compareDates(collectorValue, witnessValue?.value ?? null)
-          : compareValues(collectorValue, witnessValue?.value ?? null);
+    const collectorMissing = collectorValue === null || collectorValue === undefined;
+    const agreement = agreementFor(spec, collectorValue, witnessValue, {
+      witnessMissing,
+      collectorMissing,
+    });
 
     comparisons.push({
       path: spec.path,

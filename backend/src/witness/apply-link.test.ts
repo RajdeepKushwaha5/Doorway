@@ -189,3 +189,45 @@ describe('links as pages actually write them', () => {
     }
   });
 });
+
+describe('when both sensors find nothing', () => {
+  /*
+   * Taken from the live run of the application_link_removed fault.
+   *
+   * The collector reported no link and an independent read of the same page
+   * found none either. That was scored incomparable, coverage fell below the
+   * floor, and the run came back "inconclusive" saying the witness could not
+   * determine whether the page or the extractor had changed. It could. Both
+   * had looked and both had seen the same absence.
+   */
+  const emptyRow = { application_url: null };
+
+  it('reads two absences as agreement, not as ignorance', () => {
+    const summary = reconcile(emptyRow, observationOf(WITHOUT_LINK), [APPLY_SPEC]);
+    expect(summary.agreed).toContain('application_url');
+    expect(summary.incomparable).toHaveLength(0);
+    expect(summary.disagreed).toHaveLength(0);
+  });
+
+  it('counts the field towards coverage, so the run is not inconclusive', () => {
+    const summary = reconcile(emptyRow, observationOf(WITHOUT_LINK), [APPLY_SPEC]);
+    expect(summary.coverage).toBe(1);
+  });
+
+  it('still disagrees when only the collector claims a link', () => {
+    const summary = reconcile(
+      { application_url: 'https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply' },
+      observationOf(WITHOUT_LINK),
+      [APPLY_SPEC],
+    );
+    expect(summary.disagreed).toContain('application_url');
+  });
+
+  it('leaves an ordinary field incomparable when both are silent', () => {
+    // Only a field the page was required to show can turn silence into a
+    // finding. Everywhere else, neither sensor reading it is a shrug.
+    const optional: WitnessFieldSpec = { ...APPLY_SPEC, requiredOnPage: false };
+    const summary = reconcile(emptyRow, observationOf(WITHOUT_LINK), [optional]);
+    expect(summary.incomparable).toContain('application_url');
+  });
+});
