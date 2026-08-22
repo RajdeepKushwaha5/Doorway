@@ -1,4 +1,4 @@
-# Render blueprint for the NOTICE backend and the DriftMart fixture.
+# Render blueprint for the Doorway API and the controlled fixture it scrapes.
 #
 # The dashboard goes to Vercel and is not defined here. It needs no config file:
 # set the project's Root Directory to `frontend` and take every default. Vercel
@@ -35,7 +35,7 @@
 
 services:
   - type: web
-    name: notice-api
+    name: doorway-api
     runtime: node
     plan: free
     region: oregon
@@ -109,7 +109,7 @@ services:
   # filesystem a mode switch would apply to some requests and not others,
   # which looks exactly like a flaky scraper and wastes an hour on demo day.
   - type: web
-    name: driftmart
+    name: doorway-lab
     runtime: node
     plan: free
     region: oregon
