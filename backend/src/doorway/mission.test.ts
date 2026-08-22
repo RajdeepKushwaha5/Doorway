@@ -112,6 +112,32 @@ describe('what stops an application', () => {
     expect(mission.blockers[0]).toContain('no longer publishes a way to apply');
   });
 
+  it('says a passed deadline once, not twice', () => {
+    /*
+     * Found in production. The closed status and the date arithmetic both
+     * fired for the same fact, and the student was shown two blockers that
+     * were one problem written two ways.
+     */
+    const mission = buildMission({
+      opportunity: opportunity({
+        deadlineRaw: '17 May 2026',
+        applicationStatus: 'closed',
+        statusReason: 'The published application deadline has passed.',
+      }),
+      now: NOW,
+    });
+    expect(mission.blockers).toHaveLength(1);
+    expect(mission.blockers[0]).toBe('The published application deadline has passed.');
+  });
+
+  it('still reports a passed deadline when the source never said closed', () => {
+    const mission = buildMission({
+      opportunity: opportunity({ deadlineRaw: '17 May 2026', applicationStatus: 'open' }),
+      now: NOW,
+    });
+    expect(mission.blockers).toEqual(['The published deadline has passed.']);
+  });
+
   it('will not plan around a record only one sensor has read', () => {
     const mission = buildMission({
       opportunity: opportunity({

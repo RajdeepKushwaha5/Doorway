@@ -213,7 +213,17 @@ function findBlockers(
     );
   }
 
-  if (daysRemaining !== null && daysRemaining < 0) {
+  /*
+   * Said once, not twice.
+   *
+   * A source whose deadline has gone is usually also reported as closed, and
+   * the lifecycle's reason for that is the passed deadline. Both paths fired,
+   * so production served "The published application deadline has passed." and
+   * "The published deadline has passed." one after the other, which reads as
+   * two problems and is one.
+   */
+  const alreadySaysDatePassed = blockers.some((blocker) => /deadline has passed/i.test(blocker));
+  if (daysRemaining !== null && daysRemaining < 0 && !alreadySaysDatePassed) {
     blockers.push('The published deadline has passed.');
   }
 
