@@ -8,6 +8,7 @@ import {
 import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
 import { FileStore, ScreenshotStore, seedCollectors } from './store/index.js';
+import { OpportunityIndex, seedIndex } from './crawl/index-store.js';
 import { notifyIncident, reportIncidentToGitHub } from './pipeline/index.js';
 
 /**
@@ -148,6 +149,28 @@ function main(): void {
   // persistent disk is after every restart and every wake from idle. Only when
   // it is empty, so a curated fleet is never overwritten, and without running
   // anything, because a restart must not quietly spend the monthly allowance.
+  /*
+   * The index travels with the code, because the disk does not survive.
+   *
+   * Every restart on a free tier begins with an empty index, so the first
+   * student of the day would get the product at its worst. Crawling on boot
+   * would fix it and spend hundreds of paid requests each time the instance
+   * wakes, which is often. The shipped file is real crawl output, loaded only
+   * into an empty index, so it can never overwrite what a live crawl found.
+   */
+  void seedIndex(
+    new OpportunityIndex(process.env['DOORWAY_INDEX_FILE']),
+    process.env['DOORWAY_INDEX_SEED'] ?? '../seed-index.json',
+  ).then(
+    (result) => {
+      if (result.seeded > 0) {
+        process.stdout.write(`Loaded ${String(result.seeded)} indexed opportunities into an empty index.
+`);
+      }
+    },
+    () => undefined,
+  );
+
   void seedCollectors(store, process.env['NOTICE_SEED_FILE'] ?? '../seed-collectors.json').then(
     (result) => {
       if (result.seeded > 0) {

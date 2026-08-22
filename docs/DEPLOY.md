@@ -138,3 +138,42 @@ it is capped per caller and by a global hourly ceiling in
 `backend/src/acquire/budget.ts`. The ceiling is the limit that actually protects
 the account: the per-caller one is defeated by rotating addresses. Raise it only
 if you have budget you are willing to lose.
+
+---
+
+## Keeping the index alive across deploys
+
+Free plans have no persistent disk, so the crawled index dies at every restart
+and every wake from idle. A deploy would otherwise come up knowing nothing, and
+the first visitor of the day would meet the product at its worst.
+
+So the index ships with the code. `seed-index.json` is loaded at startup, but
+only into an empty index, so it can never overwrite what a live crawl has since
+found.
+
+**To refresh it**, from your machine:
+
+```bash
+npm run index:fill --workspace backend -- 160     # crawls across 13 subject areas
+npm run index:export --workspace backend          # writes seed-index.json
+git add seed-index.json && git commit && git push
+```
+
+`index:fill` spends roughly one Web Unlocker request per page fetched, so the
+command above costs about 2,200 requests. Check what you have left first:
+
+```bash
+curl -s -H "Authorization: Bearer $BRIGHTDATA_API_KEY" \
+  https://api.brightdata.com/customer/balance
+```
+
+`index:export` drops records whose deadline has passed on the way out. A stale
+opportunity is worse than a missing one, and there is no sense carrying dead
+ones into a deploy.
+
+Two variables control where the files live, both optional:
+
+| Variable | Default | What it is |
+|---|---|---|
+| `DOORWAY_INDEX_FILE` | `data/opportunity-index.json` | the live, working index |
+| `DOORWAY_INDEX_SEED` | `../seed-index.json` | the shipped copy loaded when empty |
