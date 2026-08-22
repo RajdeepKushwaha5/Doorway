@@ -9,6 +9,15 @@ import { LiveDiscovery } from '@/components/LiveDiscovery';
 import { ArchitectureFlowVisualizer } from '@/components/ArchitectureFlowVisualizer';
 import Link from 'next/link';
 import { collectFindAction, startFindAction } from '@/app/actions';
+
+/**
+ * How long to wait on a live search before showing what is already known.
+ *
+ * Measured: a search reading eighteen pages took a few minutes against the
+ * free tier. Three minutes is past the slow case and well short of forever,
+ * and the server is not cancelled by it.
+ */
+const SEARCH_CEILING_MS = 180_000;
 import { apiBase } from '@/lib/env';
 import type {
   DoorwayMatch,
@@ -110,7 +119,38 @@ export function DoorwayHome({
 
       const { findId } = started.data;
 
+      /*
+       * A ceiling on the wait, not on the search.
+       *
+       * A live search reads a dozen pages through Bright Data and normally
+       * settles inside a minute, but nothing in the browser was bounding it.
+       * The stream is the only thing that ended the wait, so a run that hung
+       * server-side spun here forever.
+       *
+       * The server keeps going regardless. What this bounds is how long
+       * somebody stares at it before being shown what is already known, which
+       * is never nothing: the world is answered from the index and the watched
+       * fleet before the live half is even started.
+       */
+      const ceiling = window.setTimeout(() => {
+        streamRef.current?.close();
+        streamRef.current = null;
+        void finish();
+      }, SEARCH_CEILING_MS);
+
+      /*
+       * Finishing is idempotent, because two things can trigger it.
+       *
+       * The stream closing is the ordinary end. The ceiling set above is the
+       * other, and without it a search that never closes leaves somebody
+       * watching a spinner with no way to know it has stopped being worth
+       * waiting for.
+       */
+      let settled = false;
       const finish = async (): Promise<void> => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(ceiling);
         const collected = await collectFindAction(findId);
         if (collected.ok && collected.data.world !== null) {
           setWorld(collected.data.world);
