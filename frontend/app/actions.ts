@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { serverApiBase } from '@/lib/env';
+import { api } from '@/lib/api';
 import type { DoorwayProfile, DoorwayWorld } from '@/lib/types';
 
 /**
@@ -312,4 +313,104 @@ export async function registerCollectorAction(input: unknown): Promise<ActionRes
   const result = await mutate('/api/collectors', input);
   revalidatePath('/');
   return result;
+}
+
+/**
+ * What the fixture can currently be made to do, in its own words.
+ *
+ * Read from the fixture rather than restated here so the two cannot disagree.
+ * A dashboard carrying its own copy of the list will eventually offer a fault
+ * the fixture cannot serve, and the button fails in front of whoever is being
+ * shown the demonstration.
+ *
+ * Returns an empty list rather than throwing when the fixture is unreachable,
+ * because "cannot reach the source page" is a state the walkthrough shows and
+ * explains rather than a crash.
+ */
+export interface ProofScenario {
+  id: string;
+  label: string;
+  plain: string;
+  /** What a correct system should decide, in plain words. */
+  decision: string;
+  /** The verdicts that satisfy that decision. Observed, not predicted. */
+  verdicts: string[];
+  consequence: string;
+  semanticChange: boolean;
+}
+
+export async function getProofScenariosAction(): Promise<{
+  mode: string | null;
+  scenarios: ProofScenario[];
+  fixtureUrl: string;
+}> {
+  const fixtureUrl = (
+    process.env['DRIFTMART_URL'] ?? 'https://driftmart-3ut8.onrender.com'
+  ).replace(/\/+$/, '');
+
+  try {
+    const response = await fetch(`${fixtureUrl}/api/admin/mode`, { cache: 'no-store' });
+    if (!response.ok) return { mode: null, scenarios: [], fixtureUrl };
+
+    const body = (await response.json()) as {
+      mode?: unknown;
+      opportunityScenarios?: unknown;
+    };
+
+    const scenarios = Array.isArray(body.opportunityScenarios)
+      ? (body.opportunityScenarios as ProofScenario[])
+      : [];
+
+    return {
+      mode: typeof body.mode === 'string' ? body.mode : null,
+      scenarios,
+      fixtureUrl,
+    };
+  } catch {
+    return { mode: null, scenarios: [], fixtureUrl };
+  }
+}
+
+/**
+ * The opportunity as a student would see it right now, plus its basis.
+ *
+ * The walkthrough needs the before and after of a single record, and asking
+ * for the whole world to show one row would make the page slower for no
+ * reason. Returns null when nothing is served yet, which is itself a state the
+ * page explains.
+ */
+export async function getProofOpportunityAction(): Promise<{
+  collectorId: string;
+  title: string;
+  deadlineRaw: string | null;
+  fundingLevel: string;
+  applicationUrl: string;
+  trustStatus: string;
+  confirmedBy: string;
+  fieldsDegraded: string[];
+  lastVerifiedAt: string;
+} | null> {
+  try {
+    const { opportunities } = await api.doorwayOpportunities();
+    const first = opportunities[0];
+    if (first === undefined) return null;
+    return {
+      // The walkthrough runs the collector behind the record it is showing.
+      // Picking by fixture hostname instead looked equivalent and was not:
+      // when the source sits behind a tunnel its host is not the fixture's,
+      // so the page silently fell back to the first collector registered and
+      // offered to run an unrelated one.
+      collectorId: first.collectorId,
+      title: first.title,
+      deadlineRaw: first.deadlineRaw,
+      fundingLevel: first.funding.level,
+      applicationUrl: first.applicationUrl,
+      trustStatus: first.trust.status,
+      confirmedBy: first.trust.confirmedBy,
+      fieldsDegraded: first.trust.fieldsDegraded,
+      lastVerifiedAt: first.trust.lastVerifiedAt,
+    };
+  } catch {
+    return null;
+  }
 }

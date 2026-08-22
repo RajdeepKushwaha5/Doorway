@@ -64,11 +64,11 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
         <div className="mx-auto grid min-h-[680px] max-w-[1400px] lg:grid-cols-[0.92fr_1.08fr]">
           <div className="flex flex-col justify-center border-gray-200 px-6 py-16 lg:border-r lg:px-12">
             <div className="mb-6 flex items-center gap-3 font-neuebit text-[12px] uppercase tracking-[0.18em] text-gray-500">
-              <span className="h-2 w-2 bg-[#f06449]" /> Live opportunity infrastructure
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Live opportunity infrastructure
             </div>
             <h1 className="font-mondwest text-[clamp(62px,7vw,108px)] font-normal leading-[0.83] tracking-[-0.04em]">
               The web is full of doors.
-              <span className="block text-[#f06449]">Find yours.</span>
+              <span className="block text-emerald-600">Find yours.</span>
             </h1>
             <p className="mt-8 max-w-[610px] font-mono text-[15px] leading-7 text-gray-600">
               Doorway turns scattered scholarships, fellowships, internships and grants into a
@@ -83,11 +83,32 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                 ['03', 'Prove', 'Two-sensor verification'],
               ].map(([number, title, copy]) => (
                 <div key={number} className="bg-white p-4">
-                  <div className="font-neuebit text-[11px] tracking-[0.15em] text-[#f06449]">{number}</div>
+                  <div className="font-neuebit text-[11px] tracking-[0.15em] text-emerald-600 font-bold">{number}</div>
                   <div className="mt-4 font-mondwest text-2xl">{title}</div>
                   <div className="mt-1 font-mono text-[10px] leading-5 text-gray-500">{copy}</div>
                 </div>
               ))}
+            </div>
+
+            {/*
+              The one link a first-time visitor most wants.
+
+              "Two-sensor verification" above is a claim, and a reader has no
+              way to weigh it. This offers the fault switch instead: break the
+              source page yourself and see whether the system catches it. It
+              sits in the hero rather than in a footer because a demonstration
+              nobody finds is worth the same as no demonstration.
+            */}
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <Link
+                href="/proof"
+                className="border border-black bg-black px-6 py-3 font-neuebit text-[12px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-white hover:text-black"
+              >
+                Break the page and watch
+              </Link>
+              <span className="font-mono text-[11.5px] leading-relaxed text-gray-500">
+                Cause a wrong deadline on purpose. No terminal, no account.
+              </span>
             </div>
           </div>
 
@@ -97,7 +118,10 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
             <div className="relative z-10 w-full max-w-[610px] border border-black bg-white shadow-[18px_18px_0_#0c0c0a]">
               <div className="flex items-center justify-between border-b border-black px-5 py-3 font-neuebit text-[11px] uppercase tracking-[0.15em]">
                 <span>Build my opportunity world</span>
-                <span className="text-[#f06449]">Bright Data live</span>
+                <span className="text-emerald-600 font-bold flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Bright Data live
+                </span>
               </div>
               <div className="space-y-6 p-5 sm:p-7">
                 <Field label="I am based in">
@@ -168,7 +192,7 @@ export function DoorwayHome({ initialWorld = null }: { initialWorld?: DoorwayWor
                   type="button"
                   onClick={submit}
                   disabled={pending || profile.opportunityTypes.length === 0}
-                  className="flex min-h-14 w-full items-center justify-between bg-[#f06449] px-5 font-neuebit text-[13px] uppercase tracking-[0.14em] text-black transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex min-h-14 w-full items-center justify-between bg-emerald-500 hover:bg-emerald-400 px-5 font-neuebit text-[13px] uppercase tracking-[0.14em] text-black font-bold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span>{pending ? 'Constructing your world' : 'Open the map'}</span>
                   <span>{pending ? '···' : '↗'}</span>
@@ -207,7 +231,7 @@ function WorldSection({ world, pending }: { world: DoorwayWorld | null; pending:
       <div className="mx-auto max-w-[1400px] px-6 py-20 lg:px-12">
         <div className="flex flex-col justify-between gap-7 border-b border-black pb-8 md:flex-row md:items-end">
           <div>
-            <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-[#f06449]">
+            <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-emerald-600 font-bold">
               01 / Opportunity world
             </div>
             <h2 className="mt-4 max-w-[850px] font-mondwest text-[clamp(48px,6vw,82px)] leading-[0.9] tracking-[-0.03em]">
@@ -301,14 +325,14 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
           </Link>
         ) : (
           <div className="mt-5 flex items-center justify-between gap-4 border-t border-black pt-4 font-neuebit text-[11px] uppercase tracking-[0.12em]">
-            <Link href={`/opportunities/${opportunity.id}`} className="hover:text-[#f06449]">
+            <Link href={`/opportunities/${opportunity.id}`} className="hover:text-emerald-600">
               Evidence →
             </Link>
             <a
               href={opportunity.applicationUrl}
               target="_blank"
               rel="noreferrer"
-              className="hover:text-[#f06449]"
+              className="hover:text-emerald-600 font-semibold"
             >
               Open official door ↗
             </a>
@@ -345,7 +369,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 function EmptyWorld({ initial }: { initial: boolean }) {
   return (
     <div className="doorway-grid relative mt-12 flex min-h-[360px] items-center justify-center overflow-hidden border border-gray-200 bg-[#f6f4ef] px-6 text-center">
-      <div className="relative z-10 max-w-[580px] bg-white p-8 shadow-[10px_10px_0_#f06449]">
+      <div className="relative z-10 max-w-[580px] bg-white p-8 shadow-[10px_10px_0_#10b981]">
         <div className="font-mondwest text-4xl">
           {initial ? 'Your world has not been built yet.' : 'No verified doors match yet.'}
         </div>
@@ -377,27 +401,29 @@ function HowItLives() {
     ['04', 'Heal', 'When extraction breaks, Scraper Studio repairs it and Doorway proves the candidate before restoring the door.'],
   ];
   return (
-    <section id="system" className="bg-[#f06449] text-black">
+    <section id="system" className="bg-black text-white border-t border-neutral-800">
       <div className="mx-auto max-w-[1400px] px-6 py-20 lg:px-12">
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
-            <div className="font-neuebit text-[11px] uppercase tracking-[0.18em]">02 / Living infrastructure</div>
-            <h2 className="mt-5 font-mondwest text-[clamp(52px,6vw,88px)] leading-[0.86] tracking-[-0.03em]">
+            <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-emerald-400 font-bold">
+              02 / Living infrastructure
+            </div>
+            <h2 className="mt-5 font-mondwest text-[clamp(52px,6vw,88px)] leading-[0.86] tracking-[-0.03em] text-white">
               The map stays alive when the web moves.
             </h2>
             <Link
               href="/engine"
-              className="mt-8 inline-flex border border-black bg-black px-6 py-4 font-neuebit text-[11px] uppercase tracking-[0.14em] text-white hover:bg-white hover:text-black"
+              className="mt-8 inline-flex items-center gap-2 border border-emerald-500 bg-emerald-500 hover:bg-emerald-400 px-6 py-4 font-neuebit text-[11px] uppercase tracking-[0.14em] text-black font-bold transition-all shadow-lg hover:shadow-emerald-500/20"
             >
               Inspect the Trust Engine →
             </Link>
           </div>
-          <div className="grid gap-px border border-black bg-black sm:grid-cols-2">
+          <div className="grid gap-px border border-neutral-800 bg-neutral-800 sm:grid-cols-2">
             {steps.map(([number, title, copy]) => (
-              <div key={number} className="min-h-[230px] bg-[#f06449] p-6">
-                <div className="font-neuebit text-[11px] tracking-[0.14em]">{number}</div>
-                <h3 className="mt-10 font-mondwest text-4xl">{title}</h3>
-                <p className="mt-4 font-mono text-[11px] leading-6">{copy}</p>
+              <div key={number} className="min-h-[230px] bg-neutral-950 p-6 border border-neutral-900/50 hover:border-emerald-500/30 transition-colors group">
+                <div className="font-neuebit text-[11px] tracking-[0.14em] text-emerald-400 font-bold">{number}</div>
+                <h3 className="mt-10 font-mondwest text-4xl text-white group-hover:text-emerald-300 transition-colors">{title}</h3>
+                <p className="mt-4 font-mono text-[11px] leading-6 text-neutral-400">{copy}</p>
               </div>
             ))}
           </div>
