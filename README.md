@@ -580,7 +580,7 @@ by being registered.
 ## Stop a deploy that depends on data nobody checked
 
 ```yaml
-- uses: prabhatkumar67/notice/actions/verify@main
+- uses: RajdeepKushwaha5/Doorway/actions/verify@main
   with:
     api-base: https://notice-api-0vfo.onrender.com
     collector: c_msvk2zahnc2mizts6

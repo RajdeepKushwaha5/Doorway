@@ -40,7 +40,7 @@ export async function SiteFooter() {
 
           <div className="flex items-center gap-3 shrink-0 flex-wrap">
             <a
-              href="https://github.com/prabhatkumar67/notice"
+              href="https://github.com/RajdeepKushwaha5/Doorway"
               className="bg-emerald-500 hover:bg-emerald-400 text-black font-mono font-bold text-[11px] uppercase tracking-wider px-5 py-3 rounded-md transition-colors whitespace-nowrap"
             >
               READ THE SOURCE →
@@ -103,7 +103,7 @@ export async function SiteFooter() {
               <div className="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1 bg-gray-50 text-[11px] text-gray-600">
                 <span className="relative flex h-1.5 w-1.5">
                   {collectorCount === null ? (
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-suspect" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-neutral-400" />
                   ) : (
                     <>
                       <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
@@ -172,7 +172,7 @@ export async function SiteFooter() {
               <li><Link href="/engine" className="hover:text-black">Collector Operations</Link></li>
               <li><Link href="/engine#system" className="hover:text-black">Model Context Protocol (MCP)</Link></li>
               <li>
-                <a href="https://github.com/prabhatkumar67/notice" target="_blank" rel="noreferrer" className="hover:text-black flex items-center gap-1">
+                <a href="https://github.com/RajdeepKushwaha5/Doorway" target="_blank" rel="noreferrer" className="hover:text-black flex items-center gap-1">
                   GitHub Repository ↗
                 </a>
               </li>

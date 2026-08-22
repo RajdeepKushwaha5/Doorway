@@ -111,7 +111,7 @@ export function buildRouter(deps: ApiDeps): Router {
     at: new Date().toISOString(),
     dashboard: 'https://notice-frontend-bay.vercel.app',
     fixture: 'https://driftmart-3ut8.onrender.com',
-    repository: 'https://github.com/prabhatkumar67/notice',
+    repository: 'https://github.com/RajdeepKushwaha5/Doorway',
     read: {
       health: '/api/health',
       collectors: '/api/collectors',

@@ -15,6 +15,11 @@ import { NoticeLogo } from '@/components/NoticeLogo';
  */
 const links = [
   { href: '/#world', label: 'OPPORTUNITY WORLD', active: true },
+  // Second, deliberately. The demonstration used to be reachable only by
+  // finding the engine dashboard and knowing which panel to operate, which
+  // meant the one thing a first-time visitor most wants was the hardest thing
+  // on the site to find.
+  { href: '/proof', label: 'CHECK IT YOURSELF' },
   { href: '/#system', label: 'HOW IT LIVES' },
   { href: '/verified', label: 'VERIFIED FEED' },
   { href: '/engine', label: 'TRUST ENGINE' },
@@ -67,7 +72,7 @@ export function SiteNav() {
         </a>
 
         <a
-          href="https://github.com/prabhatkumar67/notice"
+          href="https://github.com/RajdeepKushwaha5/Doorway"
           target="_blank"
           rel="noopener noreferrer"
           className="hidden sm:inline-flex font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-600 hover:text-gray-900 px-3 py-1.5 transition-colors whitespace-nowrap"
