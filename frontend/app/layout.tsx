@@ -41,14 +41,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${mondwest.variable} ${neuebit.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-surface font-mono text-ivory antialiased pt-[52px]">
-        <MotionDirector />
-        <SiteNav />
+        {/*
+          * First in the document, because that is the whole point of it.
+          *
+          * It sat after the nav, so reaching the control for skipping the nav
+          * required tabbing through the nav. A skip link that is not the first
+          * thing you land on is decoration.
+          */}
         <a
           href="#main-content"
           className="fixed left-4 top-4 z-[100] -translate-y-24 bg-ivory px-4 py-2 text-sm text-surface-raised transition-transform duration-300 focus:translate-y-0"
         >
           Skip to content
         </a>
+        <MotionDirector />
+        <SiteNav />
         <main id="main-content">{children}</main>
         <SiteFooter />
       </body>

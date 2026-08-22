@@ -184,9 +184,22 @@ export async function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/engine#system" className="hover:text-emerald-600 hover:translate-x-0.5 transition-all inline-block">
-                  MCP Protocol Server
-                </Link>
+                {/*
+                  * Pointed at the thing it names.
+                  *
+                  * This linked to /engine#system, and the engine page carries
+                  * no ids at all, so it landed on an unrelated dashboard and
+                  * scrolled nowhere. The label expanded to "Model Context
+                  * Protocol Protocol Server" as well.
+                  */}
+                <a
+                  href="https://github.com/RajdeepKushwaha5/Doorway#use-it-from-an-ai-agent"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-emerald-600 hover:translate-x-0.5 transition-all inline-block"
+                >
+                  MCP Server ↗
+                </a>
               </li>
               <li>
                 <a

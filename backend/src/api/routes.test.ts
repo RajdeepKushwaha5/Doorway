@@ -693,3 +693,93 @@ describe('a protected field nobody witnesses', () => {
     ).toEqual(['application_url']);
   });
 });
+
+describe('the mission route', () => {
+  /*
+   * Driven over a real socket against a real store, because the mission is the
+   * first thing in this product that a student is meant to act on, and the
+   * parts most likely to break are the projection and the query parsing rather
+   * than the arithmetic the unit tests already cover.
+   */
+  async function seedFellowship(documents: string[]): Promise<string> {
+    const created = await fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brightDataCollectorId: 'c_mission1',
+        name: 'Mission fixture',
+        targetDomain: 'example.test',
+        watchUrls: ['https://example.test/fellowship'],
+        witnessSpecs: [
+          {
+            path: 'deadline',
+            meaning: 'The final application deadline.',
+            labels: ['application deadline'],
+            excludeLabels: [],
+            kind: 'text',
+            allowed: [],
+          },
+        ],
+      }),
+    });
+    const collector = (await created.json()) as { id: string };
+
+    await store.saveVerifiedSnapshot({
+      collectorId: collector.id,
+      url: 'https://example.test/fellowship',
+      data: {
+        title: 'Open AI Research Fellowship',
+        provider: 'Example Foundation',
+        opportunity_type: 'fellowship',
+        interests: ['artificial intelligence'],
+        funding_level: 'fully funded',
+        deadline: '18 September 2026',
+        locations: ['India'],
+        application_url: 'https://example.test/apply',
+        required_documents: documents,
+      },
+      contractVersion: 1,
+      verifiedAt: new Date().toISOString(),
+      contentHash: 'test',
+      shape: null,
+      confirmedBy: 'two_sensors',
+    });
+
+    const catalog = (await (await fetch(`${base}/api/doorway/opportunities`)).json()) as {
+      opportunities: { id: string }[];
+    };
+    return catalog.opportunities[0]?.id ?? '';
+  }
+
+  it('builds a mission from a verified record, counting what the student holds', async () => {
+    const id = await seedFellowship(['Resume', 'Transcript', 'Research statement']);
+    expect(id).not.toBe('');
+
+    const response = await fetch(
+      `${base}/api/doorway/opportunities/${id}/mission?held=Resume,Transcript`,
+    );
+    expect(response.status).toBe(200);
+
+    const mission = (await response.json()) as {
+      readiness: { held: number; total: number; percent: number };
+      state: string;
+      documents: { name: string; status: string }[];
+    };
+
+    expect(mission.readiness).toEqual({ held: 2, total: 3, percent: 66 });
+    expect(mission.state).toBe('eligible');
+    expect(mission.documents.find((d) => d.name === 'Research statement')?.status).toBe('missing');
+  });
+
+  it('treats an absent held list as holding nothing, rather than failing', async () => {
+    const id = await seedFellowship(['Resume']);
+    const response = await fetch(`${base}/api/doorway/opportunities/${id}/mission`);
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { readiness: { held: number } }).readiness.held).toBe(0);
+  });
+
+  it('is 404 for an opportunity that does not exist', async () => {
+    const response = await fetch(`${base}/api/doorway/opportunities/nope/mission`);
+    expect(response.status).toBe(404);
+  });
+});

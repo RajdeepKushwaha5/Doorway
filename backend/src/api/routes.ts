@@ -26,6 +26,7 @@ import { witnessFieldSpecSchema } from '../witness/index.js';
 import { assertAdmin, binary, HttpError, Router, stream } from './http.js';
 import { DEFAULT_MONTHLY_BUDGET, monitoringSpend } from '../worker/budget.js';
 import {
+  buildMission,
   buildWorld,
   draftToOpportunity,
   isPublishableDraft,
@@ -231,6 +232,7 @@ export function buildRouter(deps: ApiDeps): Router {
       budget: '/api/budget',
       verifiedFeed: '/api/feed/{collectorId}',
       opportunities: '/api/doorway/opportunities',
+      mission: '/api/doorway/opportunities/{id}/mission?held=Resume,Transcript',
       opportunityWorld: 'POST /api/doorway/world',
       find: 'POST /api/doorway/find',
       crawl: 'POST /api/crawl',
@@ -827,6 +829,39 @@ export function buildRouter(deps: ApiDeps): Router {
     ].find((candidate) => candidate.id === params['id']);
     if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
     return opportunity;
+  });
+
+  /*
+   * What this opportunity asks a student to actually do.
+   *
+   * Separate from the record because they answer different questions. The
+   * record is what the source says. The mission is what that means for one
+   * person holding some documents and not others, and it is the only place
+   * verification becomes a consequence rather than a badge.
+   *
+   * `held` arrives as a query parameter rather than as stored state, because a
+   * student who has signed up for nothing should still get a real plan, and
+   * because a list of documents somebody owns is not worth holding.
+   */
+  router.get('/api/doorway/opportunities/:id/mission', async ({ params, query }) => {
+    const [collectors, snapshots, incidents, indexed] = await Promise.all([
+      store.listCollectors(),
+      store.listVerifiedSnapshots(),
+      store.listIncidents(),
+      index.all(),
+    ]);
+    const opportunity = [
+      ...opportunitiesFromSnapshots(snapshots, collectors, incidents),
+      ...indexed.filter(isPublishableDraft).map(draftToOpportunity),
+    ].find((candidate) => candidate.id === params['id']);
+    if (opportunity === undefined) throw new HttpError(404, 'opportunity not found');
+
+    const held = (query.get('held') ?? '')
+      .split(',')
+      .map((name) => name.trim())
+      .filter((name) => name !== '');
+
+    return buildMission({ opportunity, held });
   });
 
   /*

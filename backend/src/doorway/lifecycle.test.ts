@@ -83,3 +83,34 @@ describe('deciding whether somebody can still apply', () => {
     }
   });
 });
+
+describe('a closure written into the date field', () => {
+  /*
+   * Taken from production. Adobe replaced the closing date with the
+   * announcement, so the field we captured as a date was a sentence, it parsed
+   * as no date at all, and the record was served as "unknown" while the only
+   * thing we held said plainly that the door was shut.
+   */
+  it('is read as closed, not as unknown', () => {
+    const verdict = decideLifecycle({
+      deadlineRaw: 'Applications are closed for the Adobe India AI Research Fellowship',
+    });
+    expect(verdict.status).toBe('closed');
+  });
+
+  it('still treats a real future date as open', () => {
+    expect(decideLifecycle({ deadlineRaw: '18 September 2026' }).status).toBe('open');
+  });
+
+  it('still reads as closed when a future reopening is announced', () => {
+    /*
+     * A student cannot apply today, so today the door is shut. Naming the next
+     * round is useful information about January and changes nothing about now,
+     * and reporting it as open would be the more damaging of the two errors.
+     */
+    const verdict = decideLifecycle({
+      deadlineRaw: 'Applications are closed. The next round opens in January 2027.',
+    });
+    expect(verdict.status).toBe('closed');
+  });
+});

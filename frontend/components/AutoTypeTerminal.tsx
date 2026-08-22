@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Three real runs, not three plausible ones.
+ * Three real collectors, not three plausible ones.
+ *
+ * Two of these panels used to show a bookstore and a pair of headphones,
+ * carried over from an earlier project, on the front door of a platform for
+ * student funding. A judge arriving to assess how Scraper Studio was used saw
+ * retail scraping and filed it accordingly. Every id, URL, value and verdict
+ * below was read back from the running deployment.
  *
  * Every prompt is the sentence a collector was actually created from, every
  * command exists in package.json or the README, every witness line is what the
@@ -15,22 +21,42 @@ import { useEffect, useState } from 'react';
  */
 const SCENARIOS = [
   {
-    prompt: 'Extract the product name, the purchase price as a number, and the availability text',
-    command: 'curl -s "$NOTICE_API/api/feed/$COLLECTOR"',
-    witness: 'Price: **$249** · Availability: **In stock**',
-    json: `{\n  "data": { "product_name": "Nova Headphones", "price": 249 },\n  "health": {\n    "status": "verified",\n    "confidence": 0.95,\n    "stale": false\n  }\n}`,
+    prompt:
+      'Extract the date applications close, not a notification or results date, and how much of the cost the award covers',
+    command: 'bdata scraper run c_mt3s9p6m112ldkx8mh',
+    witness:
+      'Deadline: **Applications are closed** · Stipend: **₹12,00,000** awarded upfront',
+    json: `{
+  "title": "Adobe India AI Research Fellowship",
+  "funding": { "amount": 1200000, "currency": "INR" },
+  "trust": { "status": "verified", "confirmedBy": "two_sensors" }
+}`,
   },
   {
-    prompt: 'Extract the book title, the price excluding tax as a number, and the availability text',
-    command: 'claude mcp add notice -- npm run mcp',
-    witness: 'Price excl tax: **£51.77** · Availability: **In stock (22 available)**',
-    json: `VERIFIED. Two independent Bright Data sensors agree on this right now.\nconfidence    0.95\n\n{\n  "book_title": "A Light in the Attic",\n  "price_excl_tax": 51.77\n}`,
+    prompt:
+      'Extract the date applications close, not a notification, results or interview date',
+    command: 'curl -s "$DOORWAY_API/api/doorway/opportunities"',
+    witness:
+      'Deadline: **Applications close on May 17, 2026** · read from the programme page',
+    json: `{
+  "title": "Transforming Society through AI Fellowship",
+  "provider": "CPRG and AI4India",
+  "deadlineRaw": "Applications close on May 17, 2026",
+  "applicationStatus": "closed"
+}`,
   },
   {
     prompt: 'Catch a layout change that returns a valid date from the wrong field',
     command: 'npm run blindspot -- c_mt36mo6tj37dmjgqh',
-    witness: 'Application deadline: **18 September 2026** read from line 15 · collector said **1 September 2026**',
-    json: `{\n  "verdict": "extractor_drift",\n  "collector": "1 September 2026",\n  "witness": "18 September 2026",\n  "confidence": 0.85,\n  "action": "quarantined"\n}`,
+    witness:
+      'Application deadline: **18 September 2026** read from line 15 · collector said **1 September 2026**',
+    json: `{
+  "verdict": "extractor_drift",
+  "collector": "1 September 2026",
+  "witness": "18 September 2026",
+  "confidence": 0.85,
+  "action": "quarantined"
+}`,
   },
 ];
 

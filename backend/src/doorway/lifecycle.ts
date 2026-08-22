@@ -92,6 +92,22 @@ export function decideLifecycle(signals: LifecycleSignals): LifecycleVerdict {
     return { status: 'closed', reason: 'The official page says applications are closed.' };
   }
 
+  /*
+   * 2b. The closure was written into the date field itself.
+   *
+   * A source frequently replaces the date with the announcement, so the field
+   * captured as the closing date reads "Applications are closed for the Adobe
+   * India AI Research Fellowship". That parses as no date at all, so the
+   * arithmetic below has nothing to work with, and the record was served as
+   * `unknown` while the only sentence we held said plainly that it was shut.
+   *
+   * Checked against the same phrase list the prose uses, so the two cannot
+   * drift apart.
+   */
+  if (deadline !== null && saysClosed(deadline)) {
+    return { status: 'closed', reason: 'The published closing date says applications have closed.' };
+  }
+
   // 3. The date has gone. A page can forget to say so; the arithmetic cannot.
   if (deadlineHasPassed(deadline)) {
     return { status: 'closed', reason: 'The published application deadline has passed.' };
