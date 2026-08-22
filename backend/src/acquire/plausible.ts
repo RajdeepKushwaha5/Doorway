@@ -21,8 +21,7 @@
  * about it.
  */
 
-const MONTHS =
-  '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*';
+import { parseDeadline } from './dates.js';
 
 /** Markdown link syntax, stray URLs, and bare parenthesised paths. */
 const LOOKS_LIKE_MARKUP = /\]\(|https?:\/\/|^\s*\/\/|www\./i;
@@ -91,14 +90,21 @@ export function plausibleDeadline(raw: string): string | null {
   if (HEDGED.test(value)) return null;
   if (TITLE_SHAPED.test(value)) return null;
 
-  const named = new RegExp(`\\b\\d{1,2}\\s*${MONTHS}\\b|\\b${MONTHS}\\s*\\d{1,2}\\b`, 'i');
-  const numeric = /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b/;
-
-  if (!named.test(value) && !numeric.test(value)) return null;
-
-  // A date with no year is ambiguous in a way that matters here: a student
-  // reading "closes 3 March" cannot tell whether that has already happened.
-  if (!/\b(19|20)\d{2}\b/.test(value) && !numeric.test(value)) return null;
+  /*
+   * One understanding of what a date is, rather than two that drift.
+   *
+   * This carried its own pair of regexes alongside the parser in dates.ts.
+   * Ordinal suffixes were added there and not here, so "Registration Deadline:
+   * 15th July 2026" was rejected while "15 July 2026" was accepted. Real pages
+   * write the ordinal, and it cost most of the deadlines in the index: two out
+   * of twenty-three records had one, and the diagnosis was going to be "the
+   * dates are in PDFs" until somebody read the markdown.
+   *
+   * Asking the parser is also a stronger test than matching a shape. A string
+   * that parses to a date contains a date; a string that matches a date-shaped
+   * pattern might say "32 Septembre".
+   */
+  if (parseDeadline(value) === null) return null;
 
   return fromSentenceStart(value);
 }
@@ -204,14 +210,41 @@ const NOT_A_DEADLINE =
  * project exists to prevent.
  */
 export function scanForDeadline(markdown: string): string | null {
-  for (const raw of markdown.split(/\r?\n/)) {
-    const line = unbullet(raw);
-    if (line.length < 8 || line.length > 220) continue;
+  const lines = markdown.split(/\r?\n/).map(unbullet);
+
+  for (const [index, line] of lines.entries()) {
+    if (line.length < 4 || line.length > 220) continue;
     if (!DEADLINE_WORDS.test(line)) continue;
     if (NOT_A_DEADLINE.test(line)) continue;
 
     const accepted = plausibleDeadline(line);
     if (accepted !== null) return accepted;
+
+    /*
+     * The date under the heading.
+     *
+     * A line scanner structurally cannot see the shape a great many funding
+     * pages use:
+     *
+     *   ## Application deadline
+     *   15 July 2026
+     *
+     * The word and the date are both on the page and never share a line, so
+     * every one of these read as "not stated". Only the next few non-empty
+     * lines are considered, and each still has to pass the same date test, so
+     * a heading followed by prose yields nothing rather than a guess.
+     */
+    for (const below of lines.slice(index + 1, index + 4)) {
+      if (below === '') continue;
+      if (below.length > 220) break;
+      // Another labelled field means this heading's value is not below it.
+      if (DEADLINE_WORDS.test(below)) break;
+      if (NOT_A_DEADLINE.test(below)) break;
+
+      const under = plausibleDeadline(below);
+      if (under !== null) return under;
+      break;
+    }
   }
   return null;
 }

@@ -642,3 +642,78 @@ describe('what a crawl reaches that a search never did', () => {
     expect(looksLikeIndex('2026 Oxford Schmidt AI Fellowship', '')).toBe(false);
   });
 });
+
+/**
+ * Two date parsers, one of them fixed.
+ *
+ * `plausibleDeadline` carried its own regexes alongside the parser in dates.ts.
+ * Ordinal suffixes were added there and not here, so "Registration Deadline:
+ * 15th July 2026" was rejected while "15 July 2026" was accepted. Real pages
+ * write the ordinal, and it cost most of the deadlines in the index: two of
+ * twenty-three records had one, and the diagnosis was going to be "the dates
+ * are in PDFs" until somebody read the markdown.
+ */
+describe('dates written the way people write them', () => {
+  it('accepts the ordinal a live page actually used', () => {
+    // internshala.com/competitions/1st-india-computer-vision-hackathon-2026
+    expect(scanForDeadline('*   **Registration Deadline:** 15th July 2026')).toBe(
+      'Registration Deadline: 15th July 2026',
+    );
+  });
+
+  it('accepts every ordinal suffix', () => {
+    expect(plausibleDeadline('Deadline: 1st August 2026')).not.toBeNull();
+    expect(plausibleDeadline('Deadline: 2nd August 2026')).not.toBeNull();
+    expect(plausibleDeadline('Deadline: 3rd March 2027')).not.toBeNull();
+    expect(plausibleDeadline('Applications close 22nd May 2026')).not.toBeNull();
+  });
+
+  it('still refuses what is not a date', () => {
+    expect(plausibleDeadline('Application deadline')).toBeNull();
+    expect(plausibleDeadline('2026')).toBeNull();
+    expect(plausibleDeadline('Rolling admissions')).toBeNull();
+  });
+
+  /*
+   * Asking the parser is stronger than matching a shape: a string that parses
+   * contains a date, where a date-shaped pattern might say "32 Septembre".
+   */
+  it('refuses a date-shaped string that is not a date', () => {
+    expect(plausibleDeadline('Deadline: 45th Montober 2026')).toBeNull();
+  });
+});
+
+describe('the date under the heading', () => {
+  /*
+   * A line scanner structurally cannot see this shape, and a great many funding
+   * pages use it. The word and the date are both present and never share a
+   * line, so every one of them read as "not stated".
+   */
+  it('reads a date beneath a deadline heading', () => {
+    expect(scanForDeadline('## Application deadline\n\n15 July 2026\n')).toBe('15 July 2026');
+    expect(scanForDeadline('**Last date to apply**\n\n3rd March 2027')).toBe('3rd March 2027');
+  });
+
+  it('does not take prose that merely follows a heading', () => {
+    expect(
+      scanForDeadline('## Application deadline\n\nSee the programme handbook for details.'),
+    ).toBeNull();
+  });
+
+  /*
+   * A second labelled field under the first means this heading's value is not
+   * below it, and taking the next date would attribute one field's answer to
+   * another.
+   */
+  it('stops at the next labelled field', () => {
+    expect(
+      scanForDeadline('## Application deadline\n\n## Notification date\n\n1 May 2026'),
+    ).toBeNull();
+  });
+
+  it('still prefers a date on the line itself', () => {
+    expect(scanForDeadline('Deadline: 18 September 2026\n\n1 January 2030')).toBe(
+      'Deadline: 18 September 2026',
+    );
+  });
+});
