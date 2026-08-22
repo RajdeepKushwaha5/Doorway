@@ -152,7 +152,7 @@ export function DecisionStream({
       </button>
 
       {blocked ? (
-        <p className="mt-3 rounded border border-suspect/30 bg-amber-50 p-2.5 text-[12px] leading-normal text-suspect">
+        <p className="mt-3 rounded border border-neutral-300 bg-neutral-50 p-2.5 text-[12px] leading-normal text-neutral-800">
           {disabledReason}
         </p>
       ) : null}

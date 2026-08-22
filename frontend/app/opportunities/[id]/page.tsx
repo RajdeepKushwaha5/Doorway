@@ -24,17 +24,17 @@ const STATUS: Record<
 > = {
   verified: {
     label: 'Verified',
-    tone: 'border-verified/40 bg-parse-accentBg text-verified',
+    tone: 'border-emerald-500/40 bg-emerald-50 text-emerald-700 font-semibold',
     note: 'Two independent Bright Data sensors read this page and agreed on the values below.',
   },
   partially_verified: {
     label: 'Partially verified',
-    tone: 'border-suspect/40 bg-amber-50 text-suspect',
+    tone: 'border-neutral-300 bg-neutral-50 text-neutral-800',
     note: 'These values passed the checks learned for this source, but the independent witness was not consulted on this reading.',
   },
   stale: {
     label: 'Stale',
-    tone: 'border-suspect/40 bg-amber-50 text-suspect',
+    tone: 'border-neutral-300 bg-neutral-50 text-neutral-800',
     note: 'Two sensors agreed on this once, but not recently. Treat the deadline in particular as unconfirmed.',
   },
   quarantined: {
@@ -83,7 +83,7 @@ export default async function OpportunityPage({
         </nav>
 
         <header className="mt-6 border-b border-black pb-8">
-          <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-[#f06449]">
+          <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-emerald-600 font-bold">
             {opportunity.type.replace('-', ' ')} · {opportunity.provider}
           </div>
           <h1 className="mt-3 max-w-[900px] font-mondwest text-[clamp(34px,5vw,60px)] leading-[0.95] tracking-[-0.02em]">

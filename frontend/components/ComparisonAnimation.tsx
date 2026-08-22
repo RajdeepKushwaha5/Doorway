@@ -40,7 +40,7 @@ export function ComparisonAnimation() {
           {/* Browser Address Bar */}
           <div className="flex items-center gap-1.5 px-3 py-2 border-b border-gray-200 bg-gray-100/90 text-xs">
             <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+            <span className="w-2.5 h-2.5 rounded-full bg-gray-400/80" />
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
             <span className="ml-2 flex-1 truncate font-mono text-[11px] text-gray-500 bg-white border border-gray-200 rounded px-2.5 py-0.5 flex items-center gap-1.5">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
@@ -191,14 +191,14 @@ export function ComparisonAnimation() {
             </div>
 
             {/* Verdict Box */}
-            <div className="p-3 rounded-md bg-emerald-950 text-white font-mono text-[11px] space-y-1 shadow-inner">
-              <div className="text-amber-300 font-bold flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-amber-300">
+            <div className="p-3 rounded-md bg-neutral-900 border border-emerald-500/30 text-white font-mono text-[11px] space-y-1 shadow-inner">
+              <div className="text-emerald-400 font-bold flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-400">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
                 EXTRACTOR_DRIFT DISAGREEMENT
               </div>
-              <div className="text-gray-300 text-[10.5px]">
+              <div className="text-neutral-300 text-[10.5px]">
                 Rule: Extractor changed while Markdown stayed $249.00. Extractor selector drifted to deposit field.
               </div>
             </div>

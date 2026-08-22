@@ -87,11 +87,11 @@ function paletteFor(match: DoorwayMatch): Palette {
     case 'quarantined':
       return { roof: '#f3d6d4', left: '#d8908c', right: '#c2726d', edge: '#B4231F', label: 'text-blocked' };
     case 'stale':
-      return { roof: '#efe7d4', left: '#cbbc99', right: '#b6a682', edge: '#B45309', label: 'text-suspect' };
+      return { roof: '#e5e7eb', left: '#d1d5db', right: '#9ca3af', edge: '#4b5563', label: 'text-gray-600' };
     case 'partially_verified':
-      return { roof: '#e7efe6', left: '#a9c4a8', right: '#8fae8e', edge: '#4a7a4a', label: 'text-suspect' };
+      return { roof: '#e7efe6', left: '#a9c4a8', right: '#8fae8e', edge: '#16794a', label: 'text-emerald-700' };
     default:
-      return { roof: '#e2efe7', left: '#9dc7ac', right: '#7cae8f', edge: '#16794A', label: 'text-verified' };
+      return { roof: '#d1fae5', left: '#6ee7b7', right: '#34d399', edge: '#10b981', label: 'text-emerald-600' };
   }
 }
 
@@ -367,7 +367,7 @@ function SelectedPanel({ match }: { match: DoorwayMatch }) {
             ))}
           </ul>
           {match.unknownRequirements.length > 0 ? (
-            <p className="mt-3 border border-suspect/40 bg-amber-50 p-2 font-mono text-[11.5px] leading-relaxed text-suspect">
+            <p className="mt-3 border border-neutral-300 bg-neutral-50 p-2 font-mono text-[11.5px] leading-relaxed text-neutral-800">
               Could not determine: {match.unknownRequirements.join(', ')}. Doorway says unknown
               rather than assuming you qualify.
             </p>

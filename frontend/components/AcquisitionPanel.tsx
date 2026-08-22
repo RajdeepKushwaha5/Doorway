@@ -243,7 +243,7 @@ export function AcquisitionPanel({ incident }: { incident: Incident }) {
         className={`mt-5 border p-5 ${
           alignment.aligned
             ? 'border-verified/30 bg-parse-accentBg'
-            : 'border-suspect/40 bg-amber-50'
+            : 'border-neutral-300 bg-neutral-50'
         }`}
       >
         <p className="eyebrow">{alignment.aligned ? 'Conditions matched' : 'Conditions differed'}</p>

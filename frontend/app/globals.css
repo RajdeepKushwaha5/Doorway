@@ -299,7 +299,9 @@
   left: -5px;
   width: 10px;
   height: 10px;
-  background: #f06449;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
 }
 
 .doorway-orbit-one {
@@ -329,7 +331,7 @@
 }
 
 .doorway-input:focus {
-  border-bottom-color: #f06449;
+  border-bottom-color: #10b981;
 }
 
 .doorway-city {
@@ -347,7 +349,7 @@
 
 .doorway-building:hover {
   transform: translate3d(0, -7px, 0);
-  box-shadow: 12px 16px 0 rgba(240, 100, 73, 0.45);
+  box-shadow: 12px 16px 0 rgba(16, 185, 129, 0.35);
 }
 
 .doorway-building-roof {

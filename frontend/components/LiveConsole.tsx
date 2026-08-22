@@ -205,11 +205,9 @@ export function LiveConsole({
           </p>
 
           {locked ? (
-            <p className="mt-4 rounded-lg border border-suspect/30 bg-amber-50 p-3 text-[12px] leading-relaxed text-suspect">
-              This dashboard cannot switch the fixture, because{' '}
-              <code className="font-semibold">DRIFTMART_ADMIN_TOKEN</code> is not set on the server
-              that renders it. The buttons below are disabled rather than left looking live. The
-              collector can still be run against whatever the page is serving now.
+            <p className="mt-4 rounded-lg border border-neutral-300 bg-neutral-50 p-3 text-[12px] leading-relaxed text-neutral-800">
+              The fixture token is not set, so this button cannot switch the fixture. Run the
+              collector against whatever DriftMart is currently serving.
             </p>
           ) : null}
 

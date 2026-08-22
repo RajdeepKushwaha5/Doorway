@@ -77,7 +77,7 @@ export default async function VerifiedPage() {
         </nav>
 
         <header className="mt-6 border-b border-black pb-8">
-          <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-[#f06449]">
+          <div className="font-neuebit text-[11px] uppercase tracking-[0.18em] text-emerald-600 font-bold">
             The verified feed
           </div>
           <h1 className="mt-3 max-w-[900px] font-mondwest text-[clamp(34px,5vw,60px)] leading-[0.95] tracking-[-0.02em]">
@@ -92,7 +92,7 @@ export default async function VerifiedPage() {
         </header>
 
         {offline ? (
-          <p className="mt-10 border border-suspect/40 bg-amber-50 p-5 font-mono text-[13px] leading-relaxed text-suspect">
+          <p className="mt-10 border border-neutral-300 bg-neutral-50 p-5 font-mono text-[13px] leading-relaxed text-neutral-800">
             The Doorway API could not be reached, so this page cannot say what is currently served.
             It shows nothing rather than a cached guess.
           </p>
