@@ -1,3 +1,4 @@
+import { BrightDataBalanceError } from '../brightdata/index.js';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { BrightDataClient } from '../brightdata/index.js';
@@ -1173,7 +1174,11 @@ export function buildRouter(deps: ApiDeps): Router {
           live: false,
           searched: 0,
           liveMessage:
-            'The live search could not be completed, so this shows what was already known rather than nothing.',
+            error instanceof BrightDataBalanceError
+              ? 'The live search did not run because the Bright Data account has no available balance. ' +
+                'This shows what was already verified rather than nothing, and none of it is guessed. ' +
+                'Live results resume the moment the account is funded.'
+              : 'The live search could not be completed, so this shows what was already known rather than nothing.',
         });
       })
       .finally(() => {

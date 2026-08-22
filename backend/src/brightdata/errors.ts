@@ -46,7 +46,28 @@ export class BrightDataTimeoutError extends BrightDataError {
   }
 }
 
-/** A 4xx that is not auth or rate limiting. The request itself is wrong. */
+/**
+ * The account cannot pay for the request.
+ *
+ * Previously this arrived as a plain 4xx, whose class comment says the request
+ * itself is wrong. That is a confident, well-formed, wrong diagnosis of the
+ * kind this project exists to catch: it sends somebody hunting through their
+ * own code for a fault in a payload that was perfectly correct, while the
+ * actual cause is a balance of zero and no amount of debugging will move it.
+ *
+ * Separated so the product can say the true thing, and so a run that failed
+ * for want of funds is never confused with a run that found nothing.
+ */
+export class BrightDataBalanceError extends BrightDataError {
+  readonly status: number;
+
+  constructor(message: string, status: number, cause?: unknown) {
+    super(message, { retryable: false, ...(cause === undefined ? {} : { cause }) });
+    this.status = status;
+  }
+}
+
+/** A 4xx that is not auth, rate limiting or an empty balance. Payload is wrong. */
 export class BrightDataRequestError extends BrightDataError {
   readonly status: number;
   readonly body: string;

@@ -1,5 +1,6 @@
 export {
   BrightDataAuthError,
+  BrightDataBalanceError,
   BrightDataCliError,
   BrightDataError,
   BrightDataRateLimitError,

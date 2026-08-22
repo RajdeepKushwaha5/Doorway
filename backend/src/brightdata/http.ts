@@ -1,5 +1,6 @@
 import {
   BrightDataAuthError,
+  BrightDataBalanceError,
   BrightDataRateLimitError,
   BrightDataRequestError,
   BrightDataServerError,
@@ -90,6 +91,13 @@ function parseRetryAfter(header: string | null): number | null {
   return null;
 }
 
+/** Ways Bright Data says the account cannot pay, across its several APIs. */
+function mentionsBalance(body: string): boolean {
+  return /insufficient\s+(balance|funds|credit)|no\s+available\s+(funds|balance)|not\s+enough\s+(balance|funds)|payment\s+required|billing\s+issue|account\s+is\s+suspended/i.test(
+    body,
+  );
+}
+
 /** Map an HTTP response to the appropriate typed error. */
 async function errorForResponse(response: Response): Promise<BrightDataError> {
   const body = await response.text().catch(() => '');
@@ -104,6 +112,21 @@ async function errorForResponse(response: Response): Promise<BrightDataError> {
     return new BrightDataRateLimitError(
       `Bright Data rate limited the request: ${snippet}`,
       parseRetryAfter(response.headers.get('retry-after')),
+    );
+  }
+  /*
+   * An empty account, said as one.
+   *
+   * Bright Data signals this as 402, and also as an ordinary 4xx whose body
+   * names the balance, so both are matched. Getting this wrong is expensive in
+   * the only currency that matters near a deadline: the message sent somebody
+   * to read their own request payload, which was correct.
+   */
+  if (response.status === 402 || mentionsBalance(snippet)) {
+    return new BrightDataBalanceError(
+      'Bright Data will not run this request because the account has no available balance ' +
+        `(HTTP ${response.status}): ${snippet}`,
+      response.status,
     );
   }
   if (response.status >= 500) {
