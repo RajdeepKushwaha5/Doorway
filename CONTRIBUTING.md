@@ -24,6 +24,31 @@ npm run dev    --workspace frontend     # dashboard on :3000
 npm run dev    --workspace driftmart    # the controlled target on :3002
 ```
 
+## What the scripts do
+
+`npm run` prints twenty of these and explains none of them. The line that
+matters is the last column: anything marked **live** reads real pages through
+Bright Data and draws on the same 5,000-a-month allowance both sensors share.
+
+| Command | What it does | Cost |
+|---|---|---|
+| `npm run check` | Typecheck, lint, then the tests. The gate CI runs | free |
+| `npm test` | 655 tests against a scripted Bright Data client | free |
+| `npm run seed` | Put a realistic incident in the local store, so a fresh clone shows something other than three empty states | free |
+| `npm run doorway:seed` | Same, for the opportunity world: a city rather than an empty field | free |
+| `npm run blindspot:proof` | Replay the unwatched-field incident offline. Every value is computed by the functions production uses | free |
+| `npm run mcp` | Start the MCP server, so an agent can drive the system | free |
+| `npm run notice` | The CLI, against the local file store. Useful in development, wrong for a demo: the deployed dashboard has a different store | free |
+| `npm run live` | The same operations over HTTP against the deployed API, so the terminal and the dashboard agree | **live** |
+| `npm run prove` | Demonstrate the two-sensor rule end to end against the fixture | **live** |
+| `npm run blindspot` | Demonstrate why that rule has to exist: a corrupted row passing every conventional check | **live** |
+| `npm run benchmark` | Score each method on telling a broken extractor from a changed world. Writes `evals/dds.json` | **live** |
+| `npm run phase0` | The candidate-execution matrix. Answers whether an unapproved Self-Healing candidate can be run before promoting it | **live** |
+| `npm run demo:reset` | Put the fixture back to baseline and re-observe everything | **live** |
+
+Every one of these files opens with a comment saying why it exists. Read that
+before running the live ones.
+
 ## The rules that actually matter here
 
 This project's whole claim is that it does not publish what it cannot defend.

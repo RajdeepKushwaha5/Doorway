@@ -26,6 +26,11 @@ jobs:
       - name: Typecheck and build all workspaces
         run: npm run build
 
+      # Errors only. The config is deliberately small, so anything it reports
+      # is something a reader would have tripped over.
+      - name: Lint
+        run: npm run lint -- --max-warnings 0
+
       # No network, no Bright Data credentials, no credits spent. The whole
       # detection-to-blocked-repair loop runs against a scripted client.
       - name: Test
