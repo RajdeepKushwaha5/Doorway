@@ -46,3 +46,44 @@ describe('real opportunity titles', () => {
     });
   }
 });
+
+describe('categories written as though they were one opportunity', () => {
+  /*
+   * From a live crawl, with their URLs:
+   *   "Scholarships in USA"        yocket.com/scholarships/scholarships-for-usa
+   *   "Scholarships in UK"         yocket.com/scholarships/scholarships-for-united-kingdom
+   *   "Additional Funding Options" onlinedegrees.sandiego.edu/tuition-financial-aid/...
+   *
+   * A plural kind followed by a place is a listing, and the deadline it yields
+   * belongs to whichever entry happened to be first.
+   */
+  for (const listing of [
+    'Scholarships in USA',
+    'Scholarships in UK',
+    'Scholarships for United Kingdom',
+    'Fellowships in Germany',
+    'Internships for India',
+    'Additional Funding Options',
+    'Funding Options',
+    'Financial Aid Information',
+  ]) {
+    it(`rejects ${JSON.stringify(listing)}`, () => {
+      expect(looksLikePageFurniture(listing)).toBe(true);
+    });
+  }
+
+  /*
+   * The bound is four words, deliberately. Dropping a real opportunity is
+   * worse than keeping a listing, so anything longer keeps its name.
+   */
+  for (const real of [
+    'Scholarships for Women in STEM Research',
+    'Chevening Scholarships',
+    'Commonwealth Shared Scholarships for Developing Countries',
+    'Fellowships in Artificial Intelligence at Example University',
+  ]) {
+    it(`keeps ${JSON.stringify(real)}`, () => {
+      expect(looksLikePageFurniture(real)).toBe(false);
+    });
+  }
+});

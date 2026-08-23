@@ -234,6 +234,29 @@ const CHROME = [
   /^\s*(online|on-?campus|full-?time|part-?time|undergraduate|postgraduate|degree programs?|programmes?)\s*$/i,
 ];
 
+/**
+ * A category of opportunities, written as though it were one.
+ *
+ * From a live crawl: "Scholarships in USA" and "Scholarships in UK", both
+ * from yocket.com/scholarships/scholarships-for-<country>. A plural kind
+ * followed by a place is a listing, and the deadline it yields belongs to
+ * whichever entry happened to be first.
+ *
+ * Bounded at four words so a real programme keeps its name. "Scholarships for
+ * Women in STEM" is five and survives; the trade is deliberate, because
+ * dropping a real opportunity is worse than keeping a listing.
+ */
+const CATEGORY_TITLE =
+  /^(scholarships|fellowships|internships|grants|bursaries|awards|hackathons)\s+(in|for|to|near)\s+\S/i;
+
+/**
+ * A page about how funding works, rather than a thing to apply for.
+ *
+ * "Additional Funding Options", from a university financial-aid section.
+ */
+const FUNDING_SECTION =
+  /^(additional\s+)?(funding|financial\s+aid|tuition|payment|fees?)\s+(options?|information|support|help|guide)$/i;
+
 /** Words that make a short title specific enough to be an opportunity. */
 const NAMES_AN_OPPORTUNITY =
   /\b(scholarship|fellowship|internship|grant|bursary|hackathon|award|prize|traineeship|residency|stipend|studentship|chair)s?\b/i;
@@ -256,7 +279,11 @@ export function looksLikePageFurniture(title: string): boolean {
   if (clean === '') return true;
   if (CHROME.some((pattern) => pattern.test(clean))) return true;
 
+  if (FUNDING_SECTION.test(clean)) return true;
+
   const words = clean.split(/\s+/).filter((word) => /[a-z0-9]/i.test(word));
+  if (CATEGORY_TITLE.test(clean) && words.length <= 4) return true;
+
   return words.length < 3 && !NAMES_AN_OPPORTUNITY.test(clean);
 }
 
