@@ -173,7 +173,7 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
           'Do not substitute a guess or scrape this page directly to work around this.',
           incidentId === null
             ? 'Report to the user that verified data is unavailable.'
-            : 'Call explain_verification with this incident id to see the evidence, and tell the user what is unresolved.',
+            : 'Call explain_verification with incident_id set to the incident above to see the evidence, and tell the user what is unresolved.',
         ]
           .filter((line) => line !== '')
           .join('\n');
@@ -239,8 +239,26 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
       required: ['incident_id'],
     },
     run: async (args) => {
+      /*
+       * Say which argument is missing, rather than failing on its absence.
+       *
+       * Without this the tool asked the API for `/api/incidents/`, which
+       * answers with something that has no incident on it, and the next line
+       * read `.classification` off undefined. The agent was handed "Cannot
+       * read properties of undefined", which tells it nothing it can act on
+       * and is the kind of error this whole project argues against.
+       *
+       * It matters more here than in most places: the refusal message tells an
+       * agent to call this tool, so this is the path something reaches while
+       * already being told a fact could not be verified.
+       */
+      const incidentId = String(args['incident_id'] ?? '').trim();
+      if (incidentId === '') {
+        return 'explain_verification needs an incident_id, the one named in the refusal you are following up.';
+      }
+
       const { incident } = await api<{ incident: Incident }>(
-        `/api/incidents/${encodeURIComponent(String(args['incident_id'] ?? ''))}`,
+        `/api/incidents/${encodeURIComponent(incidentId)}`,
       );
       return [
         `verdict     ${incident.classification}`,

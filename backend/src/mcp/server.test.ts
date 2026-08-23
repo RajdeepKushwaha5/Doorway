@@ -350,3 +350,19 @@ describe('operating Bright Data through the gate', () => {
     expect(text).toContain('auto_save');
   });
 });
+
+describe('a tool called without its argument', () => {
+  /*
+   * The refusal message tells an agent to call explain_verification, so this
+   * is the path something reaches while already being told a fact could not be
+   * verified. Without the guard it asked for `/api/incidents/`, read
+   * `.classification` off undefined, and handed the agent "Cannot read
+   * properties of undefined", which is nothing it can act on.
+   */
+  it('names the argument it needs instead of failing on its absence', async () => {
+    const api = reader({});
+    const { text } = await call(api, 'explain_verification', {});
+    expect(text).toContain('needs an incident_id');
+    expect(text).not.toContain('Cannot read properties');
+  });
+});
