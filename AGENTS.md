@@ -55,7 +55,7 @@ Read-only by default. Set `NOTICE_ADMIN_TOKEN` and three more tools appear:
 |---|---|
 | `observe_source` | Run a source now through Scraper Studio, return the verdict and evidence |
 | `repair_source` | Drive Self-Healing with the failing page as evidence, then replay the candidate |
-| `promote_repair` | Ship a repair — **refuses unless it passed the gate** |
+| `promote_repair` | Ship a repair. **Refuses unless it passed the gate** |
 
 Without the token those three are not registered at all, rather than registered
 and failing. A tool you cannot see is a tool you cannot decide to try.
@@ -110,7 +110,8 @@ Detection lives in `backend/src/contracts`, the independent sensor in `backend/s
 
 ## Conventions
 
-- Run `npm test` before proposing changes. 220 tests, no network needed.
+- Run `npm run check` before proposing changes: typecheck, lint, then 655
+  tests. No network needed.
 - Invariants are user-declared facts and may hard-fail a run. Learned statistics may only warn. Do not promote a statistical signal to a hard failure.
 - `unknown` and `incomparable` are real outcomes. Never collapse them into pass or fail.
 - No emojis and no em dashes in code, comments, UI copy or commit messages.

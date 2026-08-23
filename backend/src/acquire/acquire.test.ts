@@ -274,7 +274,7 @@ describe('tidying what the page gave us', () => {
     // says whose they are, so it stays when nothing more specific exists.
     expect(
       titleFrom('body text with no heading at all', 'Fellowships | Wadhwani School of Data ...'),
-    ).toBe('Fellowships — Wadhwani School of Data');
+    ).toBe('Fellowships · Wadhwani School of Data');
 
     // A specific name still loses the site and the ellipsis.
     expect(
@@ -326,7 +326,7 @@ describe('naming a discovered opportunity', () => {
         '# Fellowships\n\nbody',
         'Fellowships | Wadhwani School of Data Science and Artificial Intelligence',
       ),
-    ).toBe('Fellowships — Wadhwani School of Data Science and Artificial Intelligence');
+    ).toBe('Fellowships · Wadhwani School of Data Science and Artificial Intelligence');
   });
 
   it('keeps a specific heading over the search title', () => {

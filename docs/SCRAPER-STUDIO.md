@@ -71,7 +71,7 @@ collect(parse());
 ```
 
 **Then switch the fixture to `search_drift`.** The form renames the field it
-submits, `q` to `query`, and leaves the input's id alone — the ordinary shape of
+submits, `q` to `query`, and leaves the input's id alone: the ordinary shape of
 a front-end refactor.
 
 Every step still succeeds. Real run, real collector:
@@ -87,7 +87,7 @@ Every step still succeeds. Real run, real collector:
 
 The box was found. The text was typed. The button was clicked. Results
 rendered. A product parsed, with a real price, in stock. The row is complete and
-schema-valid, and it is **the wrong product** — the server never received the
+schema-valid, and it is **the wrong product**. The server never received the
 term and fell back to a featured item.
 
 #### Why nothing in the platform reports this
@@ -118,7 +118,7 @@ evidence    : "price": collector reported 79, witness read 249 from "Price: $249
 And it needed **no new detection logic**. The witness reads the canonical URL
 for the intended query; the collector reaches its answer by interacting. When
 the interaction drifts they land on different page states and the existing rule
-fires — the same rule that catches a moved price selector, applied one layer
+fires: the same rule that catches a moved price selector, applied one layer
 earlier, in the automation rather than in the markup.
 
 ### The plain-language field description is the contract
@@ -193,7 +193,7 @@ cannot fix the failing page without breaking a working one is not a fix.
 That refusal is returned as an **outcome, not an error**, on purpose. An agent
 handed an error retries; an agent handed a reason stops. And the last line
 exists because the failure mode of a capable agent is to route around the
-guard — so the guard says, in words, not to.
+guard, so the guard says, in words, not to.
 
 Also deliberate: `observe_source` tells an agent **not** to repair a
 `genuine_source_change`. The most expensive thing an autonomous repair loop can

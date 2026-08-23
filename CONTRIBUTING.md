@@ -10,7 +10,7 @@ correct and be wrong.
 npm install
 cp .env.example .env      # only BRIGHTDATA_API_KEY is required
 npm run build
-npm test                  # 595 tests, no network and no credentials needed
+npm test                  # 655 tests, no network and no credentials needed
 ```
 
 The whole detection-to-blocked-repair loop runs offline against a scripted
@@ -79,32 +79,50 @@ withheld. Do not spend those three on decoration.
 ## Before you open a pull request
 
 ```bash
-npm run build        # typechecks every workspace
-npm test
+npm run check
 ```
 
-CI runs both, plus a check that no environment file or key-shaped string is
-committed. If you added a claim to the README, say which command reproduces it.
+That is typecheck, then lint, then the tests, in that order, and it is the
+same order CI runs them. CI adds a check that no environment file or
+key-shaped string is committed. If you added a claim to the README, say which
+command reproduces it.
 
 ## Scope
 
 Bright Data builds and repairs the collector. This project decides whether a
 repair is needed and proves it worked. A change that moves us toward
-re-implementing extraction, proxying or unblocking is out of scope — that is the
-platform's job and it does it better.
+re-implementing extraction, proxying or unblocking is out of scope. That is
+the platform's job and it does it better.
 
 ## On linting
 
-There is no ESLint configuration in this repository, and the `lint` script has
-been removed rather than left pointing at `next lint`, which had no config to
-read and launched an interactive setup wizard instead of checking anything. A
-script that claims to lint and does not is worse than no script, because CI and
-contributors both believe it.
+`npm run lint` is real. For a long time it was not: the script pointed at
+`next lint`, which had no config to read and launched an interactive setup
+wizard instead of checking anything, so it was deleted rather than left in
+place. A script that claims to lint and does not is worse than no script,
+because CI and contributors both believe it.
 
-The quality gates that do run are TypeScript in strict mode across all three
-workspaces, and the test suite:
+The configuration in `eslint.config.mjs` is chosen rather than inherited, and
+explains itself at each decision. Two things to know before you add a rule:
 
-```bash
-npm run typecheck
-npm test
-```
+**Formatting is not in here.** Arguing about semicolons in review costs more
+attention than it saves, and TypeScript already refuses the errors that break
+things.
+
+**The `unsafe-*` family is off on purpose.** This codebase reads JSON from
+Bright Data, from its own store and from the browser, and narrows every one of
+those from `unknown` at the boundary. That is the careful version, and it is
+exactly what those rules fire on. Leaving them on produced a thousand warnings
+against the pattern we want, which teaches a reader to ignore the linter.
+
+What is left is the set that catches a reader out: a promise nobody waited
+for, a condition that can never be true, an `any` that quietly turns off the
+type system a few files away from where it was written.
+
+A `no-unnecessary-condition` warning usually means one of two things, and they
+want opposite fixes. Either the guard really is dead, in which case delete it
+and let the missing branch become a compile error; or the type is claiming
+more than the data can keep, in which case fix the type. Only when the
+compiler is genuinely wrong about the runtime, as it is about `JSON.stringify`
+returning `undefined`, does a disable directive belong there, and it names the
+reason on the line above.

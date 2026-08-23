@@ -229,7 +229,7 @@ Requires **Node 22+**. No account needed for the tests.
 git clone https://github.com/RajdeepKushwaha5/Doorway.git
 cd Doorway
 npm install
-npm test                     # 655 tests, offline
+npm run check                # typecheck, lint, then 655 tests. All offline
 ```
 
 To run the whole thing locally against Bright Data:

@@ -24,7 +24,7 @@ That is the vendor stating the limitation in their own words, which is better ev
 
 **4. Self-Healing progress signals the gate through `step`, not `status`.** The live payload is `{id, step, completed_steps, status, diff, success, preview_result}`. At the gate it reads `step: "user_approval"` with `status: "pending_answer"`. Matching on `status` alone reports a waiting job as pending and polls it to timeout.
 
-**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true` — and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
+**5. `resume_automation_job` needs `auto_save: true`, or approval succeeds without promoting anything.** The endpoint accepts `{"message": true}`, returns HTTP 200, advances the job to `done` and reports `success: true`, and leaves production running the previous template. `auto_save` defaults to false, and it is the parameter that actually persists the approved candidate.
 
 Reproduced twice before the cause was known. On collector `c_mstkc1rkr8mit6wut`, job `ia_msvikpe02i5a3id7b2` reached `step: user_approval` with a `preview_result` showing the repair working: `{"price": {"value": 249, "currency": "USD"}}`. Approval returned HTTP 200 and the job completed `done`. A fresh trigger 90 seconds later (`j_msvj08aq2ac0smaxj2`) returned `price: 0` again. A second run on 2026-08-17 (job `ia_mswmuyq11k2h1grrzj`) was sharper still, because the shapes disagreed: the approved candidate carried `title`, `availability`, `upc` and `rating`, while production returned a row carrying `symbol` and none of those four. Production was running a different template from the one that had just been approved.
 
@@ -38,7 +38,7 @@ Fixed in `backend/src/brightdata/client.ts`: acceptance now sends `{"message": t
 `c_mszt6dg019q6p244j6`, `bdata scraper heal` produced a candidate whose
 `preview_result` read `product_page_url: /search?q=Nova`. `bdata scraper approve`
 returned `status: done` and finished on `completed_steps: [..., step_advance,
-user_approval]`. Production still returned `/product/headphones` — the old
+user_approval]`. Production still returned `/product/headphones`, the old
 template. Approving the next candidate with `auto_save: true` finished on
 `[..., user_approval, save_new_template]`, and production changed on the next run.
 
@@ -56,15 +56,15 @@ promotes nothing. Every signal available to the caller is identical whether or
 not the template shipped; the only way to tell is to read `completed_steps` for
 `save_new_template`, or to go and look at production. That is a footgun rather
 than a bug, and it is one people fall into: in the organisers' own launch
-webinar, Bright Data's product marketer diagnosed a participant with exactly it
-— *"It might have been in a dev version. It might have not saved it to
+webinar, Bright Data's product marketer diagnosed a participant with exactly
+it: *"It might have been in a dev version. It might have not saved it to
 production. That could be the reason."*
 
-What survives all of it, and it is the part that matters: **a call reported complete success for an operation that changed nothing in production.** Every signal a caller has access to — HTTP 200, `success: true`, `status: done` — was green while the collector kept serving the wrong value. The engineer's own closing advice is to distrust exactly that: *"Check the job's final status — confirm it went to done, not just that the approve call returned `success: true`,"* and then *"trigger the collector and verify the fields now match the approved preview."*
+What survives all of it, and it is the part that matters: **a call reported complete success for an operation that changed nothing in production.** Every signal a caller has access to, HTTP 200 and `success: true` and `status: done`, was green while the collector kept serving the wrong value. The engineer's own closing advice is to distrust exactly that: *"Check the job's final status — confirm it went to done, not just that the approve call returned `success: true`,"* and then *"trigger the collector and verify the fields now match the approved preview."*
 
 That second sentence is post-promotion verification, described by Bright Data, and it is what NOTICE already does. It is also what caught this: the gate re-checked production, found the old value, and refused to mark the incident resolved. The system was right and the operator was wrong, which is the outcome a safety layer exists to produce.
 
-Done often doesn't mean successful — and here the reason was a defaulted parameter rather than anything broken. A pipeline that trusted `success: true` would have marked this collector repaired and resumed publishing zero for a fortnight.
+Done often doesn't mean successful, and here the reason was a defaulted parameter rather than anything broken. A pipeline that trusted `success: true` would have marked this collector repaired and resumed publishing zero for a fortnight.
 
 **6. A screenshot response is labelled `Content-Type: application/json`.** `POST /request` with `data_format: screenshot` returns PNG bytes, verified by the magic number `89 50 4e 47`, under a JSON content type. A client that branches on the header will try to parse an image, and one that trusts it cannot tell a successful capture from an error payload. NOTICE checks the magic number instead.
 
@@ -77,7 +77,7 @@ policy_20140 Residential Failed (bad_endpoint): Requested site is not available
 for immediate residential (no KYC) access mode in accordance with robots.txt.
 ```
 
-Recorded because it is worth knowing before you plan a target list, and because it is the platform behaving well rather than badly: the refusal is explicit, it cites `robots.txt`, and it points at the form that lifts it. Bright Data's own product marketer described the same policy in the launch webinar — *"we purposefully block by default... we want to understand what is the purpose and then enable it to your account."* We did not pursue it, so the fleet stays on long-tail funding pages that permit it and a fixture we own.
+Recorded because it is worth knowing before you plan a target list, and because it is the platform behaving well rather than badly: the refusal is explicit, it cites `robots.txt`, and it points at the form that lifts it. Bright Data's own product marketer described the same policy in the launch webinar: *"we purposefully block by default... we want to understand what is the purpose and then enable it to your account."* We did not pursue it, so the fleet stays on long-tail funding pages that permit it and a fixture we own.
 
 **8. An empty result is a completed run, not a pending one.** Bright Data's own Python boilerplate treats a non-empty array as the completion signal, so a legitimate zero-row result reads as "still building" and times out.
 
@@ -93,7 +93,7 @@ committed in [`docs/evidence/`](docs/evidence/) rather than retyped here.
 
 `npm run blindspot -- c_mt36mo6tj37dmjgqh` triggers the real Scraper Studio
 collector, reads the row back from `/dca/dataset`, and runs nine genuine checks
-against it — a real Zod schema, a range check with a lower bound, type, null,
+against it: a real Zod schema, a range check with a lower bound, type, null,
 presence, retry. Verbatim from
 [`docs/evidence/blindspot.txt`](docs/evidence/blindspot.txt):
 
@@ -183,7 +183,7 @@ That is the distinction this whole project turns on:
 They are not competitors. Relocation is the better answer to a rename, and
 nothing here relocates anything. But no amount of structural cleverness can tell
 you that `$25` is a deposit, because the page does not encode that structurally
-— it encodes it in the words next to it. Which is exactly what the second sensor
+It encodes it in the words next to it, which is exactly what the second sensor
 reads.
 
 Three things in their source say the same thing more precisely than we can.

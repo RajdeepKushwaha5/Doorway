@@ -5,8 +5,8 @@ That is the easy case, and it is where most scrapers stop.
 
 Real catalogues are not like that. The value only appears after you type
 something and press a button, so a collector has to **operate** the page.
-Scraper Studio exposes browser functions for exactly this — `type`, `click`,
-`wait`, `select`, `scroll_to`, `tag_response` — and a single `navigate` never
+Scraper Studio exposes browser functions for exactly this: `type`, `click`,
+`wait`, `select`, `scroll_to` and `tag_response`. A single `navigate` never
 touches any of them.
 
 This collector uses them against
@@ -52,7 +52,7 @@ A multi-step interaction has more ways to fail **quietly** than a single fetch
 does, and the worst of them looks like this.
 
 Switch the fixture to `search_drift`. The search form renames the field it
-submits, from `q` to `query`, and leaves the input's id alone — the ordinary
+submits, from `q` to `query`, and leaves the input's id alone: the ordinary
 shape of a front-end refactor.
 
 Now every step of the interaction still succeeds:
@@ -89,4 +89,4 @@ different page states and the existing rule fires: the sensors disagree, so the
 extractor drifted rather than the world changing.
 
 That is the same rule that catches a moved price selector, applied to a failure
-that happens one layer earlier — in the automation rather than in the markup.
+that happens one layer earlier, in the automation rather than in the markup.

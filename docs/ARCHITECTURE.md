@@ -101,7 +101,7 @@ See `witness/extract.ts`.
 
 **Production is re-verified after promotion, not trusted.** An approval can
 return HTTP 200, report `success: true` and advance the job to `done` while
-production still serves the old template — in our case because
+production still serves the old template. In our case that was because
 `resume_automation_job` needs `auto_save: true`, which defaults to false and
 which we were not sending. The gate caught it by re-checking production rather
 than believing the flag, which is the whole reason that step exists.
@@ -125,7 +125,7 @@ refuse to ship on data nobody has checked.
 ## Reproducing the claims
 
 ```bash
-npm test                              # 655 tests, no network, no credentials
+npm run check                         # typecheck, lint, 655 tests. No network
 npm run benchmark                     # Drift Discrimination Score, live
 npm run blindspot -- <collector-id>   # every conventional check passes a wrong row
 npm run live -- observe-all           # one real observation per collector

@@ -310,7 +310,7 @@ describe('operating Bright Data through the gate', () => {
   /**
    * The one that matters. An agent must be able to drive a repair and must not
    * be able to ship one nobody proved, and the refusal has to read as a reason
-   * rather than an error — an agent given an error retries, an agent given a
+   * rather than an error. An agent given an error retries, an agent given a
    * reason stops.
    */
   it('refuses to promote a repair that did not pass the gate, and says why', async () => {

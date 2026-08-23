@@ -11,8 +11,8 @@ difference catches every corruption **and** fires on every legitimate price
 change, and treating the second like the first rewrites a collector that was
 working. So this scores two axes over the same six cases:
 
-- **Detection** — of the cases that *are* faults, how many did the method catch?
-- **Restraint** — of the cases that are *not* faults, how many did it leave alone?
+- **Detection.** Of the cases that *are* faults, how many did the method catch?
+- **Restraint.** Of the cases that are *not* faults, how many did it leave alone?
 
 **DDS** is how often the method reached the correct decision. Full marks on
 either axis alone caps a method at 67%.
@@ -28,8 +28,8 @@ writes [`evals/dds.json`](evals/dds.json) with every reading and verdict.*
 
 Nothing in that table is asserted. Each method is executed against the fixture
 and its verdict computed, so a row you doubt can be re-run. The conventional
-checks are deliberately generous — a real range check catches `silent_zero`,
-a real required-field check catches `missing_field` — because a strawman here
+checks are deliberately generous. A real range check catches `silent_zero`,
+and a real required-field check catches `missing_field`, because a strawman here
 would make the result worthless. They still miss the two cases that matter
 most: a price reading the refundable deposit, and a price reading a sponsored
 card, both of which are positive numbers that pass every check.
@@ -48,7 +48,7 @@ rewrite an extractor that was working perfectly.
 | `missing_field` | absent | absent | `inconclusive`, withheld |
 
 The last row is worth reading twice. Availability vanished from the page, so
-**both** sensors are blind. NOTICE does not guess in either direction — it
+**both** sensors are blind. NOTICE does not guess in either direction. It
 withholds and says why. `pagination_collapse` is deliberately excluded: its
 fault is a repeated row rather than a wrong field value, and scoring it here
 would measure something this benchmark does not test.

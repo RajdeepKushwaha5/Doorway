@@ -483,7 +483,7 @@ export function titleFrom(markdown: string, fallback: string): string {
    * whose they are.
    */
   if (GENERIC_TITLE.test(cleanedSearch) && searchTitle !== cleanedSearch) {
-    return tidyTitle(searchTitle.replace(/\s+\|\s+/, ' — '));
+    return tidyTitle(searchTitle.replace(/\s+\|\s+/, ' · '));
   }
 
   return cleanedSearch === '' ? searchTitle : cleanedSearch;

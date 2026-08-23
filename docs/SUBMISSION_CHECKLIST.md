@@ -6,7 +6,7 @@ Studio, reliability and self-healing, presentation.
 
 Tick a box only when the thing is done and verified, not when it is planned.
 
-## Blocking — the submission is incomplete without these
+## Blocking: the submission is incomplete without these
 
 - [ ] **Demo video recorded and uploaded.** Script at `notice-demo-script.md`,
       timed to 3:30. Presentation is one of six criteria and the only one that
@@ -41,7 +41,7 @@ Tick a box only when the thing is done and verified, not when it is planned.
 
 - [ ] `npm run live -- mode baseline` run last, so the fixture is not left broken
 - [ ] Store reseeds from `seed-collectors.json` on a cold boot
-- [ ] Dashboard renders correctly with the API asleep — every fallback labelled
+- [ ] Dashboard renders correctly with the API asleep, every fallback labelled
       as an example rather than presented as live
 - [ ] No API key visible in any recording or screenshot
 
@@ -51,7 +51,7 @@ Every one of these was found and fixed during the build. Re-check before
 submitting, because they came back more than once.
 
 - [ ] No invented domains, collector ids, or site names anywhere in the UI
-- [ ] No speed or cost claims — verification is slower and costs two page loads
+- [ ] No speed or cost claims. Verification is slower and costs two page loads
 - [ ] No "automatic" where a human still triggers it
 - [ ] No absolute claims: no "100%", no "zero", no "never breaks"
 - [ ] Every number in the README matches what the code actually produces

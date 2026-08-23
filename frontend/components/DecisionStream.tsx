@@ -13,7 +13,7 @@ import { apiBase } from '@/lib/env';
  * answer. That hid the only genuinely interesting thing here. The verdict is
  * the least surprising part; how it was reached is the product.
  *
- * The stream is read over `EventSource`, which cannot send headers — so
+ * The stream is read over `EventSource`, which cannot send headers, so
  * starting the run (the part that spends Bright Data credits) goes through an
  * authenticated server action, and only the read-only log is fetched directly.
  */

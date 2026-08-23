@@ -160,7 +160,7 @@ export async function NoticeEnginePage() {
   );
 
   // Counted, never floored. An earlier version used Math.max(length, 3), which
-  // reported three live collectors against a fleet of two — a rounded-up number
+  // reported three live collectors against a fleet of two, a rounded-up number
   // on a page whose whole argument is that a plausible number can be wrong.
   //
   // Pages matter more than collectors here: one collector can watch many URLs,

@@ -22,12 +22,12 @@ If `BRIGHTDATA_API_KEY` is unset, every command that touches the network will fa
 
 Every incident carries one of six verdicts. Read it before doing anything.
 
-- `genuine_source_change` — the collector and the independent witness **agree**, and the value simply moved. The scraper is fine. **Do not heal.** Report the change.
-- `extractor_drift` — the witness **disagrees** with the collector. Extraction moved, the page did not. This is the case that gets repaired.
-- `explicit_failure` — an error row or an empty result. Repairable.
-- `access_anomaly` — the two sensors observed different regions, devices or variants. Retry with aligned context. Not the collector's fault.
-- `inconclusive` — evidence too weak to convict. Quarantine and escalate to a human.
-- `healthy` — nothing to do.
+- `genuine_source_change`: the collector and the independent witness **agree**, and the value simply moved. The scraper is fine. **Do not heal.** Report the change.
+- `extractor_drift`: the witness **disagrees** with the collector. Extraction moved, the page did not. This is the case that gets repaired.
+- `explicit_failure`: an error row or an empty result. Repairable.
+- `access_anomaly`: the two sensors observed different regions, devices or variants. Retry with aligned context. Not the collector's fault.
+- `inconclusive`: evidence too weak to convict. Quarantine and escalate to a human.
+- `healthy`: nothing to do.
 
 The most common mistake is healing a `genuine_source_change`. That rewrites a working collector because a price moved.
 

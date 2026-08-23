@@ -41,8 +41,8 @@ export default function VerifyPage() {
         <p className="mt-4 max-w-[68ch] font-mono text-[13.5px] leading-relaxed text-muted">
           This page re-derives that digest{' '}
           <span className="text-ivory">in your browser, with no network calls</span>. A verifier
-          that asked our server whether our own document is valid would prove nothing — the answer
-          would be exactly as trustworthy as the claim it checks.
+          that asked our server whether our own document is valid would prove nothing. The
+          answer would be exactly as trustworthy as the claim it checks.
         </p>
 
         <div className="mt-8 rounded-lg border border-surface-border bg-surface-soft/40 p-5 font-mono text-[12px] leading-relaxed text-muted">
@@ -62,7 +62,7 @@ export default function VerifyPage() {
           <p className="text-ivory">What this does and does not prove.</p>
           <p className="mt-2">
             It proves the document has not been edited since it was issued. It is not a signature,
-            so it does not prove NOTICE issued it — a forger could mint a fresh certificate with a
+            so it does not prove NOTICE issued it. A forger could mint a fresh certificate with a
             matching digest. That is the honest limit, and it is stated here rather than left for
             you to find. The claim worth checking is the one about the evidence, not about us.
           </p>

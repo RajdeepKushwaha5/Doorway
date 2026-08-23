@@ -205,8 +205,8 @@ export const MODES: Readonly<Record<RetailModeId, ModeDefinition>> = {
    * completes every step, submits a term the server ignores, and scrapes the
    * featured product instead of the one it searched for.
    *
-   * A layout fault and an interaction fault produce the same symptom — a
-   * plausible price for the wrong thing — and neither raises an error. This
+   * A layout fault and an interaction fault produce the same symptom, a
+   * plausible price for the wrong thing, and neither raises an error. This
    * mode exists so the second kind can be demonstrated too.
    */
   search_drift: {
