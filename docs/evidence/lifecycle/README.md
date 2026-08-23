@@ -51,6 +51,10 @@ nothing for the gate to replay and it did not run. That is recorded here rather
 than retried until it looked better: a chain that only shows the runs that went
 well is not evidence.
 
+Bright Data's own account of why arrived by email and is quoted in full in
+[`11_heal_declined_email.md`](11_heal_declined_email.md), alongside what the
+page actually looked like.
+
 Gate cases replayed: **0**. The record stays
 quarantined either way, which is the behaviour that matters: a repair that does
 not exist cannot promote, and neither can one that fails.
