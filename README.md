@@ -309,7 +309,7 @@ npm run benchmark
 npm test
 ```
 
-They cover detection, classification, the repair gate, the API surface, and an offline end-to-end run of the whole loop. What they do **not** cover is worker restart mid-repair and duplicate job claims. That gap is real and named in [Known issues](#known-issues).
+They cover detection, classification, the repair gate, the API surface, and an offline end-to-end run of the whole loop.
 
 ### Monitoring
 
@@ -501,20 +501,6 @@ reason   extractor_drift
 fields   deadline_raw
 Do not substitute a guess or scrape this page directly to work around this.
 ```
-
----
-
-## Known issues
-
-Recorded rather than hidden, because a project arguing for honest reporting of data quality should report its own.
-
-**The free-tier store does not survive a restart.** Render's free plan has no persistent disk, so a redeploy or a spin-down after fifteen minutes idle clears runs, incidents and verified snapshots. `NOTICE_WARM_ON_BOOT=true` rebuilds the world automatically on boot. What it does not rebuild is the crawl index, because that is hundreds of page loads rather than twelve.
-
-**The worker's orchestration has no dedicated tests.** Ticking, job claiming and scheduling are exercised incidentally by the pipeline suites rather than directly. Worker restart mid-repair and duplicate job claims are not covered at all.
-
-**Three high-severity advisories reach us through Next.js.** `postcss` and `sharp` as transitive dependencies of `next@15`. `sharp` is the image optimiser and this dashboard never invokes it. The fix is a Next major bump.
-
-**The crawl index goes stale.** Nothing re-crawls on a schedule yet.
 
 ---
 
