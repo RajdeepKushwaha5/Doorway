@@ -1077,6 +1077,9 @@ export function buildRouter(deps: ApiDeps): Router {
     })
       .then(async (result) => {
         const merged = await index.merge(result.drafts);
+        // Kept, because it is the only number that says whether this reaches
+        // past the handful of sources under continuous watch.
+        await index.recordReach(result.fetched, result.hosts);
         crawls.set(id, {
           status: 'done',
           fetched: result.fetched,

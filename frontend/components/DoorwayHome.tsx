@@ -55,7 +55,12 @@ export function DoorwayHome({
 }: {
   initialWorld?: DoorwayWorld | null;
   /** What the index holds, read on the server. Null when it cannot be reached. */
-  indexStats?: { total: number; hosts: number; withDeadline: number } | null;
+  indexStats?: {
+    total: number;
+    hosts: number;
+    withDeadline: number;
+    reach: { pagesRead: number; hostsReached: number } | null;
+  } | null;
 }) {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [interest, setInterest] = useState('Artificial intelligence');
@@ -316,6 +321,30 @@ export function DoorwayHome({
                       </strong>{' '}
                       with a stated deadline
                     </span>
+                    {/*
+                      * The answer to "does this scale past six collectors".
+                      *
+                      * The fleet is six, and that was the only number on the
+                      * page, so a reader reasonably concluded six pages was
+                      * the whole system. The crawler had always known how far
+                      * it reached and printed it to a log line nobody kept.
+                      */}
+                    {indexStats.reach === null ? null : (
+                      <>
+                        <span className="h-1 w-1 rounded-full bg-gray-300" />
+                        <span>
+                          last crawl read{' '}
+                          <strong className="text-gray-900 tabular-nums">
+                            {indexStats.reach.pagesRead}
+                          </strong>{' '}
+                          pages across{' '}
+                          <strong className="text-gray-900 tabular-nums">
+                            {indexStats.reach.hostsReached}
+                          </strong>{' '}
+                          sites
+                        </span>
+                      </>
+                    )}
                   </span>
                 )}
               </div>

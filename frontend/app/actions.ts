@@ -704,6 +704,8 @@ export async function getIndexStatsAction(): Promise<{
   total: number;
   hosts: number;
   withDeadline: number;
+  /** How far the last crawl reached, when one has finished. */
+  reach: { pagesRead: number; hostsReached: number } | null;
 } | null> {
   try {
     const response = await fetch(`${serverApiBase()}/api/crawl`, { cache: 'no-store' });
@@ -713,6 +715,7 @@ export async function getIndexStatsAction(): Promise<{
       total?: unknown;
       hosts?: unknown;
       withDeadline?: unknown;
+      reach?: { pagesRead?: unknown; hostsReached?: unknown } | null;
     };
     const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
 
@@ -720,6 +723,10 @@ export async function getIndexStatsAction(): Promise<{
       total: count(body.total),
       hosts: count(body.hosts),
       withDeadline: count(body.withDeadline),
+      reach:
+        body.reach === null || body.reach === undefined
+          ? null
+          : { pagesRead: count(body.reach.pagesRead), hostsReached: count(body.reach.hostsReached) },
     };
   } catch {
     // Unreachable is a real answer. The hero shows nothing rather than a

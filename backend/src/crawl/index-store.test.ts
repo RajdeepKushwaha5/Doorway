@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -109,5 +109,63 @@ describe('the opportunity index', () => {
     const missing = new OpportunityIndex(join(directory, 'nope', 'index.json'));
     expect(await missing.all()).toEqual([]);
     expect((await missing.stats()).total).toBe(0);
+  });
+});
+
+describe('how far the last crawl reached', () => {
+  /*
+   * The crawler printed "58 opportunities from 200 pages across 85 sites" to a
+   * log line nobody kept, so the only number the site could show was the size
+   * of the fleet, which is six. A reader reasonably concluded that six pages
+   * was the whole system.
+   */
+  let directory: string;
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'reach-'));
+  });
+
+  afterEach(async () => {
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  const at = (name = 'index.json'): string => join(directory, name);
+
+  it('is null before any crawl has finished', async () => {
+    expect((await new OpportunityIndex(at()).stats()).reach).toBeNull();
+  });
+
+  it('reports what the last crawl reached', async () => {
+    const index = new OpportunityIndex(at());
+    await index.recordReach(200, 85);
+    const { reach } = await index.stats();
+    expect(reach?.pagesRead).toBe(200);
+    expect(reach?.hostsReached).toBe(85);
+  });
+
+  it('survives a reload, so the number is not lost with the process', async () => {
+    await new OpportunityIndex(at()).recordReach(200, 85);
+    expect((await new OpportunityIndex(at()).stats()).reach?.hostsReached).toBe(85);
+  });
+
+  it('still loads an index written before reach existed', async () => {
+    // The file used to be a bare array. One written then must not be a
+    // startup failure now.
+    const path = at('legacy.json');
+    await writeFile(
+      path,
+      JSON.stringify([
+        {
+          sourceUrl: 'https://example.test/fellowship',
+          host: 'example.test',
+          title: 'A Fellowship',
+          lastSeenAt: new Date().toISOString(),
+        },
+      ]),
+      'utf8',
+    );
+    const stats = await new OpportunityIndex(path).stats();
+    expect(stats.total).toBe(1);
+    expect(stats.reach).toBeNull();
   });
 });

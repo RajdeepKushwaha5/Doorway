@@ -39,6 +39,21 @@ export interface IndexStats {
   withDeadline: number;
   withFunding: number;
   updatedAt: string | null;
+  /**
+   * How far the last crawl actually reached.
+   *
+   * The crawler has always known this and always thrown it away: it printed
+   * "58 opportunities from 200 pages across 85 sites" to a log line nobody
+   * kept. So the only number on the site was the size of the fleet, which is
+   * six, and a reader reasonably concluded that six pages was the whole
+   * system.
+   *
+   * The reach is the answer to whether this scales, and it was invisible.
+   * Reported per crawl rather than as a lifetime total, because a lifetime
+   * total on a host with no persistent disk is a number that resets and is
+   * therefore a claim nobody can check.
+   */
+  reach: { pagesRead: number; hostsReached: number; at: string } | null;
 }
 
 /**
@@ -56,6 +71,7 @@ export class OpportunityIndex {
   readonly #path: string;
   #records = new Map<string, IndexedOpportunity>();
   #loaded = false;
+  #reach: IndexStats['reach'] = null;
   #writing: Promise<void> = Promise.resolve();
 
   constructor(path?: string) {
@@ -67,9 +83,24 @@ export class OpportunityIndex {
     try {
       const raw = await readFile(this.#path, 'utf8');
       const parsed: unknown = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        for (const entry of parsed as IndexedOpportunity[]) {
+      /*
+       * Two shapes, because the file used to be a bare array.
+       *
+       * An index written before reach was recorded still loads, and loses
+       * nothing but a number it never had.
+       */
+      const entries: unknown = Array.isArray(parsed)
+        ? parsed
+        : (parsed as { records?: unknown } | null)?.records;
+      if (Array.isArray(entries)) {
+        for (const entry of entries as IndexedOpportunity[]) {
           if (typeof entry?.sourceUrl === 'string') this.#records.set(identityOf(entry), entry);
+        }
+      }
+      if (!Array.isArray(parsed)) {
+        const stored = (parsed as { reach?: unknown } | null)?.reach;
+        if (stored !== null && typeof stored === 'object') {
+          this.#reach = stored as IndexStats['reach'];
         }
       }
     } catch {
@@ -87,7 +118,7 @@ export class OpportunityIndex {
    * is atomic on every filesystem this runs on.
    */
   async #persist(): Promise<void> {
-    const snapshot = [...this.#records.values()];
+    const snapshot = { records: [...this.#records.values()], reach: this.#reach };
     this.#writing = this.#writing.then(async () => {
       await mkdir(dirname(this.#path), { recursive: true });
       const temporary = `${this.#path}.${String(process.pid)}.tmp`;
@@ -200,7 +231,21 @@ export class OpportunityIndex {
         records.length === 0
           ? null
           : records.reduce((latest, record) => (record.lastSeenAt > latest ? record.lastSeenAt : latest), ''),
+      reach: this.#reach,
     };
+  }
+
+  /**
+   * Record how far a finished crawl reached.
+   *
+   * Kept because it is the only number that answers whether this scales past
+   * the handful of collectors under continuous watch, and the crawler was
+   * printing it and discarding it.
+   */
+  async recordReach(pagesRead: number, hostsReached: number): Promise<void> {
+    await this.#load();
+    this.#reach = { pagesRead, hostsReached, at: new Date().toISOString() };
+    await this.#persist();
   }
 }
 
