@@ -9,6 +9,13 @@ A scraper that breaks loudly is easy to notice. The one that matters keeps worki
 
 Built for **Into the Scrape-Verse** on Bright Data Scraper Studio, Web Unlocker and the `bdata` CLI.
 
+![Doorway searching the live web and labelling every result with how well it is known](docs/media/doorway-demo.gif)
+
+*A real run against the deployed site, at double speed. The form goes out to the
+live web, opens pages it has never seen, and every card comes back carrying how
+well that fact is known. The minute of honest waiting in the middle is shown as
+a time lapse; nothing else is altered.*
+
 ---
 
 ## The problem
