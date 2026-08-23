@@ -1,0 +1,202 @@
+Observing Doorway Lab, AI Research Fellowship. A real collector run takes a while.
+{
+  "run": {
+    "id": "194d4b5f-f569-44dc-9a95-f75f78dcdc38",
+    "collectorId": "7c5ddf18-83b3-46ff-953f-f680130e6690",
+    "brightDataSnapshotId": "j_mt6o840jadx9dh5u5",
+    "targetUrls": [
+      "https://doorway-lab.onrender.com/opportunity/ai-fellowship"
+    ],
+    "version": "production",
+    "rows": [
+      {
+        "title": "Open AI Research Fellowship",
+        "provider": "Doorway Research Foundation (controlled fixture)",
+        "opportunity_type": "fellowship",
+        "summary": "A controlled, fully funded research fellowship for undergraduate students interested in trustworthy artificial intelligence.",
+        "eligibility": [
+          "Undergraduate students interested in artificial intelligence"
+        ],
+        "funding_level": "Fully funded",
+        "funding_coverage": [],
+        "deadline": "2026-09-18",
+        "deadline_raw": "18 September 2026",
+        "locations": [
+          "India"
+        ],
+        "required_documents": [
+          "CV",
+          "transcript",
+          "research statement"
+        ],
+        "application_url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply",
+        "source_url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship",
+        "input": {
+          "url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship"
+        }
+      }
+    ],
+    "checks": [
+      {
+        "checkId": "learned:insufficient_baseline",
+        "status": "unknown",
+        "severity": 0,
+        "confidence": 0,
+        "observed": 0,
+        "expected": "3 or more baseline runs",
+        "explanation": "baseline has only 0 run(s); statistical checks are disabled until it grows"
+      }
+    ],
+    "durationMs": 5722,
+    "observedAt": "2026-08-24T03:23:03.937Z"
+  },
+  "incident": {
+    "id": "68d9f2c2-5fd5-4681-8913-4cf2e278c840",
+    "collectorId": "7c5ddf18-83b3-46ff-953f-f680130e6690",
+    "runId": "194d4b5f-f569-44dc-9a95-f75f78dcdc38",
+    "classification": "healthy",
+    "confidence": 0.5,
+    "affectedFields": [],
+    "evidence": [
+      "all contract checks passed",
+      "the independent witness agrees on deadline_raw, funding_level, title, application_url"
+    ],
+    "witness": {
+      "url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship",
+      "fetchedAt": "2026-08-24T03:23:12.415Z",
+      "contentHash": "d4a9f3d3b9ab9877fdbe0d168318e0b8f32cc25f17cd7141c7e6e3388fb22443",
+      "excerpt": "Doorway Lab\n\n**Test fixture.** Doorway Lab is a controlled fault-injection target. It is not a real opportunity provider, no application is accepted, and its failures are deliberately injected rather than spontaneous.\n\nDoorway Lab / Research opportunity\n\n# Open AI Research Fellowship\n\nProvider: Doorway Research Foundation (controlled fixture)\n\nA controlled, fully funded research fellowship for undergraduate students interested in trustworthy artificial intelligence.\n\nOpportunity type\n\nfellowship\n\nFunding\n\nFully funded\n\nLocation\n\nIndia\n\nEligibility\n\nUndergraduate students interested in artificial intelligence\n\nApplication deadline\n\n18 September 2026\n\nRequired documents\n\nCV, transcript, research statement\n\n[Start application](/opportunity/ai-fellowship/apply)\n\nControlled fixture. Not a real opportunity. Current mode: `baseline`",
+      "values": [
+        {
+          "path": "deadline_raw",
+          "value": "18 September 2026",
+          "confidence": 0.85,
+          "evidence": {
+            "line": "Application deadline / 18 September 2026",
+            "lineNumber": 29,
+            "strategy": "labelled-line"
+          }
+        },
+        {
+          "path": "funding_level",
+          "value": "Fully funded",
+          "confidence": 0.85,
+          "evidence": {
+            "line": "Funding / Fully funded",
+            "lineNumber": 17,
+            "strategy": "labelled-line"
+          }
+        },
+        {
+          "path": "title",
+          "value": "Open AI Research Fellowship",
+          "confidence": 0.85,
+          "evidence": {
+            "line": "# Open AI Research Fellowship",
+            "lineNumber": 7,
+            "strategy": "labelled-line"
+          }
+        },
+        {
+          "path": "application_url",
+          "value": "https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply",
+          "confidence": 0.85,
+          "evidence": {
+            "line": "[Start application](/opportunity/ai-fellowship/apply)",
+            "lineNumber": 37,
+            "strategy": "markdown-link"
+          }
+        }
+      ],
+      "notFound": [],
+      "shape": {
+        "headings": [
+          1
+        ],
+        "labels": [
+          "provider"
+        ],
+        "lines": 20,
+        "tables": 0,
+        "links": 1,
+        "images": 0,
+        "words": 98
+      }
+    },
+    "screenshotId": null,
+    "repairPrompt": null,
+    "history": [
+      {
+        "from": "observed",
+        "to": "validating",
+        "at": "2026-08-24T03:23:12.416Z",
+        "actor": "system",
+        "reason": "collector run ingested",
+        "evidenceRefs": []
+      },
+      {
+        "from": "validating",
+        "to": "witness_pending",
+        "at": "2026-08-24T03:23:12.416Z",
+        "actor": "system",
+        "reason": "contract checks tripped",
+        "evidenceRefs": []
+      },
+      {
+        "from": "witness_pending",
+        "to": "classifying",
+        "at": "2026-08-24T03:23:12.416Z",
+        "actor": "system",
+        "reason": "witness observed 4 field(s)",
+        "evidenceRefs": [
+          "d4a9f3d3b9ab9877fdbe0d168318e0b8f32cc25f17cd7141c7e6e3388fb22443"
+        ]
+      },
+      {
+        "from": "classifying",
+        "to": "healthy",
+        "at": "2026-08-24T03:23:12.416Z",
+        "actor": "system",
+        "reason": "all contract checks passed",
+        "evidenceRefs": []
+      }
+    ],
+    "gateResults": [],
+    "acquisition": {
+      "collector": {
+        "requestedUrl": "https://doorway-lab.onrender.com/opportunity/ai-fellowship",
+        "deviceType": "unknown",
+        "variantMarkers": [],
+        "observedAt": "2026-08-24T03:23:03.937Z"
+      },
+      "witness": {
+        "requestedUrl": "https://doorway-lab.onrender.com/opportunity/ai-fellowship",
+        "deviceType": "desktop",
+        "variantMarkers": [],
+        "observedAt": "2026-08-24T03:23:12.415Z",
+        "country": "us"
+      },
+      "alignment": {
+        "aligned": true,
+        "mismatches": [],
+        "observationGapSeconds": 8
+      }
+    },
+    "pageIdentity": {
+      "similarity": 1,
+      "parts": {
+        "labels": 1,
+        "headings": 1,
+        "density": 1,
+        "media": 1
+      },
+      "notes": [],
+      "samePage": true,
+      "reason": "100% of the verified page's structure is still present"
+    },
+    "quarantined": false,
+    "createdAt": "2026-08-24T03:23:03.937Z",
+    "resolvedAt": null
+  },
+  "publishable": true
+}

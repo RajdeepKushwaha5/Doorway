@@ -39,6 +39,7 @@ Bright Data and draws on the same 5,000-a-month allowance both sensors share.
 | `npm run blindspot:proof` | Replay the unwatched-field incident offline. Every value is computed by the functions production uses | free |
 | `npm run shots` | Screenshot every page at phone, tablet and desktop into `.visual-qa/`, and report any horizontal overflow | free |
 | `npm run legibility` | Print what a scanner actually sees in each section: the label, the heading, the first line, and any section over two screens tall | free |
+| `npm run evidence` | Capture the whole lifecycle into `docs/evidence/lifecycle/` as raw artifacts. Add `-- --with-heal` to include the repair and the gate | **live** |
 | `npm run mcp` | Start the MCP server, so an agent can drive the system | free |
 | `npm run notice` | The CLI, against the local file store. Useful in development, wrong for a demo: the deployed dashboard has a different store | free |
 | `npm run live` | The same operations over HTTP against the deployed API, so the terminal and the dashboard agree | **live** |

@@ -200,8 +200,18 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   },
 
   async heal([id]) {
-    const queued = (await authed(`/api/incidents/${id ?? ''}/heal`)) as { jobId?: string };
-    const jobId = queued.jobId;
+    /*
+     * The route answers `{ accepted, job }`, not `{ jobId }`.
+     *
+     * This read `queued.jobId`, which is never present, so every heal printed
+     * its acceptance and returned without polling once. The command claimed to
+     * follow the job and did not, and the only symptom was a queued job that
+     * nobody watched, which looks identical to a fast one.
+     */
+    const queued = (await authed(`/api/incidents/${id ?? ''}/heal`)) as {
+      job?: { id?: string };
+    };
+    const jobId = queued.job?.id;
     if (jobId === undefined) {
       out(JSON.stringify(queued, null, 2));
       return;

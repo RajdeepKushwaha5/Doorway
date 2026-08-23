@@ -22,6 +22,7 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "shots": "node scripts/shots.mjs",
     "legibility": "node scripts/legibility.mjs",
+    "evidence": "node scripts/evidence.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "phase0": "npm run phase0 --workspace backend",

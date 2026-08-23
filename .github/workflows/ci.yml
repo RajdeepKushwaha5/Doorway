@@ -42,8 +42,18 @@ jobs:
             echo "An environment file is tracked in git."
             exit 1
           fi
-          if git grep -nE '\b[a-f0-9]{32,}\b' -- ':!*.lock' ':!package-lock.json' ':!*.md'; then
+          # docs/evidence is excluded from the hex rule on purpose. Those
+          # artifacts carry SHA-256 contentHash values, the digest of the page
+          # body a witness read and the exact string the certificate verifier
+          # re-derives. Removing them would destroy the evidence they exist to
+          # be. The rule below scans that directory for credential shapes
+          # instead, so the exclusion narrows the check rather than dropping it.
+          if git grep -nE '\b[a-f0-9]{32,}\b' -- ':!*.lock' ':!package-lock.json' ':!*.md' ':!docs/evidence/**'; then
             echo "A long hex string that looks like an API key is committed."
+            exit 1
+          fi
+          if git grep -nEi 'bearer [a-z0-9]{20,}|api[_-]?key|_TOKEN[=:]' -- 'docs/evidence/**'; then
+            echo "A credential-shaped string is committed under docs/evidence."
             exit 1
           fi
           echo "No tracked env files and no key-shaped strings."

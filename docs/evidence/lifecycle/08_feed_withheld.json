@@ -1,0 +1,42 @@
+{
+  "collectorId": "7c5ddf18-83b3-46ff-953f-f680130e6690",
+  "url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship",
+  "data": {
+    "title": "Open AI Research Fellowship",
+    "provider": "Doorway Research Foundation (controlled fixture)",
+    "opportunity_type": "fellowship",
+    "summary": "A controlled, fully funded research fellowship for undergraduate students interested in trustworthy artificial intelligence.",
+    "eligibility": [
+      "Undergraduate students interested in artificial intelligence"
+    ],
+    "funding_level": "Fully funded",
+    "funding_coverage": [],
+    "deadline": "2026-09-18",
+    "deadline_raw": "18 September 2026",
+    "locations": [
+      "India"
+    ],
+    "required_documents": [
+      "CV",
+      "transcript",
+      "research statement"
+    ],
+    "application_url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship/apply",
+    "source_url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship",
+    "input": {
+      "url": "https://doorway-lab.onrender.com/opportunity/ai-fellowship"
+    }
+  },
+  "health": {
+    "status": "quarantined",
+    "confidence": 0.050000000000000044,
+    "lastVerified": "2026-08-24T03:23:03.937Z",
+    "stale": true,
+    "confirmedBy": "two_sensors",
+    "fieldsDegraded": [
+      "deadline_raw"
+    ],
+    "incidentId": "c03a8c0d-f61e-45ed-a471-b988cca13bf0",
+    "reason": "collector_witness_disagreement"
+  }
+}

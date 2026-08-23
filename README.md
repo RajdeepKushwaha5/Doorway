@@ -301,6 +301,30 @@ npm run benchmark
 | Apply link removed | `genuine_source_change` | withheld |
 | Nothing changed | `healthy` | published |
 
+### The whole loop, as raw files
+
+Every claim above is also a directory you can open. `npm run evidence` runs the
+real loop against the deployed services and writes what each step returned,
+unedited.
+
+```
+docs/evidence/lifecycle/
+```
+
+The short version of that chain: while the source page was serving **1
+September 2026** as a closing date, a consumer of the feed was still receiving
+**18 September 2026**. The verdict was `extractor_drift` on `deadline_raw`, and
+the record was withheld rather than published.
+
+Three files are enough to check it without believing anything here:
+`05_page_broken.html` is the page lying, `06_collector_output_broken.json` is
+Bright Data returning the wrong date from it in a successful run with valid
+JSON, and `08_feed_withheld.json` is what a consumer got at the same moment.
+
+The chain also records a heal that **failed** on Bright Data's side rather than
+one that worked, because that is what happened on the captured run. A directory
+that only shows the runs that went well is not evidence.
+
 ### Testing
 
 **685 tests, no network and no credentials required.** Verified by deleting `.env` and running the suite.

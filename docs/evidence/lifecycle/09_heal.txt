@@ -1,0 +1,6 @@
+Queued as job 1f21bf19-80bb-4176-ad6a-ce978fb406ef. Bright Data can take several minutes.
+  03:23:46  queued
+  03:23:52  queued
+  03:23:57  queued
+  03:24:02  failed
+  Bright Data returned HTTP 500: Invalid ide automation
