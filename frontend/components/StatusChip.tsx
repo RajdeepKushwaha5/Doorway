@@ -47,6 +47,14 @@ const PRESENTATION: Record<
   },
 };
 
+/**
+ * The one-line meaning of a verdict, for callers that want the sentence
+ * without a second copy of the badge beside it.
+ */
+export function classificationHint(classification: IncidentClassification): string {
+  return PRESENTATION[classification].hint;
+}
+
 export function StatusChip({
   classification,
   showHint = false,

@@ -8,7 +8,7 @@ import { RepairDiff } from '@/components/RepairDiff';
 import { AuditLog } from '@/components/AuditLog';
 import { AcquisitionPanel } from '@/components/AcquisitionPanel';
 import { IncidentActions } from '@/components/IncidentActions';
-import { ConfidenceBar, StatusChip } from '@/components/StatusChip';
+import { ConfidenceBar, StatusChip, classificationHint } from '@/components/StatusChip';
 import { api, ApiError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -60,7 +60,9 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
             ? `${incident.affectedFields.join(', ')} on ${incident.witness?.url ?? 'unknown URL'}`
             : (incident.witness?.url ?? 'Incident')}
         </h1>
-        <div className="mt-6 max-w-2xl"><StatusChip classification={incident.classification} showHint /></div>
+        <p className="mt-6 max-w-2xl text-sm text-muted">
+          {classificationHint(incident.classification)}
+        </p>
       </header>
 
       <section data-reveal data-delay="1" className="evidence-section">

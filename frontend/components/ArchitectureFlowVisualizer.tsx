@@ -1,19 +1,25 @@
 import Link from 'next/link';
 
 /**
- * The whole pipeline, in one screen.
+ * The whole pipeline, in one screen, including the seam.
  *
- * Two rewrites got here. The first was drawn from how the system ought to work
- * and claimed things the rest of the site refuses to claim: it called the
- * pipeline "unforgeable" while the verifier page says the certificate is not a
- * signature, showed the sensors running in parallel when the collector runs
- * first, and advertised an uptime figure nobody measured. The second was
+ * Three rewrites got here. The first was drawn from how the system ought to
+ * work and claimed things the rest of the site refuses to claim. The second was
  * accurate and scrolled for three screens, which is not a diagram, it is a
- * document.
+ * document. The third fitted on one screen and was wrong in a way that is worse
+ * than either: every arrow was positioned rather than attached, so boxes
+ * stretched to fill their grid column and the labels drifted away from the
+ * things they described. A reader could not tell what fed what.
  *
- * A reader should see the shape of the thing at once: where it forks, what
- * moves along each arrow, and which branch ends in a published fact. Anything
- * that needs a paragraph belongs on the page that demonstrates it.
+ * The rule here is that a connector is a sibling of the two things it joins,
+ * never a floating element that happens to sit between them. Nothing is
+ * centred by hope.
+ *
+ * It also now draws the part that was missing entirely. NOTICE was shown
+ * deciding a verdict and Doorway was shown publishing a world, with no line
+ * between them, which read as two projects in one repository. The line is
+ * `opportunitiesFromSnapshots(snapshots, collectors, incidents)`: the verdict
+ * and the open incidents are what put the badge on a card.
  */
 
 /** Border and fill per state: live path, held path, everything else. */
@@ -23,7 +29,13 @@ const RING: Record<'plain' | 'live' | 'held', string> = {
   plain: 'border-white/15 bg-white/[0.03]',
 };
 
-/** One box. Two lines at most, because the shape is the point. */
+/**
+ * One box. Sized to its content, never to its container.
+ *
+ * `w-fit` is the whole fix for the version where a single box spanned half the
+ * diagram: as a block child of a grid column it grew to the column width and
+ * read as a band rather than a step.
+ */
 function Box({
   label,
   title,
@@ -35,9 +47,8 @@ function Box({
   note?: string;
   tone?: 'plain' | 'live' | 'held';
 }>) {
-  const ring = RING[tone];
   return (
-    <div className={`rounded border px-3 py-2 ${ring}`}>
+    <div className={`w-fit max-w-full rounded border px-3 py-2 ${RING[tone]}`}>
       {label === undefined ? null : (
         <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-white/40">{label}</div>
       )}
@@ -49,30 +60,76 @@ function Box({
   );
 }
 
-/** A labelled arrow. The label is what travels, not what happens. */
-function Flow({ children, vertical = false }: Readonly<{ children?: string; vertical?: boolean }>) {
-  if (vertical) {
-    return (
-      <div className="flex flex-col items-center py-1" aria-hidden="true">
-        <div className="h-3 w-px bg-emerald-500/40" />
-        {children === undefined ? null : (
-          <span className="my-0.5 font-mono text-[9px] text-emerald-300/80">{children}</span>
-        )}
-        <span className="text-[10px] leading-none text-emerald-500/60">▼</span>
-      </div>
-    );
-  }
+/** A horizontal connector. The label is what travels, not what happens. */
+function Across({ children }: Readonly<{ children?: string }>) {
   return (
-    <div className="flex shrink-0 flex-col items-center px-1" aria-hidden="true">
+    <div className="flex shrink-0 flex-col items-center justify-center px-1.5" aria-hidden="true">
       {children === undefined ? null : (
-        <span className="mb-0.5 font-mono text-[9px] text-emerald-300/80">{children}</span>
+        <span className="mb-0.5 whitespace-nowrap font-mono text-[9px] text-emerald-300/80">
+          {children}
+        </span>
       )}
-      <span className="text-[11px] leading-none text-emerald-500/70">▶</span>
+      <span className="text-[11px] leading-none text-emerald-500/70">&#9654;</span>
     </div>
   );
 }
 
-const VERDICTS: [string, string][] = [
+/** A vertical connector, drawn between the two blocks it joins. */
+function Down({ children, tone = 'live' }: Readonly<{ children?: string; tone?: 'live' | 'held' }>) {
+  const line = tone === 'held' ? 'bg-amber-500/40' : 'bg-emerald-500/40';
+  const text = tone === 'held' ? 'text-amber-300/80' : 'text-emerald-300/80';
+  const head = tone === 'held' ? 'text-amber-500/60' : 'text-emerald-500/60';
+  return (
+    <div className="flex flex-col items-center py-1" aria-hidden="true">
+      <div className={`h-3 w-px ${line}`} />
+      {children === undefined ? null : (
+        <span className={`my-0.5 whitespace-nowrap font-mono text-[9px] ${text}`}>{children}</span>
+      )}
+      <span className={`text-[10px] leading-none ${head}`}>&#9660;</span>
+    </div>
+  );
+}
+
+/** A row of boxes joined left to right, wrapping as one unit on narrow screens. */
+function Chain({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <div className="flex flex-wrap items-center gap-y-2">{children}</div>;
+}
+
+/** A named band. Makes the two systems, and the seam between them, visible. */
+function Layer({
+  name,
+  children,
+  tone = 'plain',
+}: Readonly<{ name: string; children: React.ReactNode; tone?: 'plain' | 'live' | 'held' }>) {
+  const ring =
+    tone === 'live'
+      ? 'border-emerald-500/25'
+      : tone === 'held'
+        ? 'border-amber-500/25'
+        : 'border-white/10';
+  const label =
+    tone === 'live' ? 'text-emerald-400' : tone === 'held' ? 'text-amber-400' : 'text-white/40';
+  return (
+    <div className={`rounded-lg border ${ring} p-3 sm:p-4`}>
+      <div className={`mb-2.5 font-mono text-[9px] uppercase tracking-[0.16em] ${label}`}>
+        {name}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * What a reader actually sees on a card, in the colours the palette reserves
+ * for it: green is verified, amber is suspect, red is withheld.
+ */
+const BADGES: readonly (readonly [string, string, string])[] = [
+  ['verified', 'two sensors agreed', 'border-emerald-500/40 text-emerald-300'],
+  ['partially verified', 'contracts only', 'border-white/20 text-white/70'],
+  ['quarantined', 'open incident', 'border-amber-500/40 text-amber-300'],
+];
+
+const VERDICTS: readonly (readonly [string, string])[] = [
   ['healthy', 'publish'],
   ['genuine_source_change', 'publish, repair nothing'],
   ['extractor_drift', 'withhold, repair'],
@@ -98,80 +155,145 @@ export function ArchitectureFlowVisualizer() {
             href="/proof"
             className="font-mono text-[11px] text-emerald-400 underline underline-offset-4"
           >
-            watch it happen ↗
+            watch it happen &#8599;
           </Link>
         </div>
 
-        <div className="mt-7 rounded-lg border border-white/10 p-4 sm:p-5">
-          {/* Row 1: the first sensor, left to right. */}
-          <div className="flex flex-wrap items-center gap-y-2">
-            <Box label="source" title="Official page" note="long tail, no prebuilt scraper" />
-            <Flow>URL</Flow>
-            <Box label="sensor 1" title="Scraper Studio c_*" note="built from a brief" tone="live" />
-            <Flow>typed JSON</Flow>
-            <Box label="check" title="Learned contracts" note="required, ranges, profiles" />
-          </div>
-
-          {/* The fork. Drawn, because it is the reason not every record says
-              two sensors, and leaving it out made the honest label look broken. */}
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
-            <div>
-              <Flow vertical>all pass</Flow>
+        <div className="mt-7 space-y-1">
+          {/* ---- Acquisition ---------------------------------------------- */}
+          <Layer name="Bright Data reads the page">
+            <Chain>
+              <Box label="source" title="Official page" note="long tail, no prebuilt scraper" />
+              <Across>URL</Across>
               <Box
-                title="Second sensor not woken"
-                note="published as contract_only, never as two sensors"
+                label="sensor 1"
+                title="Scraper Studio c_*"
+                note="built from a brief"
+                tone="live"
               />
-            </div>
+              <Across>typed JSON</Across>
+              <Box label="check" title="Learned contracts" note="required, ranges, profiles" />
+            </Chain>
+          </Layer>
 
-            <div>
-              <Flow vertical>anything unresolved</Flow>
-              <div className="flex flex-wrap items-center gap-y-2">
-                <Box label="sensor 2" title="Web Unlocker" note="markdown, no shared code" tone="live" />
-                <Flow>markdown</Flow>
-                <Box title="Reconcile" note="field by field" />
+          <Down>every row, before anything is published</Down>
+
+          {/* ---- The trust engine ------------------------------------------ */}
+          <Layer name="NOTICE decides whether it can be defended" tone="live">
+            {/*
+             * The fork, drawn as two owned columns rather than two arrows that
+             * happen to sit near each other. Each branch label sits inside the
+             * column it belongs to, so nothing depends on where it lands.
+             */}
+            <div className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+              <div className="rounded border border-white/10 p-2.5">
+                <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-white/40">
+                  branch: all contracts pass
+                </div>
+                <Box
+                  title="Second sensor not woken"
+                  note="published as contract_only, never as two sensors"
+                />
+              </div>
+
+              <div className="rounded border border-emerald-500/20 p-2.5">
+                <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-emerald-400/70">
+                  branch: anything unresolved
+                </div>
+                <Chain>
+                  <Box
+                    label="sensor 2"
+                    title="Web Unlocker"
+                    note="markdown, no shared code"
+                    tone="live"
+                  />
+                  <Across>markdown</Across>
+                  <Box title="Reconcile" note="agree, disagree, incomparable" />
+                </Chain>
               </div>
             </div>
+
+            <Down>both branches land here</Down>
+
+            <div className="rounded border border-emerald-500/30 bg-emerald-500/[0.05] p-3">
+              <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-emerald-400">
+                one of six verdicts
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {VERDICTS.map(([name, then]) => (
+                  <span
+                    key={name}
+                    className="rounded border border-white/10 bg-black px-2 py-1 font-mono text-[10px] text-white/70"
+                  >
+                    <span className="text-emerald-300">{name}</span>
+                    <span className="text-white/30"> &#8594; </span>
+                    {then}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Layer>
+
+          {/*
+           * The seam. This is the line that was missing, and it is the reason
+           * the two halves are one product rather than two.
+           */}
+          <div className="grid gap-x-6 md:grid-cols-2">
+            <Down>verdict + open incidents</Down>
+            <Down tone="held">withheld</Down>
           </div>
 
-          <Flow vertical>agree · disagree · incomparable</Flow>
-
-          {/* The six verdicts, as chips rather than a table. */}
-          <div className="rounded border border-emerald-500/30 bg-emerald-500/[0.05] p-3">
-            <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-emerald-400">
-              one of six verdicts
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {VERDICTS.map(([name, then]) => (
-                <span
-                  key={name}
-                  className="rounded border border-white/10 bg-black px-2 py-1 font-mono text-[10px] text-white/70"
-                >
-                  <span className="text-emerald-300">{name}</span>
-                  <span className="text-white/30"> → </span>
-                  {then}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Row 3: the two endings. */}
-          <div className="mt-1 grid gap-4 md:grid-cols-2">
-            <div>
-              <Flow vertical>published</Flow>
-              <div className="flex flex-wrap items-center gap-y-2">
-                <Box title="Verified world" note="+ application plan" tone="live" />
-                <Flow />
+          <div className="grid gap-x-6 gap-y-1 md:grid-cols-2">
+            {/* ---- The product ------------------------------------------- */}
+            <Layer name="Doorway shows a student">
+              <div className="mb-2 rounded border border-white/10 bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10px] leading-relaxed text-white/50">
+                opportunitiesFromSnapshots(
+                <span className="text-emerald-300">snapshots, collectors, incidents</span>)
+              </div>
+              <Box title="Badge on every card" note="the reader sees one of these" tone="live" />
+              {/*
+               * The actual badge vocabulary, in the actual colours. A note
+               * listing all three would have been one long line, and `w-fit`
+               * would then size the box to the whole column, which is the
+               * stretching this rewrite exists to stop.
+               */}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {BADGES.map(([name, why, colour]) => (
+                  <span
+                    key={name}
+                    className={`rounded border px-2 py-1 font-mono text-[10px] ${colour}`}
+                  >
+                    {name}
+                    <span className="text-white/30"> &#183; </span>
+                    <span className="text-white/50">{why}</span>
+                  </span>
+                ))}
+              </div>
+              <Down>the same verdict, in a sentence</Down>
+              <Chain>
+                <Box
+                  title="Application plan"
+                  note="will not claim readiness while a field is disputed"
+                />
+                <Across />
                 <Box title="MCP + certificate" note="agents get evidence or a refusal" />
-              </div>
-            </div>
-            <div>
-              <Flow vertical>withheld</Flow>
-              <div className="flex flex-wrap items-center gap-y-2">
+              </Chain>
+            </Layer>
+
+            {/* ---- The repair loop --------------------------------------- */}
+            <Layer name="And what happens to the rest" tone="held">
+              <Chain>
                 <Box title="bdata scraper heal" note="candidate proposed" tone="held" />
-                <Flow />
-                <Box title="Gate replays it" note="fixes the failure, breaks nothing" tone="held" />
-              </div>
-            </div>
+                <Across />
+                <Box
+                  title="Gate replays it"
+                  note="fixes the failure, breaks nothing"
+                  tone="held"
+                />
+              </Chain>
+              <Down tone="held">only if both hold</Down>
+              <Box title="Back to production" note="and the card returns to verified" tone="held" />
+            </Layer>
           </div>
         </div>
 

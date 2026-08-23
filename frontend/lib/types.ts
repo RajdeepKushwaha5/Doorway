@@ -386,7 +386,7 @@ export interface DoorwayOpportunity {
   requiredDocuments: string[];
   applicationUrl: string;
   trust: {
-    status: 'verified' | 'partially_verified' | 'stale' | 'quarantined' | 'discovered';
+    status: TrustStatus;
     confirmedBy: 'two_sensors' | 'contract_only' | 'single_sensor';
     lastVerifiedAt: string;
     incidentId: string | null;
@@ -395,6 +395,20 @@ export interface DoorwayOpportunity {
     verdict: string | null;
   };
 }
+
+/**
+ * How far this system will vouch for a record.
+ *
+ * Named rather than inlined because the badge component renders a label and a
+ * meaning for each of these, and an inline union lets that table fall out of
+ * step with the data silently.
+ */
+export type TrustStatus =
+  | 'verified'
+  | 'partially_verified'
+  | 'stale'
+  | 'quarantined'
+  | 'discovered';
 
 export interface DoorwayMatch {
   opportunity: DoorwayOpportunity;

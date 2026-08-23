@@ -6,6 +6,7 @@ import { fundingLabel } from '@/lib/funding';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
 import { ArchitectureFlowVisualizer } from '@/components/ArchitectureFlowVisualizer';
+import { TrustMark, TrustLegend } from '@/components/TrustMark';
 import Link from 'next/link';
 import { collectFindAction, startFindAction } from '@/app/actions';
 
@@ -551,15 +552,16 @@ function WorldSection({
           {matches.length > 0 ? (
             <div className="grid grid-cols-3 gap-px border border-gray-200 bg-gray-200">
               {[
-                ['Confirmed', confirmed, 'Two independent readings agreed'],
-                ['Just found', justFound, 'Read once, not verified yet'],
+                ['Confirmed', confirmed, 'Two readings agreed'],
+                ['Just found', justFound, 'Read once'],
                 ['Closing soon', closing, 'Within 30 days'],
               ].map(([label, value, hint]) => (
-                <div key={String(label)} className="min-w-[112px] bg-white p-3" title={String(hint)}>
+                <div key={String(label)} className="min-w-[124px] bg-white p-3">
                   <div className="font-mondwest text-3xl">{value}</div>
                   <div className="font-neuebit text-[9px] uppercase tracking-[0.14em] text-gray-500">
                     {label}
                   </div>
+                  <div className="mt-1 font-mono text-[9.5px] leading-4 text-gray-400">{hint}</div>
                 </div>
               ))}
             </div>
@@ -590,6 +592,7 @@ function WorldSection({
         {!pending && world !== null && matches.length === 0 ? <EmptyWorld initial={false} /> : null}
         {!pending && matches.length > 0 ? (
           <>
+            <TrustLegend present={matches.map((match) => match.opportunity.trust.status)} />
             <IsometricWorld matches={matches} />
             <div className="doorway-city mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {matches.map((match, index) => (
@@ -795,36 +798,6 @@ function OpportunityBuilding({ match, index }: { match: DoorwayMatch; index: num
         <ApplicationMission opportunityId={opportunity.id} />
       ) : null}
     </article>
-  );
-}
-
-function TrustMark({ status }: { status: DoorwayMatch['opportunity']['trust']['status'] }) {
-  /*
-   * Words a student already knows.
-   *
-   * "Proved", "Checked", "Held" are this system's vocabulary, not theirs. Each
-   * one is paired with a plain sentence on hover so nobody has to be told what
-   * the badge means before the page is useful to them.
-   */
-  const labels = {
-    verified: 'Confirmed',
-    partially_verified: 'Checked',
-    stale: 'Not rechecked',
-    quarantined: 'On hold',
-    discovered: 'Just found',
-  } as const;
-
-  const meanings = {
-    verified: 'Two independent readings of this page agreed. Safe to plan around.',
-    partially_verified: 'Passed the checks learned for this source, but only one reading.',
-    stale: 'Confirmed once, but not recently. Check the source before you rely on it.',
-    quarantined: 'The readings stopped agreeing, so the last confirmed values are shown instead.',
-    discovered: 'Found on the live web moments ago and read once. Not verified yet, so open the source before you plan around it.',
-  } as const;
-  return (
-    <span className={`doorway-trust doorway-trust-${status}`} title={meanings[status]}>
-      {labels[status]}
-    </span>
   );
 }
 
