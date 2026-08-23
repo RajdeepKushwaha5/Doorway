@@ -65,3 +65,5 @@ remaining.md
 # committing it means a fresh deploy starts up serving whatever fault was last
 # demonstrated. state.ts already falls back to baseline when the file is absent.
 driftmart/.driftmart-mode
+
+RECORDING-SCRIPT.md
