@@ -796,3 +796,32 @@ describe('the vocabulary listings actually use', () => {
     expect(internships).toHaveLength(3);
   });
 });
+
+describe('a title the search engine cut in half', () => {
+  /*
+   * From the live deployment on 23 August 2026.
+   *
+   * wsai.iitm.ac.in came back as "Fellowships | Wadhwani School of Data
+   * Science and Artificial ...". The site half is kept deliberately, because
+   * "Fellowships" alone is indistinguishable from every other fellowships page
+   * in a list. But stripping the ellipsis left the title ending on
+   * "Artificial", which the dangling-word rule keeps because it is a real
+   * word, and which is orphaned because the noun it modified was on the far
+   * side of the cut.
+   */
+  it('drops the clause the search engine was in the middle of', () => {
+    expect(
+      titleFrom(
+        'body text with no heading at all',
+        'Fellowships | Wadhwani School of Data Science and Artificial ...',
+      ),
+    ).toBe('Fellowships · Wadhwani School of Data Science');
+  });
+
+  it('keeps a complete "and" clause when nothing was truncated', () => {
+    // No ellipsis means the source said all of it, so the last item is real.
+    expect(
+      titleFrom('body text with no heading at all', 'Fellowships | Science and Technology'),
+    ).toBe('Fellowships · Science and Technology');
+  });
+});

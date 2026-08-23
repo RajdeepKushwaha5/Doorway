@@ -403,6 +403,9 @@ const IMPERATIVE_TITLE = /^(explore|discover|learn|see|browse|find|meet|read|joi
  * Scholarship in ..." becomes "... Scholarship in", which reads like a sentence
  * somebody was interrupted saying.
  */
+/** A search engine ran out of room and said so. */
+const WAS_TRUNCATED = /(?:\.{3}|…)\s*$/;
+
 const DANGLING = /\s+(?:in|for|at|to|of|on|with|and|the|a|an|by|from)$/i;
 
 /** Strip a search engine's truncation and whatever it left behind. */
@@ -483,7 +486,25 @@ export function titleFrom(markdown: string, fallback: string): string {
    * whose they are.
    */
   if (GENERIC_TITLE.test(cleanedSearch) && searchTitle !== cleanedSearch) {
-    return tidyTitle(searchTitle.replace(/\s+\|\s+/, ' · '));
+    const joined = tidyTitle(searchTitle.replace(/\s+\|\s+/, ' · '));
+    /*
+     * A truncated source cannot be trusted about its last clause.
+     *
+     * wsai.iitm.ac.in came back as "Fellowships | Wadhwani School of Data
+     * Science and Artificial ...", which tidies to a title ending on
+     * "Artificial": a real word, so the dangling-word rule keeps it, and an
+     * orphaned one, because the noun it modified was on the far side of the
+     * cut. Dropping the final conjoined item is the general form of that: if
+     * the search engine ran out of room, whatever it was in the middle of
+     * listing is incomplete by definition.
+     */
+    // Tested against the raw fallback: searchTitle has already been tidied,
+    // and tidying is what removes the ellipsis this looks for.
+    if (WAS_TRUNCATED.test(fallback)) {
+      const trimmed = joined.replace(/\s+and\s+\S+$/i, '');
+      if (trimmed.length > 0) return tidyTitle(trimmed);
+    }
+    return joined;
   }
 
   return cleanedSearch === '' ? searchTitle : cleanedSearch;
