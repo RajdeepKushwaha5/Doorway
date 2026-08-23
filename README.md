@@ -355,6 +355,22 @@ Secrets live in `.env`, which is gitignored. No token value appears in any track
 
 The API and the fixture run on **Render** from `render.yaml`; the dashboard runs on **Vercel**. All three are free plans.
 
+**Free plans sleep after fifteen minutes idle**, and the request that wakes one
+takes most of a minute. That is designed for rather than hidden:
+
+- Server renders allow 60 seconds, so a page waits for a waking host instead of
+  reporting it unreachable.
+- Reads retry three times; writes get one long attempt, because a repeated POST
+  could start a second live search. The rule lives in `frontend/lib/wake.ts`.
+- The loading state explains the wait, but only after three and a half seconds,
+  so a warm load never flashes an excuse for a delay that did not happen.
+- `.github/workflows/keep-warm.yml` pings all three every ten minutes. It costs
+  nothing and spends no Bright Data page loads. GitHub's scheduler is best
+  effort, so it reduces cold starts rather than eliminating them.
+
+With the API switched off entirely, every page still renders and each one says
+the backend is unreachable rather than filling the gap with a plausible number.
+
 [Step-by-step deployment →](docs/DEPLOY.md)
 
 ---

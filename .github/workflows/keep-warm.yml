@@ -1,0 +1,62 @@
+name: Keep the services awake
+
+# Free-plan hosts suspend after fifteen minutes idle, and the request that
+# wakes one takes most of a minute. The site is built to wait that out rather
+# than fail, but a visitor who waits is still a visitor who waited, and the
+# first person to arrive after a quiet period is usually the one whose opinion
+# matters most.
+#
+# This costs nothing. Every URL below is a read against our own services: the
+# API's health route, the fixture's home page, and the dashboard. None of them
+# touches Bright Data, so no page loads are spent and the free-tier allowance
+# is untouched. Keeping the API awake actually *saves* credits, because
+# NOTICE_WARM_ON_BOOT rebuilds the world on every cold start and that does
+# spend them.
+#
+# Honest about what it is not: GitHub's scheduler is best effort and a
+# five-minute cron can arrive fifteen or twenty minutes late under load. This
+# reduces cold starts, it does not eliminate them. Before a demonstration or a
+# judging window, warm all three by hand as well.
+#
+# Separate from `watch.yml` on purpose. That one observes collectors, spends
+# real page loads, and runs every six hours. Mixing a cheap liveness ping into
+# an expensive monitoring job would mean either overpaying or under-pinging.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+# A late run must not stack on top of the previous one. There is nothing to
+# gain from two pings at once, and cancelling the older one is correct here:
+# the newer request keeps the service just as awake.
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wake each service
+        # Never fails the workflow. A red cross here would mean "a free host
+        # was briefly asleep", which is not a fault and would train everybody
+        # to ignore the badge. The run log says what happened.
+        continue-on-error: true
+        run: |
+          set -u
+          urls="
+          https://doorway-api-4ftn.onrender.com/api/health
+          https://doorway-lab.onrender.com/
+          https://doorway-frontend-snowy.vercel.app/
+          "
+          for url in $urls; do
+            # --max-time 90 because waking is the slow path and the whole point
+            # of this job is to be the request that pays for it.
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 "$url" || echo "000")
+            printf '%-6s %s\n' "$code" "$url"
+          done
