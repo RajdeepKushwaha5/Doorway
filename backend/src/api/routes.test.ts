@@ -34,6 +34,12 @@ let screenshots: ScreenshotStore;
 /** The routes under test never reach Bright Data. */
 const client = {} as BrightDataClient;
 
+/**
+ * What robots.txt says during one test. Null means it could not be read, which
+ * is the default and permits everything.
+ */
+let robotsText: string | null = null;
+
 function incident(overrides: Partial<IncidentRecord> = {}): IncidentRecord {
   return {
     id: 'inc-1',
@@ -61,13 +67,28 @@ beforeEach(async () => {
   screenshots = new ScreenshotStore(join(directory, 'notice.json'));
   process.env['NOTICE_ADMIN_TOKEN'] = TOKEN;
 
-  const router = buildRouter({ store, client, screenshots });
+  /*
+   * No robots.txt lookup over the network.
+   *
+   * Registration asks the site whether the watch is permitted, which is a real
+   * HTTP request against a host that does not exist in a test. Returning an
+   * empty ruleset keeps these tests offline and keeps them about routing.
+   * The refusal path has its own test below, and robots parsing has its own
+   * file.
+   */
+  const router = buildRouter({
+    store,
+    client,
+    screenshots,
+    fetchRobots: async () => robotsText,
+  });
   server = createServer((request, response) => void router.handle(request, response));
   await new Promise<void>((resolve) => server.listen(0, resolve));
   base = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
 });
 
 afterEach(async () => {
+  robotsText = null;
   delete process.env['NOTICE_ADMIN_TOKEN'];
   delete process.env['NOTICE_CORS_ORIGIN'];
   await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -691,6 +712,64 @@ describe('a protected field nobody witnesses', () => {
         protectedFields: ['application_url'],
       }),
     ).toEqual(['application_url']);
+  });
+});
+
+describe('asking the site before agreeing to watch it', () => {
+  const collector = {
+    brightDataCollectorId: 'c_robots1',
+    name: 'Fixture',
+    targetDomain: 'example.test',
+    watchUrls: ['https://example.test/private/listing'],
+    invariants: [],
+    witnessSpecs: [
+      {
+        path: 'deadline_raw',
+        meaning: 'when applications close',
+        labels: ['deadline'],
+        excludeLabels: [],
+        kind: 'text' as const,
+        allowed: [],
+      },
+    ],
+  };
+
+  async function register() {
+    return fetch(`${base}/api/collectors`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify(collector),
+    });
+  }
+
+  it('refuses a watch the site disallows, and quotes the directive', async () => {
+    robotsText = 'User-agent: *\nDisallow: /private';
+
+    const response = await register();
+    expect(response.status).toBe(403);
+
+    const body = (await response.json()) as { error?: string };
+    // A caller who disagrees has to be able to go and read the same line, so
+    // the directive appears verbatim rather than as "not permitted".
+    expect(body.error).toContain('Disallow: /private');
+
+    // And nothing was registered. A refusal that still creates the collector
+    // is not a refusal.
+    expect(await store.listCollectors()).toHaveLength(0);
+  });
+
+  it('registers when robots.txt permits the path', async () => {
+    robotsText = 'User-agent: *\nDisallow: /admin';
+    expect((await register()).status).toBe(200);
+    expect(await store.listCollectors()).toHaveLength(1);
+  });
+
+  it('registers when robots.txt cannot be read at all', async () => {
+    // Most sites have no robots.txt. Treating absence as refusal would block
+    // almost every legitimate registration.
+    robotsText = null;
+    expect((await register()).status).toBe(200);
+    expect(await store.listCollectors()).toHaveLength(1);
   });
 });
 

@@ -50,7 +50,9 @@ function Box({
   return (
     <div className={`w-fit max-w-full rounded border px-3 py-2 ${RING[tone]}`}>
       {label === undefined ? null : (
-        <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-white/40">{label}</div>
+        <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-white/40">
+          {label}
+        </div>
       )}
       <div className="font-mono text-[12px] leading-tight text-white">{title}</div>
       {note === undefined ? null : (
@@ -60,22 +62,47 @@ function Box({
   );
 }
 
-/** A horizontal connector. The label is what travels, not what happens. */
-function Across({ children }: Readonly<{ children?: string }>) {
+/**
+ * A connector between two boxes in a chain.
+ *
+ * It points down on a narrow screen and right on a wide one, because that is
+ * where the next box actually is. A `Chain` stacks below `sm`, and a
+ * right-pointing arrow above a box that has wrapped underneath it is not a
+ * decoration that survived a breakpoint, it is an arrow telling the reader
+ * something false. Both glyphs are rendered and one is hidden, so the
+ * direction is decided by the same breakpoint that decides the layout rather
+ * than by a second source of truth.
+ */
+function Across({
+  children,
+  tone = 'live',
+}: Readonly<{ children?: string; tone?: 'live' | 'held' }>) {
+  // Colour carries meaning in this palette: green is the published path, amber
+  // is the held one. A green arrow inside the repair layer spends the only
+  // vocabulary the diagram has.
+  const text = tone === 'held' ? 'text-amber-300/80' : 'text-emerald-300/80';
+  const head = tone === 'held' ? 'text-amber-500/70' : 'text-emerald-500/70';
   return (
-    <div className="flex shrink-0 flex-col items-center justify-center px-1.5" aria-hidden="true">
+    <div
+      className="flex shrink-0 flex-col items-center justify-center py-0.5 sm:px-1.5 sm:py-0"
+      aria-hidden="true"
+    >
       {children === undefined ? null : (
-        <span className="mb-0.5 whitespace-nowrap font-mono text-[9px] text-emerald-300/80">
+        <span className={`whitespace-nowrap font-mono text-[9px] ${text} sm:mb-0.5`}>
           {children}
         </span>
       )}
-      <span className="text-[11px] leading-none text-emerald-500/70">&#9654;</span>
+      <span className={`text-[10px] leading-none ${head} sm:hidden`}>&#9660;</span>
+      <span className={`hidden text-[11px] leading-none ${head} sm:inline`}>&#9654;</span>
     </div>
   );
 }
 
 /** A vertical connector, drawn between the two blocks it joins. */
-function Down({ children, tone = 'live' }: Readonly<{ children?: string; tone?: 'live' | 'held' }>) {
+function Down({
+  children,
+  tone = 'live',
+}: Readonly<{ children?: string; tone?: 'live' | 'held' }>) {
   const line = tone === 'held' ? 'bg-amber-500/40' : 'bg-emerald-500/40';
   const text = tone === 'held' ? 'text-amber-300/80' : 'text-emerald-300/80';
   const head = tone === 'held' ? 'text-amber-500/60' : 'text-emerald-500/60';
@@ -90,9 +117,19 @@ function Down({ children, tone = 'live' }: Readonly<{ children?: string; tone?: 
   );
 }
 
-/** A row of boxes joined left to right, wrapping as one unit on narrow screens. */
+/**
+ * Boxes joined in sequence: stacked on a phone, left to right from `sm` up.
+ *
+ * Wrapping was the bug. A wrapped chain puts a box on the next line while its
+ * connector still points sideways at the gap the box used to be in, which is
+ * how the diagram ended up with an arrow aimed at nothing.
+ */
 function Chain({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <div className="flex flex-wrap items-center gap-y-2">{children}</div>;
+  return (
+    <div className="flex flex-col items-start sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-2">
+      {children}
+    </div>
+  );
 }
 
 /** A named band. Makes the two systems, and the seam between them, visible. */
@@ -100,7 +137,11 @@ function Layer({
   name,
   children,
   tone = 'plain',
-}: Readonly<{ name: string; children: React.ReactNode; tone?: 'plain' | 'live' | 'held' }>) {
+}: Readonly<{
+  name: string;
+  children: React.ReactNode;
+  tone?: 'plain' | 'live' | 'held';
+}>) {
   const ring =
     tone === 'live'
       ? 'border-emerald-500/25'
@@ -140,7 +181,7 @@ const VERDICTS: readonly (readonly [string, string])[] = [
 
 export function ArchitectureFlowVisualizer() {
   return (
-    <section className="border-t border-white/10 bg-black py-14 text-white">
+    <section id="architecture" className="border-t border-white/10 bg-black py-14 text-white">
       <div className="mx-auto max-w-[1080px] px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -237,63 +278,77 @@ export function ArchitectureFlowVisualizer() {
           {/*
            * The seam. This is the line that was missing, and it is the reason
            * the two halves are one product rather than two.
+           *
+           * The arrow lives in the same grid cell as the layer it introduces.
+           * Splitting them into a row of arrows above a row of layers lines up
+           * on a wide screen and comes apart on a phone, where both grids
+           * collapse and the second arrow ends up pointing at the first layer.
            */}
-          <div className="grid gap-x-6 md:grid-cols-2">
-            <Down>verdict + open incidents</Down>
-            <Down tone="held">withheld</Down>
-          </div>
-
-          <div className="grid gap-x-6 gap-y-1 md:grid-cols-2">
+          <div className="grid items-start gap-x-6 md:grid-cols-2">
             {/* ---- The product ------------------------------------------- */}
-            <Layer name="Doorway shows a student">
-              <div className="mb-2 rounded border border-white/10 bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10px] leading-relaxed text-white/50">
-                opportunitiesFromSnapshots(
-                <span className="text-emerald-300">snapshots, collectors, incidents</span>)
-              </div>
-              <Box title="Badge on every card" note="the reader sees one of these" tone="live" />
-              {/*
-               * The actual badge vocabulary, in the actual colours. A note
-               * listing all three would have been one long line, and `w-fit`
-               * would then size the box to the whole column, which is the
-               * stretching this rewrite exists to stop.
-               */}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {BADGES.map(([name, why, colour]) => (
-                  <span
-                    key={name}
-                    className={`rounded border px-2 py-1 font-mono text-[10px] ${colour}`}
-                  >
-                    {name}
-                    <span className="text-white/30"> &#183; </span>
-                    <span className="text-white/50">{why}</span>
-                  </span>
-                ))}
-              </div>
-              <Down>the same verdict, in a sentence</Down>
-              <Chain>
+            <div>
+              <Down>verdict + open incidents</Down>
+              <Layer name="Doorway shows a student">
+                <div className="mb-2 rounded border border-white/10 bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10px] leading-relaxed text-white/50">
+                  opportunitiesFromSnapshots(
+                  <span className="text-emerald-300">snapshots, collectors, incidents</span>)
+                </div>
+                <Box title="Badge on every card" note="the reader sees one of these" tone="live" />
+                {/*
+                 * The actual badge vocabulary, in the actual colours. A note
+                 * listing all three would have been one long line, and `w-fit`
+                 * would then size the box to the whole column, which is the
+                 * stretching this rewrite exists to stop.
+                 */}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {BADGES.map(([name, why, colour]) => (
+                    <span
+                      key={name}
+                      className={`rounded border px-2 py-1 font-mono text-[10px] ${colour}`}
+                    >
+                      {name}
+                      <span className="text-white/30"> &#183; </span>
+                      <span className="text-white/50">{why}</span>
+                    </span>
+                  ))}
+                </div>
+                <Down>the same verdict, in a sentence</Down>
+                {/*
+                 * Stacked at every width, not chained. This column is half of
+                 * 1080px, which is not enough for two boxes side by side, so a
+                 * chain here wrapped even on a desktop and left its connector
+                 * pointing at the space the second box had just left.
+                 */}
                 <Box
                   title="Application plan"
                   note="will not claim readiness while a field is disputed"
                 />
-                <Across />
+                <Down>the same evidence</Down>
                 <Box title="MCP + certificate" note="agents get evidence or a refusal" />
-              </Chain>
-            </Layer>
+              </Layer>
+            </div>
 
             {/* ---- The repair loop --------------------------------------- */}
-            <Layer name="And what happens to the rest" tone="held">
-              <Chain>
-                <Box title="bdata scraper heal" note="candidate proposed" tone="held" />
-                <Across />
+            <div>
+              <Down tone="held">withheld</Down>
+              <Layer name="And what happens to the rest" tone="held">
+                <Chain>
+                  <Box title="bdata scraper heal" note="candidate proposed" tone="held" />
+                  <Across tone="held">candidate</Across>
+                  <Box
+                    title="Gate replays it"
+                    note="fixes the failure, breaks nothing"
+                    tone="held"
+                  />
+                </Chain>
+                <Down tone="held">only if both hold</Down>
                 <Box
-                  title="Gate replays it"
-                  note="fixes the failure, breaks nothing"
+                  title="Back to production"
+                  note="and the card returns to verified"
                   tone="held"
                 />
-              </Chain>
-              <Down tone="held">only if both hold</Down>
-              <Box title="Back to production" note="and the card returns to verified" tone="held" />
-            </Layer>
+              </Layer>
+            </div>
           </div>
         </div>
 

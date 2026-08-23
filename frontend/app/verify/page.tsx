@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CertificateVerifier } from '@/components/CertificateVerifier';
+import { apiBase } from '@/lib/env';
 
 export const metadata: Metadata = {
   title: 'Verify a certificate',
@@ -45,28 +46,28 @@ export default function VerifyPage() {
           answer would be exactly as trustworthy as the claim it checks.
         </p>
 
-        <div className="mt-8 rounded-lg border border-surface-border bg-surface-soft/40 p-5 font-mono text-[12px] leading-relaxed text-muted">
-          <p className="text-ivory">Get one:</p>
+        <section className="mt-8 rounded-lg border border-surface-border bg-surface-soft/40 p-5 font-mono text-[12px] leading-relaxed text-muted">
+          <h2 className="text-ivory">Get a certificate to check</h2>
           <pre className="mt-2 overflow-x-auto">
-            curl https://doorway-api-4ftn.onrender.com/api/incidents/&lt;incident-id&gt;/certificate
+            curl {apiBase()}/api/incidents/&lt;incident-id&gt;/certificate
           </pre>
           <p className="mt-3">
             Or open any incident from the control room and use its Certificate link. Then edit a
             single character in the JSON below and watch it fail.
           </p>
-        </div>
+        </section>
 
         <CertificateVerifier />
 
-        <div className="mt-12 border-t border-surface-border pt-6 font-mono text-[12px] leading-relaxed text-muted">
-          <p className="text-ivory">What this does and does not prove.</p>
+        <section className="mt-12 border-t border-surface-border pt-6 font-mono text-[12px] leading-relaxed text-muted">
+          <h2 className="text-ivory">What this does and does not prove</h2>
           <p className="mt-2">
             It proves the document has not been edited since it was issued. It is not a signature,
             so it does not prove NOTICE issued it. A forger could mint a fresh certificate with a
             matching digest. That is the honest limit, and it is stated here rather than left for
             you to find. The claim worth checking is the one about the evidence, not about us.
           </p>
-        </div>
+        </section>
       </div>
     </div>
   );

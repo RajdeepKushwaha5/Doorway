@@ -20,6 +20,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "npm run typecheck && npm run lint && npm test",
+    "shots": "node scripts/shots.mjs",
+    "legibility": "node scripts/legibility.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "phase0": "npm run phase0 --workspace backend",
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@next/eslint-plugin-next": "^15.5.23",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.2",
     "concurrently": "^9.2.4",
     "eslint": "^9.39.5",

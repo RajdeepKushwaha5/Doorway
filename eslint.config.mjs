@@ -179,4 +179,17 @@ export default tseslint.config(
       '@next/next/no-html-link-for-pages': 'off',
     },
   },
+
+  {
+    /*
+     * Playwright scripts hold code from two runtimes in one file.
+     *
+     * The body of a `page.evaluate` callback is serialised and run inside the
+     * browser, so `document` and `window` are real there and undefined in the
+     * surrounding Node module. There is no way to express that split to the
+     * linter per-function, so it is expressed per-file.
+     */
+    files: ['scripts/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
 );

@@ -1,5 +1,6 @@
 import { BrightDataBalanceError } from '../brightdata/index.js';
 import { randomUUID } from 'node:crypto';
+import { checkWatchUrls } from '../acquire/robots.js';
 import { z } from 'zod';
 import type { BrightDataClient } from '../brightdata/index.js';
 import { learnContract, type BaselineRun } from '../contracts/index.js';
@@ -181,6 +182,35 @@ export interface ApiDeps {
    * at the moment a student presses the button.
    */
   discovery?: { apiKey: string; zone: string; country?: string };
+  /**
+   * Reads a robots.txt, or resolves null when it cannot be read.
+   *
+   * Injected so registration can be tested without a network, and so a
+   * deployment can decide its own timeout. Absent means the default fetcher.
+   */
+  fetchRobots?: (robotsUrl: string) => Promise<string | null>;
+}
+
+/**
+ * Read a robots.txt over HTTP, briefly.
+ *
+ * Every failure resolves to null rather than throwing. A registration must not
+ * fall over because a host was slow, and "could not read it" is a different
+ * answer from "it said no": the first permits, the second refuses.
+ */
+async function defaultFetchRobots(robotsUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(robotsUrl, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(5_000),
+      headers: { accept: 'text/plain' },
+    });
+    // A 404 is the common case and means no rules, not a failure.
+    if (!response.ok) return null;
+    return await response.text();
+  } catch {
+    return null;
+  }
 }
 
 /** Build the HTTP surface. */
@@ -302,6 +332,31 @@ export function buildRouter(deps: ApiDeps): Router {
           : where === ''
             ? issue.message
             : `${where}: ${issue.message}`,
+      );
+    }
+
+    /*
+     * Ask the site before agreeing to read it on a schedule.
+     *
+     * A collector is a standing instruction, so the moment to find out that a
+     * path is disallowed is now, not after it has run and its output is in a
+     * feed. One site was rejected by hand on these grounds during development,
+     * and doing it by hand is how it gets skipped when somebody is in a hurry.
+     *
+     * Refusal quotes the directive, because a caller who disagrees should be
+     * able to go and read the same line rather than take this on trust.
+     */
+    const robots = await checkWatchUrls(
+      parsed.data.watchUrls,
+      deps.fetchRobots ?? defaultFetchRobots,
+    );
+    const refused = robots.filter((check) => !check.allowed);
+    if (refused.length > 0) {
+      throw new HttpError(
+        403,
+        `robots.txt refuses this watch. ${refused
+          .map((check) => `${check.url}: ${check.detail}`)
+          .join('; ')}`,
       );
     }
 

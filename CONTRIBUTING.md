@@ -10,7 +10,7 @@ correct and be wrong.
 npm install
 cp .env.example .env      # only BRIGHTDATA_API_KEY is required
 npm run build
-npm test                  # 655 tests, no network and no credentials needed
+npm test                  # 671 tests, no network and no credentials needed
 ```
 
 The whole detection-to-blocked-repair loop runs offline against a scripted
@@ -33,10 +33,12 @@ Bright Data and draws on the same 5,000-a-month allowance both sensors share.
 | Command | What it does | Cost |
 |---|---|---|
 | `npm run check` | Typecheck, lint, then the tests. The gate CI runs | free |
-| `npm test` | 655 tests against a scripted Bright Data client | free |
+| `npm test` | 671 tests against a scripted Bright Data client | free |
 | `npm run seed` | Put a realistic incident in the local store, so a fresh clone shows something other than three empty states | free |
 | `npm run doorway:seed` | Same, for the opportunity world: a city rather than an empty field | free |
 | `npm run blindspot:proof` | Replay the unwatched-field incident offline. Every value is computed by the functions production uses | free |
+| `npm run shots` | Screenshot every page at phone, tablet and desktop into `.visual-qa/`, and report any horizontal overflow | free |
+| `npm run legibility` | Print what a scanner actually sees in each section: the label, the heading, the first line, and any section over two screens tall | free |
 | `npm run mcp` | Start the MCP server, so an agent can drive the system | free |
 | `npm run notice` | The CLI, against the local file store. Useful in development, wrong for a demo: the deployed dashboard has a different store | free |
 | `npm run live` | The same operations over HTTP against the deployed API, so the terminal and the dashboard agree | **live** |
@@ -151,3 +153,31 @@ more than the data can keep, in which case fix the type. Only when the
 compiler is genuinely wrong about the runtime, as it is about `JSON.stringify`
 returning `undefined`, does a disable directive belong there, and it names the
 reason on the line above.
+
+## Looking at the pages
+
+Every UI change in this repository was, for a long time, reasoned about rather
+than seen. That is a bad way to build an interface and an impossible way to
+check one: the architecture diagram shipped a box that stretched to fill its
+grid column for two rewrites, because it looked correct in the source and
+nobody could see the screen.
+
+```bash
+npm run shots        # every route at 390, 768 and 1440, into .visual-qa/
+npm run legibility   # the three-second test, per section
+```
+
+`shots` also reports horizontal overflow per page, which is the single most
+common way a layout that looks finished on a laptop is broken on a phone, and
+which never appears in a screenshot because the screenshot is as wide as the
+content.
+
+`legibility` prints only what a reader takes in when they land on a section and
+give it three seconds: the label above the heading, the heading, and roughly the
+first line. Reading the output is the test. A heading that needs its own
+paragraph to make sense has failed, and that is far easier to see in a list of
+headings than on the page, where the surrounding prose quietly explains it for
+you. It flags any section over two screens tall for the same reason.
+
+Both write to `.visual-qa/`, which is gitignored. Screenshots are for looking
+at, not for committing.

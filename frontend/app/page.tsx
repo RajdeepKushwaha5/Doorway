@@ -231,8 +231,27 @@ export async function NoticeEnginePage() {
           </div>
         </section>
 
-        {/* Search Engine & Infinite Marquee Slider ------------------------- */}
+        {/*
+          Search Engine & Infinite Marquee Slider.
+
+          The heading is not decoration. This section used to open with a search
+          box and a row of suggestion pills whose labels are collector ids, so a
+          reader scrolling past met `c_mt3uuz5c3gmgatqsn` with nothing anywhere
+          saying what was being searched or why they would want to.
+        */}
         <section className="mb-14">
+          <div className="max-w-[760px] mb-6">
+            <div className="font-neuebit text-[12px] uppercase tracking-[0.2em] text-gray-400 mb-2">
+              &#10022; THE FLEET
+            </div>
+            <h2 className="font-mondwest text-[36px] sm:text-[48px] leading-[1.0] tracking-tight mb-3">
+              Every source under watch, searchable.
+            </h2>
+            <p className="text-[14px] text-gray-600 leading-relaxed font-mono">
+              The domains being read, the surfaces read on each one, and the collector doing the
+              reading. Search by domain, endpoint or tag.
+            </p>
+          </div>
           <SearchAndCollectorCarousel />
         </section>
 
