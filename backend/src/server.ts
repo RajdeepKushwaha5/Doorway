@@ -9,6 +9,7 @@ import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
 import { FileStore, ScreenshotStore, seedCollectors } from './store/index.js';
 import { observeOnce } from './pipeline/observe.js';
+import { composeBrief } from './acquire/compose.js';
 import { notifyIncident, reportIncidentToGitHub } from './pipeline/index.js';
 
 /**
@@ -189,6 +190,40 @@ function main(): void {
         if (url === undefined) continue;
         try {
           await observeOnce(collector, url, { client, store, fetchMarkdown });
+
+          /*
+           * Rebuild the birth certificate too, for the same reason.
+           *
+           * Provenance lives on the collector record, and seeding restores
+           * collectors from a file that has none, so every restart left six
+           * collector pages reading "No record of how this collector was
+           * created". Reconstructing it costs one more read of a page the
+           * warm-up has just proven reachable.
+           *
+           * Only when there is none. A collector that recorded its own brief
+           * at creation keeps it, because that is the stronger evidence and
+           * this would replace it with the weaker kind.
+           */
+          const saved = await store.getCollector(collector.id);
+          if (saved !== null && saved.provenance === undefined) {
+            const { markdown } = await fetchMarkdown(url);
+            const brief = composeBrief(markdown, url);
+            const protectedBecause: Record<string, string> = {};
+            for (const [field, reason] of Object.entries(brief.protectedBecause)) {
+              if (saved.protectedFields.includes(field)) protectedBecause[field] = reason;
+            }
+            await store.saveCollector({
+              ...saved,
+              provenance: {
+                sourceUrl: url,
+                reconstructed: true,
+                observations: brief.observations,
+                protectedBecause,
+                createdBy: 'operator',
+                createdAt: saved.createdAt,
+              },
+            });
+          }
           process.stdout.write(`  warmed ${collector.name}\n`);
         } catch (error) {
           // One unreachable source must not stop the rest from coming back.
