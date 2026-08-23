@@ -378,6 +378,15 @@
         }
       }
     ],
+    "anchorCase": {
+      "url": "${DOORWAY_LAB_URL}/fixtures/deadline_sentinel",
+      "expected": {
+        "deadline_raw": "SENTINEL-4F2A9C-DEADLINE"
+      },
+      "decoy": {
+        "deadline_raw": "18 September 2026"
+      }
+    },
     "autoPromote": "never",
     "freshnessMinutes": 1440,
     "currency": "INR"

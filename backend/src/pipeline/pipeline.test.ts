@@ -580,6 +580,110 @@ describe('NOTICE end-to-end', () => {
     expect(resolved.quarantined).toBe(false);
   });
 
+  /*
+   * The anchor case, end to end.
+   *
+   * Both repairs below return 249 on the incident page, which is the right
+   * answer, and the older gate would have approved either one. Only one of
+   * them read the labelled element.
+   */
+  describe('a repair that is right for the wrong reason', () => {
+    const ANCHOR_URL = 'https://driftmart.test/fixtures/price_sentinel';
+
+    beforeEach(async () => {
+      collector = {
+        ...collector,
+        anchorCase: {
+          url: ANCHOR_URL,
+          expected: { 'price.value': 1337 },
+          decoy: { 'price.value': 249 },
+        },
+      };
+      await store.saveCollector(collector);
+
+      fake.rowsByUrl.set(INCIDENT_URL, [DRIFTED_ROW]);
+      fake.candidateRowsByUrl.set(INCIDENT_URL, [HEALTHY_ROW]);
+      fake.candidateRowsByUrl.set(REGRESSION_URL, [HEALTHY_ROW]);
+    });
+
+    it('is rejected when it returns the decoy on the anchor page', async () => {
+      const observed = await observeOnce(collector, INCIDENT_URL, {
+        client: asClient(fake),
+        store,
+        fetchMarkdown: witness,
+      });
+
+      // Reading a position: on the anchor page the old value still sits where
+      // the extractor is looking, so it returns it and looks fixed.
+      fake.candidateRowsByUrl.set(ANCHOR_URL, [HEALTHY_ROW]);
+
+      const visited: string[] = [];
+      const outcome = await attemptRepair(collector, observed.incident!, {
+        client: asClient(fake),
+        store,
+        runCandidate: async (_id, url) => {
+          visited.push(url);
+          return fake.candidateRowsByUrl.get(url) ?? [];
+        },
+        pollIntervalMs: 1,
+        healTimeoutMs: 50,
+      });
+
+      expect(outcome.kind).toBe('rejected');
+      // The wiring, not the rule: the anchor page has to actually be fetched,
+      // or the gate is deciding on a case nobody ran.
+      expect(visited).toContain(ANCHOR_URL);
+      expect(fake.approvals).toBe(0);
+    });
+
+    it('is approved when it returns the token', async () => {
+      const observed = await observeOnce(collector, INCIDENT_URL, {
+        client: asClient(fake),
+        store,
+        fetchMarkdown: witness,
+      });
+
+      fake.candidateRowsByUrl.set(ANCHOR_URL, [
+        { ...HEALTHY_ROW, price: { value: 1337, currency: 'USD' } },
+      ]);
+
+      const outcome = await attemptRepair(collector, observed.incident!, {
+        client: asClient(fake),
+        store,
+        runCandidate: async (_id, url) => fake.candidateRowsByUrl.get(url) ?? [],
+        pollIntervalMs: 1,
+        healTimeoutMs: 50,
+      });
+
+      expect(outcome.kind).toBe('approved');
+    });
+
+    it('is rejected when the anchor page could not be reached', async () => {
+      // An anchor that failed to run has proved nothing. Skipping it on error
+      // would mean one flaky request is enough to promote the repair this
+      // check exists to stop.
+      const observed = await observeOnce(collector, INCIDENT_URL, {
+        client: asClient(fake),
+        store,
+        fetchMarkdown: witness,
+      });
+
+      const outcome = await attemptRepair(collector, observed.incident!, {
+        client: asClient(fake),
+        store,
+        runCandidate: async (_id, url) => {
+          if (url === ANCHOR_URL) throw new Error('unlocker refused');
+          return fake.candidateRowsByUrl.get(url) ?? [];
+        },
+        pollIntervalMs: 1,
+        healTimeoutMs: 50,
+      });
+
+      expect(outcome.kind).toBe('rejected');
+      expect(fake.approvals).toBe(0);
+    });
+  });
+
   it('refuses to repair a genuine source change', async () => {
     // The negative case that protects working collectors. Both sensors report
     // 229, so nothing is broken and nothing should be rewritten.

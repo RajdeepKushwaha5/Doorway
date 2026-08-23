@@ -47,6 +47,23 @@ export interface GateInput {
   regression: readonly GoldenCase[];
   /** Rows the candidate produced, keyed by URL. */
   candidateRowsByUrl: ReadonlyMap<string, readonly unknown[]>;
+  /**
+   * A page served with the true value moved and a decoy left behind.
+   *
+   * Optional, because it needs a page whose markup we control, and most
+   * sources are not that. Where it can be run it is the difference between
+   * "the candidate returned the right value" and "the candidate read the right
+   * element", and only the second one survives the next redesign.
+   *
+   * `expected` holds the token. `decoy` holds the value the candidate would
+   * return if it were reading position rather than meaning, and is recorded so
+   * a failure can say which mistake was made instead of only that one was.
+   */
+  anchor?: {
+    url: string;
+    expected: Readonly<Record<string, unknown>>;
+    decoy: Readonly<Record<string, unknown>>;
+  };
   /** Fields that must not change. A repair may not quietly drop them. */
   protectedFields: readonly string[];
   contract: CollectorContract;
@@ -163,6 +180,46 @@ export function evaluateGate(input: GateInput): GateDecision {
     input.specs ?? [],
   );
   results.push(incidentResult);
+
+  /*
+   * The anchor case, when there is one.
+   *
+   * Run after the incident case and before the regression set, because a
+   * candidate that reads the wrong element is not worth checking for
+   * regressions: it has not been shown to work at all.
+   */
+  if (input.anchor !== undefined) {
+    const anchorResult = evaluateCase(
+      input.anchor.url,
+      'anchor',
+      input.anchor.expected,
+      input.candidateRowsByUrl.get(input.anchor.url),
+      input.specs ?? [],
+    );
+    results.push(anchorResult);
+
+    if (!anchorResult.passed) {
+      /*
+       * Name the mistake rather than the symptom.
+       *
+       * A candidate that returned the decoy read a position. A candidate that
+       * returned neither read something else entirely. Those are different
+       * failures and an operator deciding what to do next needs to know which.
+       */
+      const followedDecoy = anchorResult.fields.some((field) => {
+        const decoyValue = input.anchor?.decoy[field.path];
+        return (
+          decoyValue !== undefined &&
+          compareValues(field.observed, decoyValue).kind === 'agree'
+        );
+      });
+      reasons.push(
+        followedDecoy
+          ? 'the candidate returned the decoy on the anchor page, so it is reading a position rather than the labelled value'
+          : 'the candidate did not return the anchor token, so it has not been shown to read the labelled value',
+      );
+    }
+  }
 
   for (const golden of input.regression) {
     results.push(

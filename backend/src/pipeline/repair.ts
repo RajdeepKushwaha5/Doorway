@@ -210,6 +210,34 @@ export async function attemptRepair(
     }
   }
 
+  /*
+   * The anchor page, where returning the right value is not enough.
+   *
+   * Run last, and treated exactly like the others when it cannot be executed:
+   * the URL stays absent and the gate reads that as unverified rather than as
+   * a pass.
+   */
+  if (collector.anchorCase !== undefined) {
+    try {
+      candidateRowsByUrl.set(
+        collector.anchorCase.url,
+        await deps.runCandidate(collector.brightDataCollectorId, collector.anchorCase.url),
+      );
+    } catch (caught) {
+      await deps.store.appendAudit({
+        id: randomUUID(),
+        actor: 'system',
+        eventType: 'candidate.execution_failed',
+        entityId: incident.id,
+        payload: {
+          url: collector.anchorCase.url,
+          error: caught instanceof Error ? caught.message : String(caught),
+        },
+        at: now().toISOString(),
+      });
+    }
+  }
+
   const incidentExpected = Object.fromEntries(
     (incident.witness?.values ?? []).map((value) => [value.path, value.value]),
   );
@@ -222,6 +250,7 @@ export async function attemptRepair(
     contract,
     // So a date is compared as a day rather than as a very large number.
     specs: collector.witnessSpecs,
+    ...(collector.anchorCase === undefined ? {} : { anchor: collector.anchorCase }),
   });
 
   /*

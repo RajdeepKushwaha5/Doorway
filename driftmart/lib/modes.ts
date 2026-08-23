@@ -27,6 +27,7 @@ export const MODE_IDS = [
   // serves, so a student looking at the demonstration sees a deadline they
   // would have planned around rather than a headphone price.
   'deadline_drift',
+  'deadline_sentinel',
   'deadline_extended',
   'sponsored_opportunity',
   'application_link_removed',
@@ -35,6 +36,7 @@ export const MODE_IDS = [
 /** The opportunity faults, separated so a page can ask for only those. */
 export const OPPORTUNITY_MODE_IDS = [
   'deadline_drift',
+  'deadline_sentinel',
   'deadline_extended',
   'sponsored_opportunity',
   'application_link_removed',

@@ -111,6 +111,16 @@ ${options.prepend ?? ''}
 </article>`.trim();
 }
 
+/**
+ * A value that exists nowhere else on the page, on the web, or in the store.
+ *
+ * Fixed rather than random so the gate can assert on it without the fixture
+ * and the checker having to agree on a value at runtime. Its only job is to be
+ * unmistakable: if an extractor returns this, it read the labelled row, and if
+ * it returns anything else it did not.
+ */
+export const DEADLINE_SENTINEL = 'SENTINEL-4F2A9C-DEADLINE';
+
 const BASELINE_OPPORTUNITY: OpportunityModeDefinition = {
   id: 'baseline',
   label: 'Baseline. The page is correct and the collector reads it correctly.',
@@ -153,6 +163,43 @@ export const OPPORTUNITY_MODES: Readonly<Record<ModeId, OpportunityModeDefinitio
     <dd class="deadline">1 September 2026</dd>
     <dt>Application deadline</dt>
     <dd class="real-deadline">${CORRECT_DEADLINE}</dd>`,
+    }),
+  },
+
+  /*
+   * The page that tells a meaning-bound extractor from a lucky one.
+   *
+   * Every other fault here changes a value and asks whether the system
+   * notices. This one asks a harder question: when an extractor returns the
+   * right answer, did it actually read the right place?
+   *
+   * The true value is rewritten to a token, and the value it used to hold is
+   * left above it under a different label. An extractor anchored to
+   * "Application deadline" returns the token. One anchored to position, or to
+   * the first date it finds, returns the decoy and looks exactly as correct as
+   * it did yesterday.
+   *
+   * This is what makes the promotion gate a test of meaning rather than of
+   * coincidence. A repaired collector that passes every value check can still
+   * fail here, and a repair that fails here was never fixed, it was lucky.
+   */
+  deadline_sentinel: {
+    id: 'deadline_sentinel',
+    label: 'The real deadline is replaced by a token, and a decoy keeps its place.',
+    plain:
+      'The labelled deadline now holds a value that appears nowhere else. The date it used to show sits above it under a different label. An extractor that reads the label returns the token; one that reads the position returns the decoy.',
+    semanticChange: false,
+    decision:
+      'Return the token. Anything else means the extractor was reading a position, not a meaning, and a value match was hiding it.',
+    verdicts: ['extractor_drift'],
+    consequence:
+      'A repair that reads the wrong element but happens to return the right value passes every value check ever written. It breaks the first time the two stop agreeing, which is exactly when nobody is looking.',
+    expected: { ...OPPORTUNITY_EXPECTED, deadline: DEADLINE_SENTINEL },
+    html: opportunityHtml({
+      deadlineRows: `<dt>Programme dates</dt>
+    <dd class="deadline">${CORRECT_DEADLINE}</dd>
+    <dt>Application deadline</dt>
+    <dd class="real-deadline">${DEADLINE_SENTINEL}</dd>`,
     }),
   },
 

@@ -71,6 +71,19 @@ const collectorFieldsSchema = z
   goldenCases: z
     .array(z.object({ url: z.string().url(), expected: z.record(z.unknown()), label: z.string() }))
     .default([]),
+  /**
+   * The page that separates reading a label from reading a position.
+   *
+   * Optional. A source whose markup we cannot serve simply has no anchor, and
+   * its repairs are gated on values alone exactly as before.
+   */
+  anchorCase: z
+    .object({
+      url: z.string().url(),
+      expected: z.record(z.unknown()),
+      decoy: z.record(z.unknown()),
+    })
+    .optional(),
   schedule: z.string().nullable().default(null),
   /** Default is never: a new collector asks before changing production. */
   autoPromote: z.enum(['never', 'on_gate_pass']).default('never'),

@@ -116,6 +116,15 @@ already caught a real repair that reported success: Self-Healing completed,
 passed its own validator, and the field it was asked to fix still returned the
 wrong value.
 
+Passing that replay still leaves a hole, because a repair can return the right
+value from the wrong element and no comparison of values will notice. So one
+page in the lab is served with the true deadline rewritten to a token that
+appears nowhere else, and the date it used to show left above it under a
+different label. A repair reading the label returns the token. A repair reading
+the position returns the old date and looks exactly as fixed as it did a minute
+ago. That page is the difference between a repair that works and a repair that
+got lucky.
+
 *Check it:* [/proof](https://doorway-frontend-snowy.vercel.app/proof), break the page yourself.
 
 ### 4. What the structured output went on to power
@@ -504,6 +513,8 @@ docs/                Deployment, evaluation, findings
 **Six verdicts instead of pass/fail.** Because "the page changed" and "the extractor broke" need opposite responses, and a binary check cannot tell them apart.
 
 **A repair must earn promotion.** A proposed fix is replayed against the page that failed **and** the pages that were working, and rejected unless it fixes the first without breaking the second. This is not theoretical: Bright Data's Self-Healing once reported a repair complete, passed its own validator, and the field it was asked to fix still returned the wrong value. The gate caught it and left production alone.
+
+**A right answer from the wrong element is still rejected.** Value comparison cannot distinguish an extractor reading the labelled field from one reading a position that happens to hold the same text, so the gate replays the candidate against a page where those two answers differ: the true value is a token, and a decoy sits where a position-anchored read would find it. A repair that returns the decoy is refused and told which mistake it made.
 
 **Refuse rather than guess.** When the two sensors disagree, the API returns the last value both confirmed and names the disputed field. The MCP server refuses outright and tells the agent not to scrape around the refusal. A confident answer is at its most damaging exactly when the value is in doubt.
 

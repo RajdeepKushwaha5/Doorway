@@ -35,6 +35,21 @@ export interface CollectorRecord {
   protectedFields: string[];
   /** Pinned correct outputs, used as the regression corpus. */
   goldenCases: GoldenCase[];
+  /**
+   * A page served with the true value moved and a decoy left in its place.
+   *
+   * Optional because it needs markup we control, which in practice means the
+   * fixture. Where it exists the gate can distinguish a candidate that reads
+   * the labelled element from one that reads a position and happens to be
+   * right, which no comparison of values can do on its own.
+   */
+  anchorCase?: {
+    url: string;
+    /** The token. Present only on the correctly labelled element. */
+    expected: Record<string, unknown>;
+    /** What a position-anchored read returns instead, so failures can say which. */
+    decoy: Record<string, unknown>;
+  } | undefined;
   acquisitionContext: Partial<AcquisitionContext>;
   /**
    * How this collector came to exist, when anybody recorded it.
