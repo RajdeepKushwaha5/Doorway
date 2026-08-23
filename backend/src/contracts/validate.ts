@@ -234,7 +234,7 @@ export function validateRun(input: ValidationInput): CheckResult[] {
 
   // 1. Explicit failure: the collector reported an error, or returned nothing.
   const errorRows = rows.filter(
-    (row) => row !== null && typeof row === 'object' && 'error' in (row as object),
+    (row) => row !== null && typeof row === 'object' && 'error' in (row),
   );
   if (errorRows.length > 0) {
     const first = errorRows[0] as Record<string, unknown>;
@@ -408,7 +408,7 @@ function learnedChecks(
       const sample = [profile.numeric.p05, profile.numeric.median, profile.numeric.p95];
       for (const value of values) {
         const numeric = typeof value === 'number' ? value : normalizeMoney(value)?.value;
-        if (numeric === undefined || numeric === null) continue;
+        if (numeric === undefined) continue;
 
         const z =
           profile.numeric.mad > 0

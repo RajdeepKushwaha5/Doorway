@@ -56,7 +56,7 @@ export class IllegalTransitionError extends Error {
 }
 
 export function canTransition(from: IncidentState, to: IncidentState): boolean {
-  return (TRANSITIONS[from] ?? []).includes(to);
+  return TRANSITIONS[from].includes(to);
 }
 
 export interface TransitionRecord {

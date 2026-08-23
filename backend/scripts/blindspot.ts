@@ -60,7 +60,7 @@ const out = (text = ''): void => void process.stdout.write(`${text}\n`);
  */
 function show(value: unknown): string {
   if (value !== null && typeof value === 'object' && 'value' in value) {
-    return String((value as { value: unknown }).value);
+    return String((value).value);
   }
   return JSON.stringify(value) ?? String(value);
 }

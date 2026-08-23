@@ -144,6 +144,9 @@ export function Globe({
     // Names the fleet actually under watch. Falls back to this system's own
     // surfaces, never to invented sites.
     const callouts = calloutsFor(markers);
+    // lib.dom says matchMedia is always there. It is absent in jsdom and in
+    // older engines, and this runs before anything else on the canvas.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 
     let rotY = 0;
@@ -473,6 +476,9 @@ export function Globe({
       isDragging = true;
       dragStartX = e.clientX;
       glitchEndTime = currentTime + 320;
+      // Pointer capture is missing on older Safari. Dragging degrades, the
+      // page does not break.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       canvas?.setPointerCapture?.(e.pointerId);
     }
 
@@ -487,6 +493,8 @@ export function Globe({
 
     function onPointerUp(e: PointerEvent) {
       isDragging = false;
+      // See setPointerCapture above.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       canvas?.releasePointerCapture?.(e.pointerId);
     }
 

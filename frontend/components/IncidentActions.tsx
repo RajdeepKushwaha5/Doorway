@@ -173,6 +173,8 @@ function JobProgress({ jobId }: { jobId: string }) {
           const response = await fetch(`${base}/api/jobs/${jobId}`, { cache: 'no-store' });
           if (response.ok) {
             const next = (await response.json()) as JobRecord;
+            // Set by the effect's cleanup, which the rule does not follow into.
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (cancelled) return;
             setJob(next);
             if (next.status === 'succeeded' || next.status === 'failed') {

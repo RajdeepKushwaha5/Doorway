@@ -93,8 +93,11 @@ export class OpportunityIndex {
         ? parsed
         : (parsed as { records?: unknown } | null)?.records;
       if (Array.isArray(entries)) {
-        for (const entry of entries as IndexedOpportunity[]) {
-          if (typeof entry?.sourceUrl === 'string') this.#records.set(identityOf(entry), entry);
+        for (const entry of entries as readonly unknown[]) {
+          if (entry === null || typeof entry !== 'object') continue;
+          const record = entry as IndexedOpportunity;
+          if (typeof record.sourceUrl !== 'string') continue;
+          this.#records.set(identityOf(record), record);
         }
       }
       if (!Array.isArray(parsed)) {

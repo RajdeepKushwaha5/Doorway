@@ -9,7 +9,16 @@
 export interface FundingFacts {
   amount: number | null;
   currency: string | null;
-  level: 'full' | 'partial' | 'unspecified' | string;
+  /**
+   * `full`, `partial` or `unspecified` where the source says so, and
+   * whatever the source actually printed where it does not.
+   *
+   * Typed as a plain string on purpose. Writing the three known values as a
+   * union alongside `string` reads like a checked set but is exactly `string`
+   * to the compiler, which promises a reader a guarantee the data cannot
+   * keep.
+   */
+  level: string;
 }
 
 export function fundingLabel(funding: FundingFacts): string {

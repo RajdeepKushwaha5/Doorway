@@ -41,7 +41,7 @@ function record(overrides: Partial<Opportunity>): Opportunity {
       verdict: null,
     },
     ...overrides,
-  } as Opportunity;
+  };
 }
 
 describe('collapsing two readings of one opportunity', () => {
@@ -57,7 +57,7 @@ describe('collapsing two readings of one opportunity', () => {
       fieldsDegraded: [],
       verdict: null,
     },
-  } as Partial<Opportunity>);
+  });
 
   it('keeps the two-sensor record over a newer single-sensor one', () => {
     expect(deduplicate([verified, justFound])[0]?.trust.confirmedBy).toBe('two_sensors');
@@ -65,8 +65,8 @@ describe('collapsing two readings of one opportunity', () => {
   });
 
   it('still prefers the newer of two equally corroborated records', () => {
-    const older = record({ id: 'x', trust: { ...verified.trust, lastVerifiedAt: '2026-08-20T10:00:00Z' } } as Partial<Opportunity>);
-    const newer = record({ id: 'y', trust: { ...verified.trust, lastVerifiedAt: '2026-08-22T10:00:00Z' } } as Partial<Opportunity>);
+    const older = record({ id: 'x', trust: { ...verified.trust, lastVerifiedAt: '2026-08-20T10:00:00Z' } });
+    const newer = record({ id: 'y', trust: { ...verified.trust, lastVerifiedAt: '2026-08-22T10:00:00Z' } });
     expect(deduplicate([older, newer])[0]?.id).toBe('y');
   });
 

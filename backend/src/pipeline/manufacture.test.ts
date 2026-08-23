@@ -85,7 +85,7 @@ async function run(
         : stubClient(steps, row, emptyFirstRuns),
     store,
     readPage: async () => ({ markdown: MARKDOWN }),
-    emit: (event) => events.push({ at: new Date().toISOString(), ...event } as ObserveEvent),
+    emit: (event) => events.push({ at: new Date().toISOString(), ...event }),
     pollMs: 0,
     sleep: async () => undefined,
   });

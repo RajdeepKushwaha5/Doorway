@@ -133,6 +133,8 @@ export function buildMission(input: MissionInput): Mission {
   const { opportunity } = input;
   const now = input.now ?? Date.now();
   const held = new Set((input.held ?? []).map((name) => name.trim().toLowerCase()));
+  // An opportunity stored before this field existed still loads.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const disputed = [...(opportunity.trust.fieldsDegraded ?? [])];
 
   /*
@@ -316,17 +318,19 @@ function decideState(input: {
     };
   }
 
-  if (opportunity.trust.status === 'verified' || opportunity.trust.status === 'partially_verified') {
-    return {
-      state: 'eligible',
-      reason:
-        total === 0
-          ? 'Confirmed by two sensors. This source publishes no document list, so what it asks for is unknown.'
-          : `Confirmed by two sensors. ${total - heldCount} of ${total} documents still to gather.`,
-    };
-  }
-
-  return { state: 'verified', reason: 'The facts have been confirmed.' };
+  /*
+   * Everything else returned above, so what is left is verified or
+   * partially_verified. Stating that as a condition would be dead code, and
+   * a trailing default would swallow a trust status added later; returning
+   * here makes that a compile error instead.
+   */
+  return {
+    state: 'eligible',
+    reason:
+      total === 0
+        ? 'Confirmed by two sensors. This source publishes no document list, so what it asks for is unknown.'
+        : `Confirmed by two sensors. ${total - heldCount} of ${total} documents still to gather.`,
+  };
 }
 
 /** One difference between two readings of the same mission. */

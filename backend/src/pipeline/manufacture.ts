@@ -144,7 +144,7 @@ export function alignSpecs(
    * reads nothing.
    */
   if (row === null || typeof row !== 'object') return [];
-  const actual = Object.keys(row as Record<string, unknown>);
+  const actual = Object.keys(row);
 
   const aligned: WitnessFieldSpec[] = [];
   for (const spec of specs) {
@@ -375,7 +375,7 @@ export async function manufactureCollector(
       generationSeconds,
     },
     createdAt: new Date(startedAt).toISOString(),
-  } as CollectorRecord;
+  };
 
   await input.store.saveCollector(collector);
   input.emit({

@@ -1,3 +1,4 @@
+import { asText } from '../src/shared/text.js';
 import { extractField } from '../src/witness/extract.js';
 import { reconcile } from '../src/witness/compare.js';
 import { classify } from '../src/incident/classify.js';
@@ -136,8 +137,8 @@ function report(specs: readonly WitnessFieldSpec[], markdown: string): void {
   const { summary, classification } = run(markdown, specs);
   console.log(`   fields compared   ${specs.map((s) => s.path).join(', ')}`);
   for (const comparison of summary.comparisons) {
-    const collector = String(comparison.collectorValue ?? 'not reported');
-    const witness = String(comparison.witnessValue ?? 'NOT FOUND ON PAGE');
+    const collector = asText(comparison.collectorValue ?? 'not reported');
+    const witness = asText(comparison.witnessValue ?? 'NOT FOUND ON PAGE');
     console.log(
       `     ${comparison.path.padEnd(16)} ${comparison.agreement.kind.toUpperCase().padEnd(12)}` +
         `\n       collector  ${collector}` +

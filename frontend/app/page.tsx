@@ -20,33 +20,6 @@ import { getIndexStatsAction } from '@/app/actions';
 
 export const dynamic = 'force-dynamic';
 
-const STEPS = [
-  {
-    n: '01',
-    title: 'Observe',
-    sub: 'Scraper Studio',
-    copy: 'A Scraper Studio collector returns structured rows. Contracts check them for missing, impossible or unusual values.',
-  },
-  {
-    n: '02',
-    title: 'Witness',
-    sub: 'Web Unlocker',
-    copy: 'Web Unlocker reads the same page as plain markdown. No selectors, so it cannot drift the way an extractor does.',
-  },
-  {
-    n: '03',
-    title: 'Decide',
-    sub: 'Reconciliation',
-    copy: 'Sensors disagree and the extractor broke. They agree on a new value and the world changed, so the collector is left alone.',
-  },
-  {
-    n: '04',
-    title: 'Prove',
-    sub: 'Gated Replay',
-    copy: 'Self-Healing proposes a repair. It is replayed against the page that failed and the pages that worked, before anything ships.',
-  },
-];
-
 const FAQS = [
   {
     q: 'Why is valid JSON not enough?',
@@ -117,8 +90,6 @@ export async function NoticeEnginePage() {
   // token that guards runs guards this.
   const canManufacture = capabilities.canRunCollector;
 
-  const open = incidents.filter((incident) => incident.resolvedAt === null && incident.quarantined);
-
   /*
    * The fixture, found by where it actually lives.
    *
@@ -168,7 +139,10 @@ export async function NoticeEnginePage() {
   const fixtureCollector = collectors
     .filter(
       (collector) =>
-        !/search/i.test(collector.name) &&
+        !/\bsearch\b/i.test(collector.name) &&
+        // The frontend and backend deploy separately: a collector can arrive
+        // from a backend version that did not send this field.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         (collector.watchUrls ?? []).some((url) => url.toLowerCase().startsWith(labUrl)),
     )
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
@@ -180,7 +154,8 @@ export async function NoticeEnginePage() {
     (collector) =>
       // Same two faults as the lookup above: a hostname that no longer exists,
       // and "search" as a substring, which "Research" satisfies.
-      /search/i.test(collector.name) &&
+      /\bsearch\b/i.test(collector.name) &&
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
       (collector.watchUrls ?? []).some((url) => url.toLowerCase().startsWith(labUrl)),
   );
 

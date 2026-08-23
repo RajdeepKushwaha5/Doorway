@@ -66,7 +66,7 @@ async function operate<T>(path: string, body?: unknown): Promise<T> {
   if (!response.ok) {
     const message =
       typeof payload === 'object' && payload !== null && 'error' in payload
-        ? String((payload as { error: unknown }).error)
+        ? String((payload).error)
         : `NOTICE API returned ${String(response.status)}`;
     throw new Error(message);
   }

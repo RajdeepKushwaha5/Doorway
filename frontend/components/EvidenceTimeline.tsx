@@ -1,3 +1,4 @@
+import { asText } from '@/lib/text';
 import type { Incident } from '@/lib/types';
 
 /**
@@ -59,7 +60,7 @@ function readable(value: unknown): string {
     }
     return JSON.stringify(value);
   }
-  return String(value);
+  return asText(value);
 }
 
 export function WitnessComparison({ incident }: { incident: Incident }) {

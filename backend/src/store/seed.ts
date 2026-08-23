@@ -49,7 +49,7 @@ export async function seedCollectors(
   const existing = await store.listCollectors();
   if (existing.length > 0) return { seeded: 0, reason: 'store-not-empty' };
 
-  let entries: SeedEntry[];
+  let entries: readonly unknown[];
   try {
     /*
      * Hosts are configuration, not content.
@@ -73,7 +73,7 @@ export async function seedCollectors(
 
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return { seeded: 0, reason: 'unreadable' };
-    entries = parsed as SeedEntry[];
+    entries = parsed;
   } catch {
     // A missing or malformed seed file must not stop the server starting. An
     // API that refuses to boot over optional demo data is worse than an empty
@@ -82,8 +82,10 @@ export async function seedCollectors(
   }
 
   let seeded = 0;
-  for (const entry of entries) {
-    if (typeof entry?.brightDataCollectorId !== 'string') continue;
+  for (const raw of entries) {
+    if (raw === null || typeof raw !== 'object') continue;
+    const entry = raw as SeedEntry;
+    if (typeof entry.brightDataCollectorId !== 'string') continue;
     const collector: CollectorRecord = {
       ...entry,
       id: randomUUID(),

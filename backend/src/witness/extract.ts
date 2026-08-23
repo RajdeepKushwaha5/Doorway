@@ -25,8 +25,15 @@ function lineMatchesAny(line: string, needles: readonly string[]): boolean {
   return needles.some((needle) => key.includes(comparisonKey(needle)));
 }
 
-/** Coerce a raw string to the type the spec asks for. */
-function coerce(raw: unknown, spec: WitnessFieldSpec): unknown | null {
+/**
+ * Coerce a raw string to the type the spec asks for.
+ *
+ * Returns null when the value cannot be read as that type. The signature
+ * says `unknown` rather than `unknown | null` because those are the same
+ * type; the null is a fact about the values, not something callers can be
+ * made to check.
+ */
+function coerce(raw: unknown, spec: WitnessFieldSpec): unknown {
   switch (spec.kind) {
     case 'money': {
       const money = normalizeMoney(raw);
@@ -523,10 +530,14 @@ export function extractField(
 
 /** Whether a candidate matches the optional shape a spec declared. */
 function satisfiesShape(value: unknown, spec: WitnessFieldSpec): boolean {
-  if (spec.shape === undefined) return true;
-  if (spec.shape === 'date') return typeof value === 'string' && parseDeadline(value) !== null;
-  if (spec.shape === 'url') return typeof value === 'string' && /^https?:\/\//i.test(value);
-  return true;
+  switch (spec.shape) {
+    case undefined:
+      return true;
+    case 'date':
+      return typeof value === 'string' && parseDeadline(value) !== null;
+    case 'url':
+      return typeof value === 'string' && /^https?:\/\//i.test(value);
+  }
 }
 
 /** Extract every field in a spec list. */

@@ -84,7 +84,7 @@ async function runCli(args: readonly string[], options: CliOptions): Promise<str
     throw new BrightDataCliError(
       `\`${binary} ${args[0] ?? ''}\` failed`,
       typeof error.code === 'number' ? error.code : null,
-      error.stderr ?? String(error.message ?? ''),
+      error.stderr ?? String(error.message),
     );
   }
 }

@@ -7,7 +7,6 @@ import { invariantSchema } from '../contracts/index.js';
 import { buildCertificate } from '../incident/certificate.js';
 import { ObservationBroker, type ObserveEvent } from '../pipeline/events.js';
 import {
-  attemptRepair,
   buildFeed,
   compareBestDeal,
   computeImpact,

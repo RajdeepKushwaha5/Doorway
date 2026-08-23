@@ -60,7 +60,7 @@ async function call(path: string, init?: RequestInit): Promise<unknown> {
   if (!response.ok) {
     const message =
       typeof body === 'object' && body !== null && 'error' in body
-        ? String((body as { error: unknown }).error)
+        ? String((body).error)
         : text;
     throw new Error(`${String(response.status)} ${message}`);
   }

@@ -42,14 +42,12 @@ function run(id: string, row: unknown, at: string): RunRecord {
   return {
     id,
     collectorId: 'col-1',
-    brightDataSnapshotId: null,
     targetUrls: ['https://driftmart.test/p'],
-    version: 'production',
     rows: [row],
     checks: [],
     durationMs: 10,
     observedAt: at,
-  } as unknown as RunRecord;
+  };
 }
 
 function incident(runId: string, classification: Incident['classification']): Incident {

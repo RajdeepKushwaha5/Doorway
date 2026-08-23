@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { JetBrains_Mono } from 'next/font/google';
-import Link from 'next/link';
 import { MotionDirector } from '@/components/MotionDirector';
 import { SiteNav } from '@/components/SiteNav';
 import { SiteFooter } from '@/components/SiteFooter';

@@ -121,7 +121,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, payload?.error ?? response.statusText ?? 'request failed');
+    // HTTP/2 carries no reason phrase, so statusText is '' rather than absent
+    // and `?? 'request failed'` never fired on the responses that needed it.
+    const reason = response.statusText === '' ? 'request failed' : response.statusText;
+    throw new ApiError(response.status, payload?.error ?? reason);
   }
   if (payload === null) {
     throw new ApiError(500, 'empty or invalid JSON response from backend');

@@ -156,7 +156,6 @@ export async function attemptRepair(
    * on the automatic path, refused.
    */
   const candidateRowsByUrl = new Map<string, unknown[]>();
-  const urlsToReplay = [incidentUrl, ...regressionUrls];
   let candidateIndistinguishable = false;
 
   try {

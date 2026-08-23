@@ -67,6 +67,9 @@ export default async function ProofPage() {
     opportunity === null
       ? null
       : (collectors.find((entry) => entry.id === opportunity.collectorId) ?? null);
+  // As on the control room: watchUrls can be absent on a collector that came
+  // from a backend deployed at an earlier version.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const watchUrl = collector?.watchUrls?.[0] ?? null;
 
   return (

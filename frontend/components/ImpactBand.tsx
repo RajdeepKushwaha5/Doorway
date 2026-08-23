@@ -1,3 +1,4 @@
+import { asText } from '@/lib/text';
 import { api } from '@/lib/api';
 import type { ImpactStats, WithheldValue } from '@/lib/types';
 
@@ -38,7 +39,7 @@ function shown(value: unknown): string {
     }
     return JSON.stringify(value);
   }
-  return String(value);
+  return asText(value);
 }
 
 function Figure({

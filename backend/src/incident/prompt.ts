@@ -1,3 +1,4 @@
+import { asText } from '../shared/text.js';
 import type { WitnessFieldSpec } from '../witness/index.js';
 import type { ReconciliationSummary } from '../witness/index.js';
 import type { Classification } from './classify.js';
@@ -35,7 +36,7 @@ function describeValue(value: unknown): string {
       return `${String(record['value'])}${currency}`;
     }
   }
-  return String(value);
+  return asText(value);
 }
 
 /**

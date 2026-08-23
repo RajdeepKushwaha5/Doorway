@@ -40,7 +40,7 @@ function opportunity(overrides: Partial<Opportunity> = {}): Opportunity {
       verdict: null,
     },
     ...overrides,
-  } as Opportunity;
+  };
 }
 
 describe('building a mission', () => {

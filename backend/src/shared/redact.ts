@@ -27,9 +27,9 @@ const SENSITIVE_KEYS: readonly string[] = [
 /** Patterns redacted anywhere they appear inside free text. */
 const SENSITIVE_PATTERNS: readonly RegExp[] = [
   // Bearer tokens in headers or logged curl commands.
-  /\bBearer\s+[A-Za-z0-9._\-]{12,}/gi,
+  /\bBearer\s+[A-Za-z0-9._-]{12,}/gi,
   // Bright Data CLI flag form.
-  /--api[-_]?key[= ]\s*[A-Za-z0-9._\-]{12,}/gi,
+  /--api[-_]?key[= ]\s*[A-Za-z0-9._-]{12,}/gi,
   // Long hex strings, which is the shape Bright Data API keys take.
   /\b[a-f0-9]{32,}\b/gi,
   // Basic-auth credentials embedded in a proxy URL.
@@ -105,6 +105,9 @@ function redactInternal(value: unknown, depth: number, seen: WeakSet<object>): u
  * @throws If a secret pattern survives in the serialized value.
  */
 export function assertNoSecrets(value: unknown, context = 'value'): void {
+  // JSON.stringify returns undefined for undefined, a function or a symbol,
+  // whatever its type says. Defaulting here means a secret check never throws.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const serialized = JSON.stringify(value) ?? '';
   for (const pattern of SENSITIVE_PATTERNS) {
     // Reset lastIndex: these patterns carry the global flag.

@@ -26,6 +26,7 @@
  *     --prompt     "The price field returns ... it should return ..."
  */
 
+import { asText } from '../src/shared/text.js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { BrightDataClient, runScraper, type HealProgress } from '../src/brightdata/index.js';
@@ -106,7 +107,7 @@ async function runCandidate(label: string, collectorId: string, url: string): Pr
       rowCount: rows.length,
       sample: redact(firstRow),
       error: looksLikeError
-        ? String((firstRow as Record<string, unknown>)['error'] ?? 'unknown')
+        ? asText((firstRow as Record<string, unknown>)['error'] ?? 'unknown')
         : null,
       durationMs: Date.now() - startedAt,
     };

@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Sparkle } from '@phosphor-icons/react';
 import { registerCollectorAction, type ActionResult } from '@/app/actions';
 
 /**

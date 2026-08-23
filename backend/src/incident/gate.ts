@@ -90,7 +90,7 @@ function evaluateCase(
   }
 
   const errorRow = rows.find(
-    (row) => row !== null && typeof row === 'object' && 'error' in (row as object),
+    (row) => row !== null && typeof row === 'object' && 'error' in (row),
   );
   if (errorRow !== undefined) {
     return {

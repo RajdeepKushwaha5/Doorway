@@ -1,5 +1,6 @@
 'use client';
 
+import { asText } from '@/lib/text';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { startObservationAction } from '@/app/actions';
 import { apiBase } from '@/lib/env';
@@ -35,7 +36,7 @@ type Phase =
 function toneFor(event: StreamEvent): string {
   if (event.step === 'error') return 'text-blocked';
   if (event.step === 'verdict') {
-    const verdict = String(event.detail?.['verdict'] ?? '');
+    const verdict = asText(event.detail?.['verdict'] ?? '');
     if (verdict === 'healthy') return 'text-verified';
     if (verdict === 'genuine_source_change') return 'text-verified';
     if (verdict === 'access_anomaly') return 'text-suspect';
@@ -46,7 +47,7 @@ function toneFor(event: StreamEvent): string {
     return event.detail['samePage'] === true ? 'text-verified' : 'text-blocked';
   }
   if (event.step === 'compare') {
-    return String(event.detail?.['agreement'] ?? '') === 'disagree' ? 'text-blocked' : 'text-muted';
+    return asText(event.detail?.['agreement'] ?? '') === 'disagree' ? 'text-blocked' : 'text-muted';
   }
   if (event.step === 'witness-read' || event.step === 'witness-fetch') return 'text-parse-accent';
   return 'text-muted';
@@ -149,7 +150,7 @@ export function DecisionStream({
   const busy = phase.kind === 'starting' || phase.kind === 'watching';
   const blocked = disabledReason !== undefined;
   const verdict = events.find((event) => event.step === 'verdict');
-  const verdictName = String(verdict?.detail?.['verdict'] ?? '');
+  const verdictName = asText(verdict?.detail?.['verdict'] ?? '');
 
   // Tell the page what was decided, so it can describe this run rather than a
   // typical one. Reset to empty on a fresh start, so a stale verdict from the
@@ -208,7 +209,7 @@ export function DecisionStream({
 
           {verdict !== undefined ? (
             <div className="border-t border-white/10 px-3 py-2 text-[11px] text-white/70">
-              {String(verdict.detail?.['action'] ?? '')}
+              {asText(verdict.detail?.['action'] ?? '')}
             </div>
           ) : null}
         </div>

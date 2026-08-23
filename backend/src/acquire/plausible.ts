@@ -26,11 +26,15 @@ import { parseDeadline } from './dates.js';
 /** Markdown link syntax, stray URLs, and bare parenthesised paths. */
 const LOOKS_LIKE_MARKUP = /\]\(|https?:\/\/|^\s*\/\/|www\./i;
 
-/** Language that means the page is guessing rather than stating. */
-const HEDGED = new RegExp(
-  '(?:e\.g\.|around|approximately|typically|usually|expected|likely|estimated|varies|tbd|to be announced)',
-  'i',
-);
+/**
+ * Language that means the page is guessing rather than stating.
+ *
+ * Written as a literal regex rather than a `new RegExp` string. In a string,
+ * `\.` collapses to a bare `.` before the pattern is ever compiled, so the
+ * intended literal dots in `e.g.` silently became wildcards.
+ */
+const HEDGED =
+  /(?:e\.g\.|around|approximately|typically|usually|expected|likely|estimated|varies|tbd|to be announced)/i;
 
 /** A run of a value that is clearly a navigation label rather than a fact. */
 const NAVIGATION = /^(read more|learn more|click here|apply now|home|menu|back)\b/i;

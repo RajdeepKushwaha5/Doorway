@@ -10,9 +10,8 @@ import {
   plausibleProvider,
   scanForDeadline,
   scanForFunding,
-  saysClosed,
 } from './plausible.js';
-import { deadlineHasPassed, parseDeadline } from './dates.js';
+import { deadlineHasPassed } from './dates.js';
 import { decideLifecycle } from '../doorway/lifecycle.js';
 import { hasStructuredFacts, readStructured, type StructuredFacts } from './structured.js';
 import { adjudicateStructured } from './adjudicate.js';

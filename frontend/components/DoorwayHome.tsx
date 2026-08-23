@@ -5,7 +5,6 @@ import { ApplicationMission } from '@/components/ApplicationMission';
 import { fundingLabel } from '@/lib/funding';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IsometricWorld } from '@/components/IsometricWorld';
-import { LiveDiscovery } from '@/components/LiveDiscovery';
 import { ArchitectureFlowVisualizer } from '@/components/ArchitectureFlowVisualizer';
 import Link from 'next/link';
 import { collectFindAction, startFindAction } from '@/app/actions';
@@ -873,16 +872,6 @@ function EmptyWorld({ initial }: { initial: boolean }) {
           )}
         </p>
       </div>
-    </div>
-  );
-}
-
-function WorldSkeleton() {
-  return (
-    <div className="mt-12 grid gap-6 md:grid-cols-3">
-      {[0, 1, 2].map((item) => (
-        <div key={item} className="h-[360px] animate-pulse border border-gray-200 bg-[#f6f4ef]" />
-      ))}
     </div>
   );
 }

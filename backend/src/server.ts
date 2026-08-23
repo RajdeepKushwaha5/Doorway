@@ -171,10 +171,6 @@ function main(): void {
        * it spent rather than doing it quietly.
        */
       if (process.env['NOTICE_WARM_ON_BOOT'] !== 'true') return;
-      if (fetchMarkdown === undefined) {
-        process.stdout.write('Warm-up skipped: no Web Unlocker is configured.\n');
-        return;
-      }
 
       const snapshots = await store.listVerifiedSnapshots();
       if (snapshots.length > 0) return;
@@ -266,7 +262,7 @@ function main(): void {
       tickIntervalMs: Number(process.env['NOTICE_SCHEDULER_INTERVAL_S'] ?? 60) * 1000,
       minIntervalMs: Number(process.env['NOTICE_MIN_INTERVAL_S'] ?? 21_600) * 1000,
       maxPerTick: Number(process.env['NOTICE_MAX_PER_TICK'] ?? 5),
-      ...(fetchMarkdown === undefined ? {} : { fetchMarkdown }),
+      fetchMarkdown,
       notifyIncident: announce,
     });
   }

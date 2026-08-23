@@ -1,5 +1,6 @@
 'use client';
 
+import { asText } from '@/lib/text';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { acceptBaselineAction, runCollectorAction } from '@/app/actions';
@@ -74,7 +75,7 @@ function summarise(row: unknown): { label: string; value: string }[] {
       const currency = typeof money['currency'] === 'string' ? ` ${money['currency']}` : '';
       value = `${String(money['value'])}${currency}`;
     } else {
-      value = String(raw);
+      value = asText(raw);
     }
     out.push({ label: key.replace(/_/g, ' '), value });
   }

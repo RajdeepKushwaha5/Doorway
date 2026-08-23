@@ -1,3 +1,4 @@
+import { asText } from '@/lib/text';
 import type { GateCaseResult, RunRecord } from '@/lib/types';
 
 /**
@@ -27,7 +28,7 @@ function shown(value: unknown): string {
     }
     return JSON.stringify(value);
   }
-  return String(value);
+  return asText(value);
 }
 
 function readPath(row: unknown, path: string): unknown {

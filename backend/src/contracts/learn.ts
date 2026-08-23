@@ -22,9 +22,7 @@ const ENUM_CARDINALITY_LIMIT = 12;
 function profileField(rows: readonly unknown[], path: string): FieldProfile {
   const lookups = rows.map((row) => getPath(row, path));
   const present = lookups.filter((lookup) => lookup.found);
-  const values = present
-    .map((lookup) => (lookup.found ? lookup.value : undefined))
-    .filter((value) => value !== undefined);
+  const values = present.map((lookup) => lookup.value).filter((value) => value !== undefined);
 
   const nonNull = values.filter((value) => value !== null);
 

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { OpportunityDraft } from '../acquire/index.js';
-import { deadlineHasPassed, parseDeadline } from '../acquire/dates.js';
+import { parseDeadline } from '../acquire/dates.js';
 import { plausibleDeadline, scanForDeadline } from '../acquire/plausible.js';
 import { looksLikeIndex, looksLikePageFurniture } from '../acquire/read.js';
 import type { Opportunity, OpportunityType } from './types.js';

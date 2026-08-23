@@ -17,14 +17,20 @@ export async function OperationsPanel() {
   let jobs: JobRecord[] = [];
   let health: { status: string; at: string } | null = null;
 
-  // Rendered inside a page that is already useful without it. A backend that
-  // cannot answer should cost this panel, not the whole view.
+  /*
+   * Rendered inside a page that is already useful without it. A backend that
+   * cannot answer should cost this panel, not the whole view.
+   *
+   * The failure path leaves these null so the panel renders "unknown". An
+   * earlier version filled them with plausible numbers instead, which meant a
+   * dead API produced a page reporting 142 of 5,000 page loads and a healthy
+   * status, both invented. A tool whose argument is that unverified facts must
+   * not be published cannot invent one on its own status panel.
+   */
   try {
     [budget, jobs, health] = await Promise.all([api.budget(), api.listJobs(), api.health()]);
   } catch {
-    budget = { spent: 142, budget: 5000, remaining: 4858, exhausted: false };
     jobs = [];
-    health = { status: 'healthy', at: new Date().toISOString() };
   }
 
   const active = jobs.filter((job) => job.status === 'queued' || job.status === 'running');

@@ -1,3 +1,4 @@
+import { asText } from '../shared/text.js';
 /**
  * The NOTICE MCP server, minus its transport.
  *
@@ -154,7 +155,7 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
       required: ['source'],
     },
     run: async (args) => {
-      const collector = await resolveCollector(api, String(args['source'] ?? ''));
+      const collector = await resolveCollector(api, asText(args['source'] ?? ''));
       const url = typeof args['url'] === 'string' ? args['url'] : collector.watchUrls[0];
       const query = url === undefined ? '' : `?url=${encodeURIComponent(url)}`;
       const feed = await api<HealthEnvelope>(`/api/feed/${collector.id}${query}`);
@@ -252,7 +253,7 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
        * agent to call this tool, so this is the path something reaches while
        * already being told a fact could not be verified.
        */
-      const incidentId = String(args['incident_id'] ?? '').trim();
+      const incidentId = asText(args['incident_id'] ?? '').trim();
       if (incidentId === '') {
         return 'explain_verification needs an incident_id, the one named in the refusal you are following up.';
       }
@@ -297,7 +298,7 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
               required: ['source'],
             },
             run: async (args: Record<string, unknown>): Promise<string> => {
-              const collector = await resolveCollector(api, String(args['source'] ?? ''));
+              const collector = await resolveCollector(api, asText(args['source'] ?? ''));
               const result = await operate<{
                 publishable: boolean;
                 incident: {
@@ -345,7 +346,7 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
               required: ['incident'],
             },
             run: async (args: Record<string, unknown>): Promise<string> => {
-              const id = String(args['incident'] ?? '');
+              const id = asText(args['incident'] ?? '');
               const queued = await operate<{ job?: { id: string }; jobId?: string }>(
                 `/api/incidents/${encodeURIComponent(id)}/heal`,
               );
@@ -373,7 +374,7 @@ export function buildTools(api: ApiReader, operate?: ApiWriter): Tool[] {
               required: ['incident'],
             },
             run: async (args: Record<string, unknown>): Promise<string> => {
-              const id = String(args['incident'] ?? '');
+              const id = asText(args['incident'] ?? '');
               try {
                 await operate(`/api/incidents/${encodeURIComponent(id)}/approve`);
               } catch (error) {
@@ -462,7 +463,7 @@ export async function dispatch(
       });
 
     case 'tools/call': {
-      const name = String(request.params?.['name'] ?? '');
+      const name = asText(request.params?.['name'] ?? '');
       const tool = tools.find((candidate) => candidate.name === name);
       if (tool === undefined) return fail(-32602, `unknown tool: ${name}`);
 

@@ -121,6 +121,6 @@ export function verifyCertificate(
   candidate: EvidenceCertificate,
 ): { valid: boolean; expected: string; found: string } {
   const { digest, ...body } = candidate;
-  const expected = digestOf(body as Omit<EvidenceCertificate, 'digest'>);
+  const expected = digestOf(body);
   return { valid: expected === digest, expected, found: digest };
 }

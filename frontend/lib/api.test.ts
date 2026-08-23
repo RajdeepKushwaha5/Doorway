@@ -65,7 +65,7 @@ describe('api request retry', () => {
         opportunityTypes: [],
         fundingRequirement: 'any',
         locations: [],
-      } as never)
+      })
       .catch((err: unknown) => err);
     await vi.runAllTimersAsync();
 

@@ -17,6 +17,9 @@
     "dev": "npm run build --workspace backend && concurrently --kill-others --names backend-types,backend,frontend,fixture \"npm run dev:types --workspace backend\" \"npm run dev:server --workspace backend\" \"npm run dev --workspace frontend\" \"npm run dev --workspace driftmart\"",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check": "npm run typecheck && npm run lint && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
     "phase0": "npm run phase0 --workspace backend",
@@ -32,9 +35,14 @@
     "blindspot:proof": "npm run build --workspace backend && npm run blindspot:proof --workspace backend"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@next/eslint-plugin-next": "^15.5.23",
     "@types/node": "^22.10.2",
     "concurrently": "^9.2.4",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^2.1.8"
   }
 }

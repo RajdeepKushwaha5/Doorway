@@ -1,3 +1,4 @@
+import { asText } from '../shared/text.js';
 import { randomUUID } from 'node:crypto';
 
 /**
@@ -199,6 +200,6 @@ export function brief(value: unknown, max = 48): string {
       return `${String(record['value'])}${currency}`;
     }
   }
-  const text = String(value);
+  const text = asText(value);
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }

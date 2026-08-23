@@ -73,7 +73,7 @@ export function parseLooseNumber(input: string): number | null {
   if (trimmed === '') return null;
 
   // Strip everything that cannot be part of a number, keeping separators.
-  const cleaned = trimmed.replace(/[^0-9.,\-]/g, '');
+  const cleaned = trimmed.replace(/[^0-9.,-]/g, '');
   if (cleaned === '' || !/[0-9]/.test(cleaned)) return null;
 
   const negative = cleaned.startsWith('-');
@@ -178,7 +178,9 @@ export function normalizeMoney(input: unknown, currencyHint?: string): Normalize
  */
 export function normalizeText(input: string): string {
   return input
-    .replace(/[​-‍﻿]/g, '')
+    // Zero-width space, non-joiner, joiner and the byte-order mark, written as
+    // escapes because the literal characters are invisible in a diff.
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }

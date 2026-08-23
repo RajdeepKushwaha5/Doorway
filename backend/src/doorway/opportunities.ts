@@ -1,6 +1,5 @@
 import { repairMojibake } from '../shared/mojibake.js';
 import { createHash } from 'node:crypto';
-import { deadlineHasPassed } from '../acquire/dates.js';
 import type { CollectorRecord, IncidentRecord, VerifiedSnapshot } from '../store/index.js';
 import type { Opportunity, OpportunityType } from './types.js';
 import { decideLifecycle } from './lifecycle.js';
@@ -91,8 +90,10 @@ function parseOpportunity(
   if (!isRecord(value)) return null;
   const title = text(value, ['title', 'opportunity_title', 'name']);
   const provider = text(value, ['provider', 'organization', 'organisation', 'host']);
+  // A source that does not print its own apply link leaves the listing page
+  // as the way in, which is where a reader would have had to start anyway.
   const applicationUrl = url(value, ['application_url', 'apply_url', 'url']) ?? snapshot.url;
-  if (title === null || provider === null || applicationUrl === null) return null;
+  if (title === null || provider === null) return null;
 
   const rawType = (text(value, ['opportunity_type', 'type', 'category']) ?? '').toLowerCase();
   const type = TYPES.has(rawType as OpportunityType)

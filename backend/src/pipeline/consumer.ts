@@ -73,6 +73,7 @@ function newestRowFor(runs: readonly RunRecord[], url: string): unknown {
   // A run that does not record which page it read cannot be attributed to one.
   // Skipped rather than matched loosely, because matching loosely is how every
   // URL ended up showing the same row.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a run
   const match = runs.find((run) => run.targetUrls?.includes(url) === true);
   return match?.rows[0] ?? null;
 }

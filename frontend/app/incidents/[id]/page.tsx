@@ -135,10 +135,11 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
             question is what was actually on the page, and two numbers in a table answer that less
             well than the page itself.
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a PNG of
-              arbitrary size served from the API, not a bundled asset, so the
-              image optimizer has nothing to optimize and would only add a
-              failure mode between the reader and their evidence. */}
+          {/* A plain img, deliberately. This is a PNG of arbitrary size
+              served from the API rather than a bundled asset, so the image
+              optimizer has nothing to optimize and would only add a failure
+              mode between the reader and their evidence. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`${apiBase()}/api/incidents/${incident.id}/screenshot`}
             alt="Rendered capture of the page when the incident opened"

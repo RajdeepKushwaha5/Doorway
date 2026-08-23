@@ -1,3 +1,4 @@
+import { asText } from '../shared/text.js';
 import { redact } from '../shared/index.js';
 import { BrightDataRequestError, BrightDataTimeoutError } from './errors.js';
 import { brightDataRequest, type RetryPolicy } from './http.js';
@@ -435,8 +436,8 @@ export function normalizeHealProgress(raw: unknown): HealProgress {
   // version of this function read only `status`, and "pending_answer" matched
   // none of its patterns, so a job sitting at the gate was reported as
   // `pending` and polled to timeout. Read `step` first.
-  const step = String(record['step'] ?? '').toLowerCase();
-  const statusText = String(record['status'] ?? record['state'] ?? '').toLowerCase();
+  const step = asText(record['step'] ?? '').toLowerCase();
+  const statusText = asText(record['status'] ?? record['state'] ?? '').toLowerCase();
 
   let phase: HealPhase;
   if (step === 'user_approval' || statusText === 'pending_answer') {

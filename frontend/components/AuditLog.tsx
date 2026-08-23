@@ -30,7 +30,7 @@ const ACTOR: Record<AuditEvent['actor'], { label: string; tone: string }> = {
  */
 function summarise(payload: unknown): string | null {
   if (payload === null || typeof payload !== 'object') return null;
-  const keys = Object.keys(payload as Record<string, unknown>);
+  const keys = Object.keys(payload);
   if (keys.length === 0) return null;
   return keys.slice(0, 6).join(', ');
 }
