@@ -29,7 +29,7 @@ NOTICE is the incident-to-verified-repair layer for Bright Data Scraper Studio. 
 Nothing below needs a Bright Data account. The first two run offline.
 
 ```bash
-npm install && npm test      # 613 tests, no network, no credentials
+npm install && npm test      # 655 tests, no network, no credentials
 npm run blindspot:proof      # replays the blind spot this system was built around
 ```
 
@@ -75,6 +75,31 @@ With an API key, to reproduce the live claims:
 npm run benchmark            # the Drift Discrimination Score table
 npm run demo:reset           # put the fixture and the fleet back
 ```
+
+---
+
+## What this scrapes, and what it does not
+
+Every source is a public page that returns 200 to an anonymous request. No
+login walls, no paywalls, no personal data. The six targets are:
+
+| Source | Why it is here |
+|---|---|
+| `cprgindia.org` | An Indian policy fellowship, no API, no prebuilt scraper |
+| `research.adobe.com` | A corporate research fellowship, no API |
+| `latrobe.edu.au` | A university scholarship page, one of thousands like it |
+| `wemakedevs.org` | A hackathon listing on a small organiser's own site |
+| `devpost.com` | A single hackathon page, not the platform index |
+| `doorway-lab.onrender.com` | A fixture we own, labelled as one everywhere it appears |
+
+These are the long tail on purpose. None is covered by Bright Data's prebuilt
+library, and none has an API that would make scraping it a strange choice.
+The records they produce describe programmes, not people: a title, a closing
+date, a funding level, an application link.
+
+Credentials live in `.env`, which is gitignored, and no token value appears in
+any tracked file. The mutating routes refuse to run at all when
+`NOTICE_ADMIN_TOKEN` is unset, rather than defaulting to open.
 
 ---
 
@@ -942,13 +967,24 @@ demo, so it is named here instead of being quietly carried.
 **The free-tier store does not survive a restart.** Render's free plan has no
 persistent disk, so a redeploy or a spin-down after fifteen minutes idle clears
 runs, incidents, accepted baselines and verified snapshots. Seeding restores
-collector definitions only. Everything reappears after one `npm run live --
-observe-all`, and the fix is a paid disk or Postgres behind the existing `Store`
-interface.
+collector definitions only.
+
+`NOTICE_WARM_ON_BOOT=true` closes most of it: a boot that finds no verified
+snapshot at all observes each collector once and rebuilds its provenance,
+which takes the world from empty to populated before anybody arrives. It costs
+two Bright Data requests per collector and is off by default, because a restart
+quietly spending the monthly allowance is the right thing to avoid for anybody
+without a demo to protect.
+
+What it does not restore is the crawl index, because refilling that is hundreds
+of page loads rather than twelve, and doing it on every wake would be a strange
+way to treat a cache. So a fresh deployment answers searches from the watched
+fleet and the live web until a crawl runs. The real fix is a paid disk, or
+Postgres behind the existing `Store` interface, which is already the seam.
 
 **The worker's own orchestration has no dedicated tests.** Ticking, job
 claiming, scheduling and automatic promotion are exercised incidentally by the
-pipeline suites rather than directly. The  tests cover detection,
+pipeline suites rather than directly. The 655 tests cover detection,
 classification, gating and the API well; they cover worker restart mid-repair
 and duplicate job claims not at all.
 
@@ -1047,7 +1083,7 @@ npm install
 cp .env.example .env          # add BRIGHTDATA_API_KEY
 
 npm run build
-npm test                      #  tests, no network required
+npm test                      # 655 tests, no network required
 npm run seed                  # repeat-safe local Doorway world and NOTICE incident
 npm run dev                   # API :4000, dashboard :3000, controlled source :3002
 
@@ -1112,7 +1148,7 @@ This is stated carefully because an earlier version got it wrong. It passed a ha
 
 ## AI assistance
 
-Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it:  tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
+Built with the assistance of AI coding tools. Architecture decisions, the platform findings above, and every design tradeoff documented here were reviewed and are explainable by the author. The test suite is the check on all of it: 655 tests, including an offline end-to-end run of the full detection-to-blocked-repair loop and a dedicated safety suite covering the promotion guards.
 
 ## License
 
