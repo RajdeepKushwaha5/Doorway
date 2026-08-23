@@ -1,3 +1,4 @@
+import { deduplicate } from './opportunities.js';
 import type { DoorwayProfile, DoorwayWorld, Opportunity, OpportunityMatch } from './types.js';
 
 export function buildWorld(
@@ -55,54 +56,6 @@ function lifecycleOrder(status: Opportunity['applicationStatus']): number {
   return 3;
 }
 
-function deduplicate(opportunities: Opportunity[]): Opportunity[] {
-  const byKey = new Map<string, Opportunity>();
-  for (const opportunity of opportunities) {
-    const normalizedTitle = opportunity.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    const normalizedProvider = opportunity.provider.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    const key = `${normalizedTitle}::${normalizedProvider}`;
-    const existing = byKey.get(key);
-    if (existing === undefined || prefer(opportunity, existing)) {
-      byKey.set(key, opportunity);
-    }
-  }
-  return [...byKey.values()];
-}
-
-function prefer(candidate: Opportunity, existing: Opportunity): boolean {
-  const candidateTrust = trustWeight(candidate);
-  const existingTrust = trustWeight(existing);
-  if (candidateTrust !== existingTrust) return candidateTrust > existingTrust;
-
-  const candidateQuality = informationWeight(candidate);
-  const existingQuality = informationWeight(existing);
-  if (candidateQuality !== existingQuality) return candidateQuality > existingQuality;
-
-  return Date.parse(candidate.trust.lastVerifiedAt) > Date.parse(existing.trust.lastVerifiedAt);
-}
-
-function informationWeight(opportunity: Opportunity): number {
-  return (
-    (opportunity.deadline === null ? 0 : 5) +
-    (opportunity.deadlineRaw === null ? 0 : 2) +
-    (opportunity.applicationStatus === 'unknown' ? 0 : 2) +
-    (opportunity.funding.amount === null ? 0 : 1) +
-    (opportunity.eligibility.length === 0 ? 0 : 1)
-  );
-}
-
-function trustWeight(opportunity: Opportunity): number {
-  const trust = opportunity.trust.status === 'verified'
-    ? 5
-    : opportunity.trust.status === 'partially_verified'
-      ? 4
-      : opportunity.trust.status === 'discovered'
-        ? 3
-        : opportunity.trust.status === 'stale'
-          ? 2
-          : 1;
-  return trust * 10 + (opportunity.trust.confirmedBy === 'two_sensors' ? 2 : 0);
-}
 
 /**
  * Forms of the same subject that a page might use.

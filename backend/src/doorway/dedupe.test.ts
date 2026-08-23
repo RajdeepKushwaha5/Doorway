@@ -75,3 +75,71 @@ describe('collapsing two readings of one opportunity', () => {
     expect(deduplicate([verified, other])).toHaveLength(2);
   });
 });
+
+/**
+ * Found in the live demo, on 23 August 2026.
+ *
+ * A search for AI fellowships returned "Transforming Society through AI
+ * Fellowship" twice. Both were the same programme on the same host. They
+ * survived deduplication because the provider had been read two different
+ * ways: one page yielded the organisation, `CPRG and AI4India`, and the other
+ * fell back to the bare hostname, `cprgindia.org`.
+ *
+ * Keying on the provider makes deduplication only as reliable as the weakest
+ * extraction on the page. The host is the same whatever the extractor managed
+ * to read, which is the property the key needs.
+ */
+describe('the same programme read two different ways', () => {
+  const base = {
+    title: 'Transforming Society through AI Fellowship',
+    sourceUrl: 'https://cprgindia.org/fellowship',
+    trust: {
+      status: 'discovered' as const,
+      confirmedBy: 'single_sensor' as const,
+      lastVerifiedAt: '2026-08-23T03:00:00Z',
+      incidentId: null,
+      fieldsDegraded: [],
+      verdict: null,
+    },
+  };
+
+  it('collapses when one read the organisation and the other fell back to the host', () => {
+    const named = record({ ...base, id: 'named', provider: 'CPRG and AI4India' });
+    const fallback = record({
+      ...base,
+      id: 'fallback',
+      provider: 'cprgindia.org',
+      sourceUrl: 'https://cprgindia.org/fellowship/apply',
+    });
+    expect(deduplicate([named, fallback])).toHaveLength(1);
+  });
+
+  it('prefers the reading that names the organisation over the bare host', () => {
+    const named = record({ ...base, id: 'named', provider: 'CPRG and AI4India' });
+    const fallback = record({ ...base, id: 'fallback', provider: 'cprgindia.org' });
+    // A hostname is what we print when nobody told us who runs the programme.
+    // Between two otherwise equal readings, the one that knows is better.
+    expect(deduplicate([fallback, named])[0]?.provider).toBe('CPRG and AI4India');
+    expect(deduplicate([named, fallback])[0]?.provider).toBe('CPRG and AI4India');
+  });
+
+  it('still keeps genuinely different programmes on one host', () => {
+    // La Trobe list two scholarships whose titles differ only by a suffix.
+    // Collapsing those would hide a real opportunity.
+    const plain = record({
+      ...base,
+      id: 'plain',
+      title: 'La Trobe Artificial Intelligence Scholarship',
+      sourceUrl: 'https://latrobe.edu.au/a',
+      provider: 'latrobe.edu.au',
+    });
+    const thirty = record({
+      ...base,
+      id: 'thirty',
+      title: 'La Trobe Artificial Intelligence Scholarship 30%',
+      sourceUrl: 'https://latrobe.edu.au/b',
+      provider: 'La Trobe University',
+    });
+    expect(deduplicate([plain, thirty])).toHaveLength(2);
+  });
+});

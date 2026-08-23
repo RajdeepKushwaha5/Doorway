@@ -218,6 +218,59 @@ const STANDING: Record<string, number> = {
  * Corroboration decides it, then standing, and recency only breaks a tie
  * between records that have been checked equally well.
  */
+/** How much a reading actually tells a student. Higher is better. */
+function informationWeight(opportunity: Opportunity): number {
+  return (
+    (opportunity.deadline === null ? 0 : 5) +
+    (opportunity.deadlineRaw === null ? 0 : 2) +
+    (opportunity.applicationStatus === 'unknown' ? 0 : 2) +
+    (opportunity.funding.amount === null ? 0 : 1) +
+    (opportunity.eligibility.length === 0 ? 0 : 1)
+  );
+}
+
+/** Reduce a value to letters, digits and single spaces, for comparison only. */
+function comparable(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** The host a record was read from, without `www.`. Empty when unparseable. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Whether a provider is really just the hostname wearing a hat.
+ *
+ * When a page does not say who runs a programme, the bare host is printed
+ * instead. That is honest, and it is also not a name, so between two readings
+ * of the same thing the one that knows the organisation is the better record.
+ */
+function isHostFallback(provider: string, host: string): boolean {
+  const value = provider.trim().toLowerCase().replace(/^www\./i, '');
+  return value === host || (!value.includes(' ') && /\.[a-z]{2,}$/.test(value));
+}
+
+/**
+ * One record per opportunity, keeping the best-evidenced reading of it.
+ *
+ * Keyed on the title and the host rather than the title and the provider. The
+ * provider is whatever the extractor managed to read, and a live search found
+ * the same fellowship twice because one page yielded `CPRG and AI4India` and
+ * the other fell back to `cprgindia.org`. Keying on the provider makes
+ * deduplication only as reliable as the weakest extraction on the page; the
+ * host is the same either way.
+ *
+ * Titles still have to match, so two genuinely different programmes on one
+ * host stay two records.
+ */
 export function deduplicate(opportunities: Opportunity[]): Opportunity[] {
   const byKey = new Map<string, Opportunity>();
 
@@ -231,11 +284,31 @@ export function deduplicate(opportunities: Opportunity[]): Opportunity[] {
       (STANDING[candidate.trust.status] ?? 0) - (STANDING[existing.trust.status] ?? 0);
     if (byStanding !== 0) return byStanding > 0;
 
+    /*
+     * Equally evidenced: prefer the reading that is more use.
+     *
+     * A record with a closing date is worth more to a student than one
+     * without, and two reads of the same page routinely differ in what they
+     * managed to pull out.
+     */
+    const byInformation = informationWeight(candidate) - informationWeight(existing);
+    if (byInformation !== 0) return byInformation > 0;
+
+    // Then prefer the reading that names the organisation.
+    const host = hostOf(candidate.sourceUrl) || hostOf(existing.sourceUrl);
+    const candidateNamed = !isHostFallback(candidate.provider, host);
+    const existingNamed = !isHostFallback(existing.provider, host);
+    if (candidateNamed !== existingNamed) return candidateNamed;
+
     return Date.parse(candidate.trust.lastVerifiedAt) > Date.parse(existing.trust.lastVerifiedAt);
   };
 
   for (const opportunity of opportunities) {
-    const key = `${opportunity.title.toLowerCase()}::${opportunity.provider.toLowerCase()}`;
+    const host = hostOf(opportunity.sourceUrl);
+    // No usable host: fall back to the provider, which is what this used to
+    // key on throughout, rather than collapsing unrelated records together.
+    const scope = host === '' ? comparable(opportunity.provider) : host;
+    const key = `${comparable(opportunity.title)}::${scope}`;
     const existing = byKey.get(key);
     if (existing === undefined || stronger(opportunity, existing)) {
       byKey.set(key, opportunity);
