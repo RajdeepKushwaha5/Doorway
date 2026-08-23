@@ -8,6 +8,7 @@ import {
 import { startWorkerLoop } from './worker/index.js';
 import { buildRouter } from './api/routes.js';
 import { FileStore, ScreenshotStore, seedCollectors } from './store/index.js';
+import { observeOnce } from './pipeline/observe.js';
 import { notifyIncident, reportIncidentToGitHub } from './pipeline/index.js';
 
 /**
@@ -149,10 +150,53 @@ function main(): void {
   // it is empty, so a curated fleet is never overwritten, and without running
   // anything, because a restart must not quietly spend the monthly allowance.
   void seedCollectors(store, process.env['NOTICE_SEED_FILE'] ?? '../seed-collectors.json').then(
-    (result) => {
+    async (result) => {
       if (result.seeded > 0) {
-        process.stdout.write(`Seeded ${String(result.seeded)} collector(s) into an empty store.
-`);
+        process.stdout.write(`Seeded ${String(result.seeded)} collector(s) into an empty store.\n`);
+      }
+
+      /*
+       * Optionally observe once, so a cold visitor is not shown an empty world.
+       *
+       * Seeding restores the fleet and deliberately runs nothing, because a
+       * restart must not quietly spend the monthly allowance. On a host with
+       * no persistent disk that leaves every verified snapshot behind, so the
+       * first person to arrive after a spin-down sees a site with nothing in
+       * it, which is a worse first impression than the spend is a cost.
+       *
+       * Off by default, because the reasoning that kept it off is right for
+       * anybody running this without a demo to protect. Where it is turned on,
+       * it fires only when there is genuinely nothing to serve, and says what
+       * it spent rather than doing it quietly.
+       */
+      if (process.env['NOTICE_WARM_ON_BOOT'] !== 'true') return;
+      if (fetchMarkdown === undefined) {
+        process.stdout.write('Warm-up skipped: no Web Unlocker is configured.\n');
+        return;
+      }
+
+      const snapshots = await store.listVerifiedSnapshots();
+      if (snapshots.length > 0) return;
+
+      const collectors = await store.listCollectors();
+      process.stdout.write(
+        `Warming ${String(collectors.length)} collector(s): the world is empty and ` +
+          'NOTICE_WARM_ON_BOOT is set.\n',
+      );
+
+      for (const collector of collectors) {
+        const url = collector.watchUrls[0];
+        if (url === undefined) continue;
+        try {
+          await observeOnce(collector, url, { client, store, fetchMarkdown });
+          process.stdout.write(`  warmed ${collector.name}\n`);
+        } catch (error) {
+          // One unreachable source must not stop the rest from coming back.
+          process.stdout.write(
+            `  could not warm ${collector.name}: ${error instanceof Error ? error.message : String(error)}
+`,
+          );
+        }
       }
     },
   );

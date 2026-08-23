@@ -118,6 +118,16 @@ is a better check than any of them individually.
 **Services sleep after 15 minutes idle.** The first request afterwards takes
 thirty seconds or more. Warm all three URLs before showing this to anyone.
 
+**Set `NOTICE_WARM_ON_BOOT=true` on the API if a cold visitor matters.**
+Seeding restores the fleet and deliberately runs nothing, so after a restart
+the collectors are all there and the world is empty. With this set, a boot that
+finds no verified snapshot at all observes each collector once, which costs two
+Bright Data requests per collector and takes the site from empty to populated
+without anybody noticing it was empty.
+
+Off by default. A restart quietly spending the monthly allowance is the right
+thing to avoid for anybody who does not have a demo to protect.
+
 **There is no persistent disk.** A redeploy resets the store, so verified
 opportunities disappear and the world empties. Re-run the collectors afterwards,
 or seed:

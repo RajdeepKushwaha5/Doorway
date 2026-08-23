@@ -56,6 +56,15 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.11.0
+      # Seeding restores the fleet and runs nothing, so a restart leaves every
+      # collector registered and the world empty. This host has no persistent
+      # disk, so that happens on every deploy and every wake from idle, and the
+      # first visitor after one sees a site with nothing in it.
+      #
+      # Two Bright Data requests per collector, only when there is genuinely
+      # nothing to serve.
+      - key: NOTICE_WARM_ON_BOOT
+        value: "true"
       # Render assigns the port. `next start` and the API both read PORT.
       - key: NOTICE_RUN_WORKER_IN_PROCESS
         value: "true"
