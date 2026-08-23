@@ -39,6 +39,100 @@ Everything downstream inherits a confident wrong answer, silently, for months.
 
 ---
 
+## What this demonstrates
+
+Four things, each with somewhere you can go and check it.
+
+### 1. The scraper, designed in Scraper Studio
+
+Six collectors against long-tail funding pages, each built from a
+natural-language brief through the CLI. What makes them a design rather than a
+receipt is the **field contract** attached to every one:
+
+```json
+{
+  "path": "deadline_raw",
+  "meaning": "The date applications close, not a notification or results date",
+  "labels": ["application deadline", "applications close"],
+  "excludeLabels": ["early interest", "notification", "result"],
+  "shape": "date"
+}
+```
+
+And a rule enforced when a collector is registered: **a protected field must be
+read by a second sensor.** Protecting a field is a statement that publishing it
+wrong does harm, so it cannot be one only a single sensor sees. Registration
+refuses the arrangement outright.
+
+*Check it:* any collector page on `/engine` shows its contract and how it was
+built. → [How each collector was built](docs/SCRAPER-STUDIO.md)
+
+### 2. Driven from a coding agent
+
+Not "an agent wrote this last week". The product calls Scraper Studio at
+runtime when it meets a page it has no sensor for.
+
+Paste any funding page into the Foundry on `/engine` and watch: the page is
+read through Web Unlocker first, the agent reports the dates it found, says
+**which label it refuses to take the date from**, writes the brief, and creates
+the collector. Measured at 97 and 116 seconds on real pages.
+
+```
+saw   2 labelled dates on the page
+saw   "1 September 2026" is labelled early interest, not the closing date
+saw   "18 September 2026" is labelled application deadline
+brief Extract the title, provider, funding level and closing date.
+      Take the closing date from "application deadline".
+      Never take it from "early interest".
+```
+
+The refusal is the half that matters. A brief naming only what to extract
+produces a scraper that takes the first plausible date in the page.
+
+*Check it:* [/engine](https://doorway-frontend-snowy.vercel.app/engine), with a URL we have never seen.
+
+### 3. What it did when the site changed
+
+Six verdicts, not a pass/fail, because "the page changed" and "the extractor
+broke" need opposite responses. Every fault on `/proof` states the verdict a
+correct system should reach **before** you run it, so the demonstration can
+fail in front of you.
+
+The case worth watching is `genuine_source_change`: a source that genuinely
+moved its deadline is published, and **nothing is repaired**. Repairing a
+collector that was right is how a working one gets broken.
+
+When a repair *is* warranted, it has to earn promotion. A proposed fix is
+replayed against the page that failed and the pages that were working, and
+rejected unless it fixes the first without breaking the second. That gate has
+already caught a real repair that reported success: Self-Healing completed,
+passed its own validator, and the field it was asked to fix still returned the
+wrong value.
+
+*Check it:* [/proof](https://doorway-frontend-snowy.vercel.app/proof), break the page yourself.
+
+### 4. What the structured output went on to power
+
+Three things, and none of them is a dashboard.
+
+**An application plan** that changes when the source does. When both sensors
+agree a programme has added a required document, the plan gets harder and says
+so. When only the collector claims a requirement vanished, the requirement
+**stays on the list**, because a checklist that quietly shrinks when an
+extractor slips is worse than no checklist.
+
+**An MCP server** that refuses. An agent asking for a disputed fact gets the
+field named and an instruction not to scrape around the refusal, rather than a
+confident wrong answer at the moment one does the most damage.
+
+**Evidence certificates** anyone can re-derive in their own browser, with no
+call back to us, because a verifier that asks our server whether our own
+document is valid proves nothing.
+
+*Check it:* open any opportunity, then [/verify](https://doorway-frontend-snowy.vercel.app/verify).
+
+---
+
 ## What Doorway does about it
 
 Every important fact is read **twice, by two things that share no code**:
@@ -172,22 +266,41 @@ The API and the fixture run on **Render** from `render.yaml`; the dashboard runs
 
 ## How it works
 
-```
-Official page ──URL──▶ Scraper Studio c_* ──typed JSON──▶ learned contracts
-                                                                │
-              ┌─────────────────────────────────────────────────┴──────────────┐
-        all pass │                                              anything unresolved │
-              ▼                                                                ▼
-   second sensor not woken                          Web Unlocker ──markdown──▶ reconcile
-   published as contract_only                                                  │
-                                              agree · disagree · incomparable ─┘
-                                                                │
-                                                    one of six verdicts
-                                                                │
-                              ┌─────────────────────────────────┴──────────────┐
-                    published ▼                                       withheld ▼
-            verified world → application plan                  bdata scraper heal
-            MCP + evidence certificate                          → gate replays it
+```mermaid
+flowchart TD
+    A["Official funding page<br/><i>long tail, no prebuilt scraper</i>"]
+    B["Scraper Studio collector<br/><code>c_*</code> · sensor 1"]
+    C{"Learned contracts<br/>required · ranges · profiles"}
+    D["Second sensor not woken<br/><i>published as contract_only</i>"]
+    E["Web Unlocker<br/>sensor 2 · no shared code"]
+    F["Reconcile, field by field"]
+    G{"One of six verdicts"}
+    H["Verified world<br/>+ application plan"]
+    I["MCP server<br/>+ evidence certificate"]
+    J["bdata scraper heal<br/><i>candidate proposed</i>"]
+    K["Gate replays the candidate<br/><i>on the page that failed,<br/>and the ones that worked</i>"]
+    L["Production unchanged"]
+
+    A -- "URL" --> B
+    B -- "typed JSON" --> C
+    C -- "all pass" --> D
+    C -- "anything unresolved" --> E
+    E -- "markdown" --> F
+    F -- "agree · disagree · incomparable" --> G
+
+    G -- "healthy" --> H
+    G -- "genuine_source_change<br/>publish, repair nothing" --> H
+    G -- "extractor_drift" --> J
+    G -- "access_anomaly · inconclusive<br/>explicit_failure" --> L
+
+    H --> I
+    J --> K
+    K -- "fixes the failure,<br/>breaks nothing" --> B
+    K -- "otherwise rejected" --> L
+
+    style D stroke-dasharray: 4 4
+    style G stroke-width:2px
+    style L stroke-dasharray: 4 4
 ```
 
 **Note the left branch.** When every contract passes there is nothing for a second reading to settle, so it is not taken, and the record is published marked `contract_only` rather than claiming corroboration it does not have.
