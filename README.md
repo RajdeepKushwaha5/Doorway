@@ -185,7 +185,7 @@ labelled `c_mt3uuz5c3gmgatqsn`.
 **One command runs every gate CI runs.**
 
 ```bash
-npm run check        # typecheck, then lint, then 676 tests
+npm run check        # typecheck, then lint, then 685 tests
 ```
 
 Offline. No Bright Data account, no credentials, no network.
@@ -255,7 +255,7 @@ Then it compares them, and reaches one of six conclusions:
 Nothing below needs an account. The first two run offline.
 
 ```bash
-npm install && npm test      # 676 tests, no network, no credentials
+npm install && npm test      # 685 tests, no network, no credentials
 npm run blindspot:proof      # replays the blind spot this system was built around
 ```
 
@@ -296,7 +296,7 @@ npm run benchmark
 
 ### Testing
 
-**676 tests, no network and no credentials required.** Verified by deleting `.env` and running the suite.
+**685 tests, no network and no credentials required.** Verified by deleting `.env` and running the suite.
 
 ```bash
 npm test
@@ -324,7 +324,7 @@ Requires **Node 22+**. No account needed for the tests.
 git clone https://github.com/RajdeepKushwaha5/Doorway.git
 cd Doorway
 npm install
-npm run check                # typecheck, lint, then 676 tests. All offline
+npm run check                # typecheck, lint, then 685 tests. All offline
 ```
 
 To run the whole thing locally against Bright Data:
@@ -499,7 +499,7 @@ Recorded rather than hidden, because a project arguing for honest reporting of d
 
 Bright Data Scraper Studio · Web Unlocker · `bdata` CLI · Node 22 · TypeScript · Next.js · Vitest
 
-AI coding tools assisted the implementation. Every architecture decision, platform finding and trade-off recorded here was reviewed and is explainable by the author, and the 676 tests are the check on all of it.
+AI coding tools assisted the implementation. Every architecture decision, platform finding and trade-off recorded here was reviewed and is explainable by the author, and the 685 tests are the check on all of it.
 
 ## License
 

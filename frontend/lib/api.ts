@@ -1,4 +1,6 @@
+
 import { serverApiBase } from './env';
+import { wakeFetch, wakeFailureNote } from './wake';
 import type {
   AuditEvent,
   BudgetStatus,
@@ -58,56 +60,17 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * How long to wait, and how many times, when the backend is asleep.
- *
- * The API runs on a free plan that suspends after fifteen minutes idle, and
- * the first request afterwards is what wakes it. That request routinely takes
- * longer than a browser is willing to wait, and it fails.
- *
- * This is not a theoretical edge. The proof page issues three reads at once,
- * then a fourth after them. Opened cold, the first three hit a sleeping
- * service and failed while the fourth arrived to a woken one and succeeded, so
- * the page rendered with no record, no collector, and no error to show for it.
- * A visitor following a link cold is the normal case, not the unlucky one.
- */
-const WAKE_TIMEOUT_MS = 20_000;
-const WAKE_ATTEMPTS = 3;
-
-/** Retry is safe only for reads. A repeated POST can spend money twice. */
-function isRead(init?: RequestInit): boolean {
-  const method = (init?.method ?? 'GET').toUpperCase();
-  return method === 'GET' || method === 'HEAD';
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
-  const attempts = isRead(init) ? WAKE_ATTEMPTS : 1;
-  let lastError = 'network error';
-
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      response = await fetch(`${base()}${path}`, {
-        ...init,
-        headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(WAKE_TIMEOUT_MS),
-      });
-      break;
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : 'network error';
-      if (attempt >= attempts) {
-        throw new ApiError(
-          503,
-          attempts > 1
-            ? `${lastError} (after ${attempts} attempts, ${WAKE_TIMEOUT_MS / 1000}s each)`
-            : lastError,
-        );
-      }
-      // A woken service answers the next one. No backoff worth the name is
-      // needed, and the caller is a page render that somebody is waiting on.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+  try {
+    response = await wakeFetch(`${base()}${path}`, {
+      ...init,
+      headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
+      cache: 'no-store',
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'network error';
+    throw new ApiError(503, `${reason} (${wakeFailureNote(init?.method)})`);
   }
 
   const text = await response.text();

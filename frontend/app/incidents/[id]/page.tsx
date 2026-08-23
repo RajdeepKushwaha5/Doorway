@@ -13,6 +13,16 @@ import { api, ApiError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
+/*
+ * Long enough to outlast a cold start.
+ *
+ * This page reads on the server, and the backend runs on a free plan that
+ * suspends after fifteen minutes idle. Without this, the platform ends the
+ * render while the API is still waking and the visitor gets the unreachable
+ * state for a service that was about to answer.
+ */
+export const maxDuration = 60;
+
 /**
  * The hero screen.
  *

@@ -4,9 +4,8 @@ import { fundingLabel } from '@/lib/funding';
 import { revalidatePath } from 'next/cache';
 import { serverApiBase } from '@/lib/env';
 import { api } from '@/lib/api';
-import type { DoorwayProfile, DoorwayWorld,
-  Mission,
-} from '@/lib/types';
+import type { DoorwayProfile, DoorwayWorld, Mission } from '@/lib/types';
+import { wakeFetch } from '@/lib/wake';
 
 /**
  * Server actions: the only place the admin token exists.
@@ -32,7 +31,7 @@ export async function buildDoorwayWorldAction(
   profile: DoorwayProfile,
 ): Promise<ActionResult<DoorwayWorld>> {
   try {
-    const response = await fetch(`${BASE}/api/doorway/world`, {
+    const response = await wakeFetch(`${BASE}/api/doorway/world`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(profile),
@@ -75,7 +74,7 @@ async function mutate<T>(
   }
 
   try {
-    const response = await fetch(`${BASE}${path}`, {
+    const response = await wakeFetch(`${BASE}${path}`, {
       method,
       headers: {
         'content-type': 'application/json',
@@ -128,7 +127,7 @@ export async function setFixtureModeAction(mode: string): Promise<ActionResult> 
   }
 
   try {
-    const response = await fetch(`${fixture}/api/admin/mode`, {
+    const response = await wakeFetch(`${fixture}/api/admin/mode`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -194,7 +193,7 @@ export async function getFixtureModeAction(): Promise<string | null> {
     '',
   );
   try {
-    const response = await fetch(`${fixture}/api/admin/mode`, { cache: 'no-store' });
+    const response = await wakeFetch(`${fixture}/api/admin/mode`, { cache: 'no-store' });
     if (!response.ok) return null;
     const body = (await response.json()) as { mode?: unknown };
     return typeof body.mode === 'string' ? body.mode : null;
@@ -367,7 +366,7 @@ export async function getProofScenariosAction(): Promise<{
   ).replace(/\/+$/, '');
 
   try {
-    const response = await fetch(`${fixtureUrl}/api/admin/mode`, { cache: 'no-store' });
+    const response = await wakeFetch(`${fixtureUrl}/api/admin/mode`, { cache: 'no-store' });
     if (!response.ok) return { mode: null, scenarios: [], fixtureUrl };
 
     const body = (await response.json()) as {
@@ -513,7 +512,7 @@ export async function startFindAction(
   profile: DoorwayProfile,
 ): Promise<ActionResult<{ findId: string; live: boolean }>> {
   try {
-    const response = await fetch(`${serverApiBase()}/api/doorway/find`, {
+    const response = await wakeFetch(`${serverApiBase()}/api/doorway/find`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(profile),
@@ -566,7 +565,7 @@ export async function collectFindAction(
   id: string,
 ): Promise<ActionResult<{ status: string; world: FoundWorld | null }>> {
   try {
-    const response = await fetch(
+    const response = await wakeFetch(
       `${serverApiBase()}/api/doorway/find/${encodeURIComponent(id)}`,
       { cache: 'no-store' },
     );
@@ -609,7 +608,7 @@ export async function getIndexStatsAction(): Promise<{
   reach: { pagesRead: number; hostsReached: number } | null;
 } | null> {
   try {
-    const response = await fetch(`${serverApiBase()}/api/crawl`, { cache: 'no-store' });
+    const response = await wakeFetch(`${serverApiBase()}/api/crawl`, { cache: 'no-store' });
     if (!response.ok) return null;
 
     const body = (await response.json()) as {

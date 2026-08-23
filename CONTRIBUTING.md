@@ -10,7 +10,7 @@ correct and be wrong.
 npm install
 cp .env.example .env      # only BRIGHTDATA_API_KEY is required
 npm run build
-npm test                  # 676 tests, no network and no credentials needed
+npm test                  # 685 tests, no network and no credentials needed
 ```
 
 The whole detection-to-blocked-repair loop runs offline against a scripted
@@ -33,7 +33,7 @@ Bright Data and draws on the same 5,000-a-month allowance both sensors share.
 | Command | What it does | Cost |
 |---|---|---|
 | `npm run check` | Typecheck, lint, then the tests. The gate CI runs | free |
-| `npm test` | 676 tests against a scripted Bright Data client | free |
+| `npm test` | 685 tests against a scripted Bright Data client | free |
 | `npm run seed` | Put a realistic incident in the local store, so a fresh clone shows something other than three empty states | free |
 | `npm run doorway:seed` | Same, for the opportunity world: a city rather than an empty field | free |
 | `npm run blindspot:proof` | Replay the unwatched-field incident offline. Every value is computed by the functions production uses | free |

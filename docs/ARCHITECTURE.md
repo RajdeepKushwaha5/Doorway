@@ -125,7 +125,7 @@ refuse to ship on data nobody has checked.
 ## Reproducing the claims
 
 ```bash
-npm run check                         # typecheck, lint, 676 tests. No network
+npm run check                         # typecheck, lint, 685 tests. No network
 npm run benchmark                     # Drift Discrimination Score, live
 npm run blindspot -- <collector-id>   # every conventional check passes a wrong row
 npm run live -- observe-all           # one real observation per collector
