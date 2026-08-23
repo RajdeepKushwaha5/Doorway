@@ -41,7 +41,7 @@ Everything downstream inherits a confident wrong answer, silently, for months.
 
 ## What this demonstrates
 
-Four things, each with somewhere you can go and check it.
+Six things, each with somewhere you can go and check it.
 
 ### 1. The scraper, designed in Scraper Studio
 
@@ -130,6 +130,101 @@ call back to us, because a verifier that asks our server whether our own
 document is valid proves nothing.
 
 *Check it:* open any opportunity, then [/verify](https://doorway-frontend-snowy.vercel.app/verify).
+
+### 5. An interface nobody has to be walked through
+
+Doorway publishes one thing no other opportunity site does: **whether a fact
+can be trusted**. That is the whole product, so the interface is judged on
+whether a stranger can read it without being told how.
+
+**The badge explains itself on the page.** Every card carries one of
+`Confirmed`, `Checked`, `Just found`, `Not rechecked` or `On hold`, and a key
+above the results says what each one licenses you to do. That key used to be a
+`title` tooltip, which is invisible on every phone, invisible to anyone
+scanning, and invisible to a reader who does not already suspect there is
+something to hover over. The single most important thing here was the one
+piece nobody could see.
+
+**The words are a student's, not ours.** The engine's vocabulary is
+`two_sensors` and `partially_verified`. A person looking for a scholarship
+reads "Confirmed. Two independent readings agreed. Safe to plan around."
+
+**Colour means exactly one thing.** Green is verified, amber is suspect or on
+hold, red is withheld. Nothing decorative is allowed to spend them, and no
+status is ever carried by colour alone, so it survives a compressed video and
+a colour-blind reader.
+
+**The refusal states are designed.** An empty result says what was searched
+and why the list is short. A quarantined record says which field is disputed
+and shows the last values both sensors confirmed. A backend that cannot be
+reached leaves the panel reading `unknown` rather than filling it in: an
+earlier version invented a plausible budget when the API was down, and a tool
+whose argument is that unverified facts must not be published cannot publish
+one on its own status panel.
+
+**It is checked rather than asserted.** Every page renders at 390, 768 and
+1440 with no horizontal overflow. Reduced motion is honoured. Keyboard focus
+is visible from one global `:focus-visible` rule rather than component by
+component, so a new control cannot be added without it.
+
+*Check it:*
+
+```bash
+npm run shots        # every page at three widths, plus an overflow report
+npm run legibility   # what a reader takes in per section, in three seconds
+```
+
+`legibility` prints only the label, the heading and the first line of each
+section, because that is all a scanner absorbs. Reading the output is the
+test: it is how a whole section of the control room was found to have no
+heading at all, leaving a reader looking at a search box and a row of pills
+labelled `c_mt3uuz5c3gmgatqsn`.
+
+### 6. Code a stranger could pick up on Monday
+
+**One command runs every gate CI runs.**
+
+```bash
+npm run check        # typecheck, then lint, then 676 tests
+```
+
+Offline. No Bright Data account, no credentials, no network.
+
+**The linter is chosen, not inherited.** Formatting is not in it, because
+arguing about semicolons in review costs more attention than it saves. The
+`unsafe-*` family is deliberately off, because this codebase narrows `unknown`
+at every boundary and that is precisely what those rules fire on: leaving them
+on produced a thousand warnings against the pattern we want, which teaches a
+reader to ignore the linter. `eslint.config.mjs` explains each decision where
+it is made.
+
+**Adding it was supposed to be housekeeping. It found eleven real defects,**
+including four literal backspace bytes where word boundaries were meant, so a
+lookup had silently matched nothing since the day it was written, and a
+hedging pattern built with `new RegExp` on a string, where the escaped dots in
+`e.g.` collapse to wildcards before the pattern is ever compiled.
+
+**The type system is doing real work.** `strict`, `noUncheckedIndexedAccess`,
+`exactOptionalPropertyTypes` and `noImplicitReturns` are all on, and there is
+a Zod schema at every external edge. Where a fallthrough has been removed,
+adding a verdict or a trust status is now a compile error rather than a silent
+wrong answer.
+
+**One rule lives in one place.** Deduplication used to have two
+implementations that disagreed about which reading to show, so the answer
+depended on which path assembled the world. That is the same arrangement that
+cost this project most of its deadlines, where two date parsers were both
+correct when written and only one was ever improved.
+
+**Comments record the decision, not the syntax.** Several exist because the
+obvious version was tried first and failed, and that history is kept rather
+than tidied away.
+
+**A bug fix arrives with a test that fails without it.** Most of the suite is
+there because something was genuinely broken once.
+
+*Check it:* [`CONTRIBUTING.md`](CONTRIBUTING.md) is the orientation, including
+a table of every script marking which ones spend Bright Data credits.
 
 ---
 
